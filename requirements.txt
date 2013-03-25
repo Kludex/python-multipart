@@ -1,0 +1,7 @@
+PyYAML==3.10
+cov-core==1.7
+coverage==3.6
+mock==1.0.1
+py==1.4.13
+pytest==2.3.4
+pytest-cov==1.6
