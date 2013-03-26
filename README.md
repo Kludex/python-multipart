@@ -6,4 +6,4 @@ This project is a streaming multipart parser for Python.  It's still under some 
 
 ## Why?
 
-Because streaming uploads are awesome for large files.
+Because streaming uploads are awesome for large files.  Examples will be coming soon :)
