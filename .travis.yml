@@ -10,7 +10,9 @@ python:
 
 install:
   - sudo pip install -r requirements.txt --use-mirrors
+  - sudo pip install PyYAML
   - "if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install unittest2; fi"
+  - pip freeze
 
 script:
   - py.test
