@@ -891,8 +891,6 @@ class MultipartParser(BaseParser):
                 else:
                     # Check to ensure our boundary matches
                     if c != boundary[index + 2]:
-                        # print('start_boundary: expected %r, found %r' % (c,
-                        #        boundary[index + 2]))
                         msg = "Did not find boundary character %r at index " \
                               "%d" % (c, index + 2)
                         logger.warn(msg)
