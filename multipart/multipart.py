@@ -422,7 +422,7 @@ class File(object):
 class BaseParser(object):
     """
     This class implements some helpful methods for parsers.  Currently, it
-    implements the callback logic in a central location.
+    just implements the callback logic in a central location.
     """
     def callback(self, name, data=None, start=None, end=None):
         """
@@ -755,11 +755,12 @@ class MultipartParser(BaseParser):
         # Setup marks.  These are used to track the state of data recieved.
         self.marks = {}
 
+        # TODO: Actually use this rather than the dumb version we currently use
         # # Precompute the skip table for the Boyer-Moore-Horspool algorithm.
         # skip = [len(boundary) for x in range(256)]
         # for i in range(len(boundary) - 1):
         #     skip[ord_char(boundary[i])] = len(boundary) - i - 1
-
+        #
         # # We use a tuple since it's a constant, and marginally faster.
         # self.skip = tuple(skip)
 
@@ -893,7 +894,7 @@ class MultipartParser(BaseParser):
                         # print('start_boundary: expected %r, found %r' % (c,
                         #        boundary[index + 2]))
                         msg = "Did not find boundary character %r at index " \
-                                "%d" % (c, index + 2)
+                              "%d" % (c, index + 2)
                         logger.warn(msg)
                         e = MultipartParseError(msg)
                         e.offset = i
@@ -953,7 +954,7 @@ class MultipartParser(BaseParser):
                     cl = lower_char(c)
                     if cl < LOWER_A or cl > LOWER_Z:
                         msg = "Found non-alphanumeric character %r in " \
-                                "header at %d" % (c, i)
+                              "header at %d" % (c, i)
                         logger.warn(msg)
                         e = MultipartParseError(msg)
                         e.offset = i
@@ -983,8 +984,8 @@ class MultipartParser(BaseParser):
             elif state == STATE_HEADER_VALUE_ALMOST_DONE:
                 # The last character should be a LF.  If not, it's an error.
                 if c != LF:
-                    msg = "Did not find LF character at end of header (found " \
-                            "%r)" % (c,)
+                    msg = "Did not find LF character at end of header " \
+                          "(found %r)" % (c,)
                     logger.warn(msg)
                     e = MultipartParseError(msg)
                     e.offset = i
@@ -1199,7 +1200,7 @@ class MultipartParser(BaseParser):
 
 class FormParser(object):
     # This is the default configuration for our form parser.
-    # Note: all file paths should be in bytes.
+    # Note: all file sizes should be in bytes.
     DEFAULT_CONFIG = {
         'MAX_BODY_SIZE': 1024,
         'MAX_MEMORY_FILE_SIZE': 1 * 1024 * 1024,

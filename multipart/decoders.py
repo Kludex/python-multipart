@@ -94,6 +94,3 @@ class QuotedPrintableDecoder(object):
 
     def __repr__(self):
         return "%s(underlying=%r)" % (self.__class__.__name__, self.underlying)
-
-
-

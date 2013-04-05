@@ -96,8 +96,10 @@ class ParametrizingMetaclass(type):
             for i, values in enumerate(param_values):
                 assert len(param_names) == len(values)
 
-                # Get a repr of the values, and fix it to be a valid identifier.
-                human = '_'.join([klass.IDENTIFIER_RE.sub('', repr(x)) for x in values])
+                # Get a repr of the values, and fix it to be a valid identifier
+                human = '_'.join(
+                    [klass.IDENTIFIER_RE.sub('', repr(x)) for x in values]
+                )
 
                 # Create a new name.
                 # new_name = attr.__name__ + "_%d" % i
@@ -131,5 +133,6 @@ class ParametrizingMetaclass(type):
 
 # This is a class decorator that actually applies the above metaclass.
 def parametrize_class(klass):
-    return ParametrizingMetaclass(klass.__name__, klass.__bases__, klass.__dict__)
-
+    return ParametrizingMetaclass(klass.__name__,
+                                  klass.__bases__,
+                                  klass.__dict__)
