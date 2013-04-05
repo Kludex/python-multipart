@@ -11,7 +11,7 @@ python:
 
 install:
   # Install requirements
-  - sudo pip install -r requirements.txt --use-mirrors
+  - pip install -r requirements.txt --use-mirrors
   - "if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install unittest2; fi"
 
   # Fix weird travis-ci python paths
