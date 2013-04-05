@@ -10,32 +10,12 @@ python:
   - "pypy"
 
 install:
-  # Install requirements
   - pip install -r requirements.txt --use-mirrors
   - "if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install unittest2; fi"
 
-  # Fix weird travis-ci python paths
-  # - export PYTHONPATH=$PYTHONPATH:/usr/lib/pymodules/python2.7/
-  # - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/dist-packages
-  # - export PYTHONPATH=$PYTHONPATH:/usr/lib/pyshared/python2.7/
-  - export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages/
-  - export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/dist-packages/
-
-  # Debugging
-  - pip freeze
-
 script:
-  # Fix weird travis-ci python paths
-  # - export PYTHONPATH=$PYTHONPATH:/usr/lib/pymodules/python2.7/
-  # - export PYTHONPATH=$PYTHONPATH:/usr/lib/python2.7/dist-packages
-  # - export PYTHONPATH=$PYTHONPATH:/usr/lib/pyshared/python2.7/
-  # - export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/site-packages/
-  # - export PYTHONPATH=$PYTHONPATH:/usr/local/lib/python2.7/dist-packages/
-
-  # Run test
   - py.test
 
 branches:
     only:
         - master
-
