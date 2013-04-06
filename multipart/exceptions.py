@@ -9,36 +9,32 @@ class FormParserError(ValueError):
 
 
 class ParseError(FormParserError):
-    """
-    This error (or a subclass) is raised when there is an error while parsing
-    something.
+    """This exception (or a subclass) is raised when there is an error while
+    parsing something.
     """
 
-    # This is the offset in the input data chunk (*NOT* the overall stream) in
-    # which the parse error occured.  Will be -1 if not specified.
+    #: This is the offset in the input data chunk (*NOT* the overall stream) in
+    #: which the parse error occured.  It will be -1 if not specified.
     offset = -1
 
 
 class MultipartParseError(ParseError):
-    """
-    This is a specific error that is raised when the MultipartParser detects
+    """This is a specific error that is raised when the MultipartParser detects
     an error while parsing.
     """
     pass
 
 
 class QuerystringParseError(ParseError):
-    """
-    This is a specific error that is raised when the MultipartParser detects
-    an error while parsing.
+    """This is a specific error that is raised when the QuerystringParser
+    detects an error while parsing.
     """
     pass
 
 
 class DecodeError(ParseError):
-    """
-    This exception is raised when there is a decoding error - for example with
-    the Base64Decoder or QuotedPrintableDecoder.
+    """This exception is raised when there is a decoding error - for example
+    with the Base64Decoder or QuotedPrintableDecoder.
     """
     pass
 

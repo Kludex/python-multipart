@@ -127,9 +127,19 @@ def parse_options_header(value):
 
 
 class Field(object):
-    """
-    Object that represents a form field.  You can subclass this to handle the
-    written data in an alternate method.
+    """A Field object represents a (parsed) form field.  It represents a single
+    field with a corresponding name and value.
+
+    The that a :class:`Field` will be instantiated with is as would be found in
+    the following HTML::
+
+        <input name="name_goes_here" type="text"/>
+
+    This class defines two methods, :meth:`on_data` and :meth:`on_end`, that
+    will be called when data is written to the Field, and when the Field is
+    finalized, respectively.
+
+    :param name: the name of the form field
     """
     def __init__(self, name):
         self._name = name
@@ -140,6 +150,15 @@ class Field(object):
 
     @classmethod
     def from_value(klass, name, value):
+        """Create an instance of a :class:`Field`, and set the corresponding
+        value - either None or an actual value.  This method will also
+        finalize the Field itself.
+
+        :param name: the name of the form field
+        :param value: the value of the form field - either a bytestring or
+                      None
+        """
+
         f = klass(name)
         if value is None:
             f.set_none()
@@ -149,21 +168,36 @@ class Field(object):
         return f
 
     def write(self, data):
+        """Write some data into the form field.
+
+        :param data: a bytestring
+        """
         return self.on_data(data)
 
     def on_data(self, data):
+        """This method is a callback that will be called whenever data is
+        written to the Field.
+
+        :param data: a bytestring
+        """
         self._value.append(data)
         self._cache = _missing
         return len(data)
 
     def on_end(self):
+        """This method is called whenever the Field is finalized.
+        """
         if self._cache is _missing:
             self._cache = b''.join(self._value)
 
     def finalize(self):
+        """Finalize the form field.
+        """
         self.on_end()
 
     def close(self):
+        """Close the Field object.  This will free any underlying cache.
+        """
         # Free our value array.
         if self._cache is _missing:
             self._cache = b''.join(self._value)
@@ -171,8 +205,7 @@ class Field(object):
         del self._value
 
     def set_none(self):
-        """
-        Some fields in a querystring can possibly have a value of None - for
+        """Some fields in a querystring can possibly have a value of None - for
         example, the string "foo&bar=&baz=asdf" will have a field with the
         name "foo" and value None, one with name "bar" and value "", and one
         with name "baz" and value "asdf".  Since the write() interface doesn't
@@ -182,10 +215,12 @@ class Field(object):
 
     @property
     def field_name(self):
+        """This property returns the name of the field."""
         return self._name
 
     @property
     def value(self):
+        """This property returns the value of the form field."""
         if self._cache is _missing:
             self._cache = b''.join(self._value)
 
@@ -216,10 +251,59 @@ class Field(object):
 
 
 class File(object):
-    """
-    This class represents an uploaded file.  It handles writing file data to
+    """This class represents an uploaded file.  It handles writing file data to
     either an in-memory file or a temporary file on-disk, if the optional
     threshold is passed.
+
+    There are some options that can be passed to the File to change behavior
+    of the class.  Valid options are as follows:
+
+    .. list-table::
+       :widths: 15 5 5 30
+       :header-rows: 1
+
+       * - Name
+         - Type
+         - Default
+         - Description
+       * - UPLOAD_DIR
+         - `str`
+         - None
+         - The directory to store uploaded files in.  If this is None, a
+           temporary file will be created in the system's standard location.
+       * - UPLOAD_KEEP_FILENAME
+         - `bool`
+         - False
+         - Whether or not to keep the filename of the uploaded file.  If True,
+           then the filename will be converted to a safe representation (e.g.
+           by removing any invalid path segments), and then saved with the
+           same name).  Otherwise, a temporary name will be used.
+       * - UPLOAD_KEEP_EXTENSIONS
+         - `bool`
+         - False
+         - Whether or not to keep the uploaded file's extension.  If False, the
+           file will be saved with the default temporary extension (usually
+           ".tmp").  Otherwise, the file's extension will be maintained.  Note
+           that this will properly combine with the UPLOAD_KEEP_FILENAME
+           setting.
+       * - MAX_MEMORY_FILE_SIZE
+         - `int`
+         - 1 MiB
+         - The maximum number of bytes of a File to keep in memory.  By
+           default, the contents of a File are kept into memory until a certain
+           limit is reached, after which the contents of the File are written
+           to a temporary file.  This behavior can be disabled by setting this
+           value to an appropriately large value (or, for example, infinity,
+           such as `float('inf')`.
+
+    :param file_name: The name of the file that this :class:`File` represents
+
+    :param field_name: The field name that uploaded this file.  Note that this
+                       can be None, if, for example, the file was uploaded
+                       with Content-Type application/octet-stream
+
+    :param config: The configuration for this File.  See above for valid
+                   configuration keys and their corresponding values.
     """
     def __init__(self, file_name, field_name=None, config={}):
         # Save configuration, set other variables default.
@@ -244,47 +328,46 @@ class File(object):
 
     @property
     def field_name(self):
-        """
-        The form field associated with this file.  May be None if there isn't
+        """The form field associated with this file.  May be None if there isn't
         one, for example when we have an application/octet-stream upload.
         """
         return self._field_name
 
     @property
     def file_name(self):
-        """
-        The file name given in the upload request.
+        """The file name given in the upload request.
         """
         return self._file_name
 
     @property
     def actual_file_name(self):
-        """
-        The file name that this file is saved as.  Will return None if it's not
+        """The file name that this file is saved as.  Will be None if it's not
         currently saved on disk.
         """
         return self._actual_file_name
 
     @property
     def file_object(self):
-        """
-        The file object that we're currently writing to.
+        """The file object that we're currently writing to.  Note that this
+        will either be an instance of a :class:`io.BytesIO`, or a regular file
+        object.
         """
         return self._fileobj
 
     @property
     def in_memory(self):
-        """
-        Whether or not this file object is currently stored in-memory or on-
-        disk.
+        """A boolean representing whether or not this file object is currently
+        stored in-memory or on-disk.
         """
         return self._in_memory
 
     def flush_to_disk(self):
-        """
-        If the file is already on-disk, do nothing.  Otherwise, copy from the
-        in-memory buffer to a disk file, and then reassign our internal file
-        object to this new disk file.
+        """If the file is already on-disk, do nothing.  Otherwise, copy from
+        the in-memory buffer to a disk file, and then reassign our internal
+        file object to this new disk file.
+
+        Note that if you attempt to flush a file that is already on-disk, a
+        warning will be logged to this module's logger.
         """
         if not self._in_memory:
             logger.warn("Trying to flush to disk when we're not in memory")
@@ -294,7 +377,7 @@ class File(object):
         self._fileobj.seek(0)
 
         # Open a new file.
-        new_file = self.get_disk_file()
+        new_file = self._get_disk_file()
 
         # Copy the file objects.
         shutil.copyfileobj(self._fileobj, new_file)
@@ -312,9 +395,8 @@ class File(object):
         # Close the old file object.
         old_fileobj.close()
 
-    def get_disk_file(self):
-        """
-        This function is responsible for getting a file object on-disk for us.
+    def _get_disk_file(self):
+        """This function is responsible for getting a file object on-disk for us.
         """
         logger.info("Opening a file on disk")
 
@@ -377,9 +459,18 @@ class File(object):
         return tmp_file
 
     def write(self, data):
+        """Write some data to the File.
+
+        :param data: a bytestring
+        """
         return self.on_data(data)
 
     def on_data(self, data):
+        """This method is a callback that will be called whenever data is
+        written to the File.
+
+        :param data: a bytestring
+        """
         bwritten = self._fileobj.write(data)
 
         # If the bytes written isn't the same as the length, just return.
@@ -403,12 +494,21 @@ class File(object):
         return bwritten
 
     def on_end(self):
+        """This method is called whenever the Field is finalized.
+        """
         pass
 
     def finalize(self):
+        """Finalize the form file.  This will not close the underlying file,
+        but simply signal that we are finished writing to the File.
+        """
         self.on_end()
 
     def close(self):
+        """Close the File object.  This will actually close the underlying
+        file object (whether it's a :class:`io.BytesIO` or an actual file
+        object).
+        """
         self._fileobj.close()
 
     def __repr__(self):
@@ -420,8 +520,7 @@ class File(object):
 
 
 class BaseParser(object):
-    """
-    This class implements some helpful methods for parsers.  Currently, it
+    """This class implements some helpful methods for parsers.  Currently, it
     just implements the callback logic in a central location.
     """
     def callback(self, name, data=None, start=None, end=None):
@@ -466,12 +565,31 @@ class BaseParser(object):
 
 
 class OctetStreamParser(BaseParser):
-    """
-    This parser parses an octet-stream request body and calls callbacks when
-    incoming data is received.  Callbacks are:
-        - on_start
-        - on_data       (with data parameters)
-        - on_end
+    """This parser parses an octet-stream request body and calls callbacks when
+    incoming data is received.  Callbacks are as follows:
+
+    .. list-table::
+       :widths: 15 10 30
+       :header-rows: 1
+
+       * - Callback Name
+         - Parameters
+         - Description
+       * - on_start
+         - None
+         - Called when the first data is parsed.
+       * - on_data
+         - data, start, end
+         - Called for each data chunk that is parsed.
+       * - on_end
+         - None
+         - Called when the parser is finished parsing all data.
+
+    :param callbacks: A dictionary of callbacks.  See the documentation for
+                      :class:`BaseParser`.
+
+    :param max_size: The maximum size of body to parse.  Defaults to infinity -
+                     i.e. unbounded.
     """
     def __init__(self, callbacks={}, max_size=float('inf')):
         self.callbacks = callbacks
@@ -484,6 +602,11 @@ class OctetStreamParser(BaseParser):
         self._current_size = 0
 
     def write(self, data):
+        """Write some data to the parser, which will perform size verification,
+        and then pass the data to the underlying callback.
+
+        :param data: a bytestring
+        """
         if not self._started:
             self.callback('start')
             self._started = True
@@ -504,6 +627,9 @@ class OctetStreamParser(BaseParser):
         return data_len
 
     def finalize(self):
+        """Finalize this parser, which signals to that we are finished parsing,
+        and sends the on_end callback.
+        """
         self.callback('end')
 
     def __repr__(self):
@@ -511,22 +637,49 @@ class OctetStreamParser(BaseParser):
 
 
 class QuerystringParser(BaseParser):
-    """
-    This is a streaming querystring parser.  It will consume data, and call
-    the callbacks given when it has enough data.
+    """This is a streaming querystring parser.  It will consume data, and call
+    the callbacks given when it has data.
 
-    Valid callbacks (* means with data):
-        - on_field_start
-        - on_field_name         *
-        - on_field_data         *
-        - on_field_end
-        - on_end
+    .. list-table::
+       :widths: 15 10 30
+       :header-rows: 1
 
-    Some details on how the strict_parsing deals with values:
-        - If a field has a value with an equal sign (e.g. "foo=bar", or
-          "foo="), it is always included.
-        - If a field has no equals sign (e.g. "...&name&..."), it will be
-          treated as an error if 'strict_parsing' is True, otherwise included.
+       * - Callback Name
+         - Parameters
+         - Description
+       * - on_field_start
+         - None
+         - Called when a new field is encountered.
+       * - on_field_name
+         - data, start, end
+         - Called when a portion of a field's name is encountered.
+       * - on_field_data
+         - data, start, end
+         - Called when a portion of a field's data is encountered.
+       * - on_field_end
+         - None
+         - Called when the end of a field is encountered.
+       * - on_end
+         - None
+         - Called when the parser is finished parsing all data.
+
+    :param callbacks: A dictionary of callbacks.  See the documentation for
+                      :class:`BaseParser`.
+
+    :param strict_parsing: Whether or not to parse the body strictly.  Defaults
+                           to False.  If this is set to True, then the behavior
+                           of the parser changes as the following: if a field
+                           has a value with an equal sign (e.g. "foo=bar", or
+                           "foo="), it is always included.  If a field has no
+                           equals sign (e.g. "...&name&..."), it will be
+                           treated as an error if 'strict_parsing' is True,
+                           otherwise included.  If an error is encountered,
+                           then a
+                           :class:`multipart.exceptions.QuerystringParseError`
+                           will be raised.
+
+    :param max_size: The maximum size of body to parse.  Defaults to infinity -
+                     i.e. unbounded.
     """
     SPLIT_RE = re.compile(b'[&;]')
 
@@ -548,6 +701,12 @@ class QuerystringParser(BaseParser):
         self.strict_parsing = strict_parsing
 
     def write(self, data):
+        """Write some data to the parser, which will perform size verification,
+        parse into either a field name or value, and then pass the
+        corresponding data to the underlying callback.
+
+        :param data: a bytestring
+        """
         # Handle sizing.
         data_len = len(data)
         if self._current_size + data_len > self.max_size:
@@ -710,6 +869,10 @@ class QuerystringParser(BaseParser):
         return len(data)
 
     def finalize(self):
+        """Finalize this parser, which signals to that we are finished parsing,
+        if we're still in the middle of a field, an on_field_end callback, and
+        then the on_end callback.
+        """
         # If we're currently in the middle of a field, we finish it.
         if self.state == STATE_FIELD_DATA:
             self.callback('field_end')
