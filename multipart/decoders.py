@@ -13,12 +13,12 @@ class Base64Decoder(object):
 
         from multipart.decoders import Base64Decoder
         fd = open("notb64.txt", "wb")
-        dec = Base64Decoder(fd)
+        decoder = Base64Decoder(fd)
         try:
-            dec.write("Zm9vYmFy")       # "foobar"
-            dec.finalize()
+            decoder.write("Zm9vYmFy")       # "foobar" in Base64
+            decoder.finalize()
         finally:
-            dec.close()
+            decoder.close()
 
         # The contents of "notb64.txt" should be "foobar".
 

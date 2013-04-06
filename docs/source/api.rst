@@ -9,6 +9,15 @@ This section of the documentation covers all of the public interfaces of
 python-multipart.
 
 
+Main Class
+----------
+
+.. currentmodule:: multipart.multipart
+
+.. autoclass:: FormParser
+   :members:
+
+
 Parsers
 -------
 
@@ -42,12 +51,7 @@ Support Classes
 Decoders
 --------
 
-.. currentmodule:: multipart.decoders
-
-.. autoclass:: Base64Decoder
-   :members:
-
-.. autoclass:: QuotedPrintableDecoder
+.. automodule:: multipart.decoders
    :members:
 
 
@@ -56,18 +60,5 @@ Exceptions
 
 The following are all custom exceptions that python-multipart will raise, for various cases.  Each method that will raise an exception will document it in this documentation.
 
-.. currentmodule:: multipart.exceptions
-
-.. autoclass:: FormParserError
-
-.. autoclass:: ParseError
+.. automodule:: multipart.exceptions
    :members:
-
-.. autoclass:: MultipartParseError
-
-.. autoclass:: QuerystringParseError
-
-.. autoclass:: DecodeError
-
-.. autoclass:: FileError
-

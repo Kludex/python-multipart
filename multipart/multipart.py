@@ -520,12 +520,38 @@ class File(object):
 
 
 class BaseParser(object):
-    """This class implements some helpful methods for parsers.  Currently, it
-    just implements the callback logic in a central location.
+    """This class is the base class for all parsers.  It contains the logic for
+    calling and adding callbacks.
+
+    A callback can be one of two different forms.  "Notification callbacks" are
+    callbacks that are called when something happens - for example, when a new
+    part of a multipart message is encountered by the parser.  "Data callbacks"
+    are called when we get some sort of data - for example, part of the body of
+    a multipart chunk.  Notification callbacks are called with no parameters,
+    whereas data callbacks are called with three, as follows::
+
+        data_callback(data, start, end)
+
+    The "data" parameter is a bytestring (i.e. "foo" on Python 2, or b"foo" on
+    Python 3).  "start" and "end" are integer indexes into the "data" string
+    that represent the data of interest.  Thus, in a data callback, the slice
+    `data[start:end]` represents the data that the callback is "interested in".
+    The callback is not passed a copy of the data, since copying severely hurts
+    performance.
     """
     def callback(self, name, data=None, start=None, end=None):
-        """
-        This function calls a provided callback with some data.
+        """This function calls a provided callback with some data.  If the
+        callback is not set, will do nothing.
+
+        :param name: The name of the callback to call (as a string).
+
+        :param data: Data to pass to the callback.  If None, then it is
+                     assumed that the callback is a notification callback,
+                     and no parameters are given.
+
+        :param end: An integer that is passed to the data callback.
+
+        :param start: An integer that is passed to the data callback.
         """
         name = "on_" + name
         func = self.callbacks.get(name)
@@ -545,9 +571,14 @@ class BaseParser(object):
             func()
 
     def set_callback(self, name, new_func):
-        """
-        Update the function for a callback.  Removes from the callbacks dict
+        """Update the function for a callback.  Removes from the callbacks dict
         if new_func is None.
+
+        :param name: The name of the callback to call (as a string).
+
+        :param new_func: The new function for the callback.  If None, then the
+                         callback will be removed (with no error if it does not
+                         exist).
         """
         if new_func is None:
             self.callbacks.pop('on_' + name, None)
@@ -703,7 +734,10 @@ class QuerystringParser(BaseParser):
     def write(self, data):
         """Write some data to the parser, which will perform size verification,
         parse into either a field name or value, and then pass the
-        corresponding data to the underlying callback.
+        corresponding data to the underlying callback.  If an error is
+        encountered while parsing, a QuerystringParseError will be raised.  The
+        "offset" attribute of the raised exception will be set to the offset in
+        the input data chunk (NOT the overall stream) that caused the error.
 
         :param data: a bytestring
         """
@@ -980,7 +1014,10 @@ class MultipartParser(BaseParser):
     def write(self, data):
         """Write some data to the parser, which will perform size verification,
         and then parse the data into the appropriate location (e.g. header,
-        data, etc.), and pass this on to the underlying callback.
+        data, etc.), and pass this on to the underlying callback.  If an error
+        is encountered, a MultipartParseError will be raised.  The "offset"
+        attribute on the raised exception will be set to the offset of the byte
+        in the input chunk that caused the error.
 
         :param data: a bytestring
         """
@@ -1410,8 +1447,59 @@ class MultipartParser(BaseParser):
 
 
 class FormParser(object):
-    # This is the default configuration for our form parser.
-    # Note: all file sizes should be in bytes.
+    """This class is the all-in-one form parser.  Given all the information
+    necessary to parse a form, it will instantiate the correct parser, create
+    the proper :class:`Field` and :class:`File` classes to store the data that
+    is parsed, and call the two given callbacks with each field and file as
+    they become available.
+
+    :param content_type: The Content-Type of the incoming request.  This is
+                         used to select the appropriate parser.
+
+    :param on_field: The callback to call when a field has been parsed and is
+                     ready for usage.  See above for parameters.
+
+    :param on_file: The callback to call when a file has been parsed and is
+                    ready for usage.  See above for parameters.
+
+    :param on_end: An optional callback to call when all fields and files in a
+                   request has been parsed.  Can be None.
+
+    :param boundary: If the request is a multipart/form-data request, this
+                     should be the boundary of the request, as given in the
+                     Content-Type header, as a bytestring.
+
+    :param file_name: If the request is of type application/octet-stream, then
+                      the body of the request will not contain any information
+                      about the uploaded file.  In such cases, you can provide
+                      the file name of the uploaded file manually.
+
+    :param FileClass: The class to use for uploaded files.  Defaults to
+                      :class:`File`, but you can provide your own class if you
+                      wish to customize behaviour.  The class will be
+                      instantiated as FileClass(file_name, field_name), and it
+                      must provide the folllowing functions::
+                          file_instance.write(data)
+                          file_instance.finalize()
+                          file_instance.close()
+
+    :param FieldClass: The class to use for uploaded fields.  Defaults to
+                       :class:`Field`, but you can provide your own class if
+                       you wish to customize behaviour.  The class will be
+                       instantiated as FieldClass(field_name), and it must
+                       provide the folllowing functions::
+                           field_instance.write(data)
+                           field_instance.finalize()
+                           field_instance.close()
+
+    :param config: Configuration to use for this FormParser.  The default
+                   values are taken from the DEFAULT_CONFIG value, and then
+                   any keys present in this dictionary will overwrite the
+                   default values.
+
+    """
+    #: This is the default configuration for our form parser.
+    #: Note: all file sizes should be in bytes.
     DEFAULT_CONFIG = {
         'MAX_BODY_SIZE': 1024,
         'MAX_MEMORY_FILE_SIZE': 1 * 1024 * 1024,
@@ -1655,15 +1743,22 @@ class FormParser(object):
         self.parser = parser
 
     def write(self, data):
+        """Write some data.  The parser will forward this to the appropriate
+        underlying parser.
+
+        :param data: a bytestring
+        """
         self.bytes_received += len(data)
         # TODO: check the parser's return value for errors?
         return self.parser.write(data)
 
     def finalize(self):
+        """Finalize the parser."""
         if self.parser is not None and hasattr(self.parser, 'finalize'):
             self.parser.finalize()
 
     def close(self):
+        """Close the parser."""
         if self.parser is not None and hasattr(self.parser, 'close'):
             self.parser.close()
 
