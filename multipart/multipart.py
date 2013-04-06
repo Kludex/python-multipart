@@ -886,20 +886,58 @@ class QuerystringParser(BaseParser):
 
 
 class MultipartParser(BaseParser):
-    """
-    This class implements a state machine that parses a multipart/form-data
-    message.
+    """This class is a streaming multipart/form-data parser.
 
-    Valid callbacks (* indicates given data):
-        - on_part_begin
-        - on_part_data              *
-        - on_part_end
-        - on_header_begin
-        - on_header_field           *
-        - on_header_value           *
-        - on_header_end
-        - on_headers_finished
-        - on_end
+    .. list-table::
+       :widths: 15 10 30
+       :header-rows: 1
+
+       * - Callback Name
+         - Parameters
+         - Description
+       * - on_part_begin
+         - None
+         - Called when a new part of the multipart message is encountered.
+       * - on_part_data
+         - data, start, end
+         - Called when a portion of a part's data is encountered.
+       * - on_part_end
+         - None
+         - Called when the end of a part is reached.
+       * - on_header_begin
+         - None
+         - Called when we've found a new header in a part of a multipart
+           message
+       * - on_header_field
+         - data, start, end
+         - Called each time an additional portion of a header is read (i.e. the
+           part of the header that is before the colon; the "Foo" in
+           "Foo: Bar").
+       * - on_header_value
+         - data, start, end
+         - Called when we get data for a header.
+       * - on_header_end
+         - None
+         - Called when the current header is finished - i.e. we've reached the
+           newline at the end of the header.
+       * - on_headers_finished
+         - None
+         - Called when all headers are finished, and before the part data
+           starts.
+       * - on_end
+         - None
+         - Called when the parser is finished parsing all data.
+
+
+    :param boundary: The multipart boundary.  This is required, and must match
+                     what is given in the HTTP request - usually in the
+                     Content-Type header.
+
+    :param callbacks: A dictionary of callbacks.  See the documentation for
+                      :class:`BaseParser`.
+
+    :param max_size: The maximum size of body to parse.  Defaults to infinity -
+                     i.e. unbounded.
     """
 
     def __init__(self, boundary, callbacks={}, max_size=float('inf')):
@@ -940,6 +978,12 @@ class MultipartParser(BaseParser):
         self.lookbehind = [NULL for x in range(len(boundary) + 8)]
 
     def write(self, data):
+        """Write some data to the parser, which will perform size verification,
+        and then parse the data into the appropriate location (e.g. header,
+        data, etc.), and pass this on to the underlying callback.
+
+        :param data: a bytestring
+        """
         # Handle sizing.
         data_len = len(data)
         if self._current_size + data_len > self.max_size:
@@ -1351,6 +1395,12 @@ class MultipartParser(BaseParser):
         return length
 
     def finalize(self):
+        """Finalize this parser, which signals to that we are finished parsing.
+
+        Note: It does not currently, but in the future, it will verify that we
+        are in the final state of the parser (i.e. the end of the multipart
+        message is well-formed), and, if not, throw an error.
+        """
         # TODO: verify that we're in the state STATE_END, otherwise throw an
         # error or otherwise state that we're not finished parsing.
         pass
