@@ -1,22 +1,10 @@
-.. python-multipart documentation master file, created by
-   sphinx-quickstart on Fri Apr  5 20:24:27 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+:orphan:
 
-Welcome to python-multipart's documentation!
-============================================
+Python-Multipart
+================
 
-Contents:
+.. module:: multipart
 
-.. toctree::
-   :maxdepth: 2
+Python-Multipart is a streaming multipart parser for Python.
 
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+.. include:: contents.rst.inc

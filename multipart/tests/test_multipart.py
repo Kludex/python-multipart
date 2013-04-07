@@ -34,10 +34,10 @@ def force_bytes(val):
 
 class TestField(unittest.TestCase):
     def setUp(self):
-        self.f = Field(b'foo')
+        self.f = Field('foo')
 
     def test_name(self):
-        self.assertEqual(self.f.field_name, b'foo')
+        self.assertEqual(self.f.field_name, 'foo')
 
     def test_data(self):
         self.f.write(b'test123')
@@ -235,17 +235,17 @@ class TestFile(unittest.TestCase):
 
 class TestParseOptionsHeader(unittest.TestCase):
     def test_simple(self):
-        t, p = parse_options_header(b'application/json')
+        t, p = parse_options_header('application/json')
         self.assertEqual(t, b'application/json')
         self.assertEqual(p, {})
 
     def test_blank(self):
-        t, p = parse_options_header(b'')
+        t, p = parse_options_header('')
         self.assertEqual(t, b'')
         self.assertEqual(p, {})
 
     def test_single_param(self):
-        t, p = parse_options_header(b'application/json;par=val')
+        t, p = parse_options_header('application/json;par=val')
         self.assertEqual(t, b'application/json')
         self.assertEqual(p, {b'par': b'val'})
 
@@ -727,7 +727,7 @@ class TestFormParser(unittest.TestCase):
             self.ended = True
 
         # Get a form-parser instance.
-        self.f = FormParser(b'multipart/form-data', on_field, on_file, on_end,
+        self.f = FormParser('multipart/form-data', on_field, on_file, on_end,
                             boundary=boundary, config=config)
 
     def assert_file_data(self, f, data):
@@ -835,7 +835,7 @@ class TestFormParser(unittest.TestCase):
         # We split the file through all cases.
         for first, last in split_all(test_data):
             # Create form parser.
-            self.make(b'boundary')
+            self.make('boundary')
 
             # Feed with data in 2 chunks.
             i = 0
@@ -860,7 +860,7 @@ class TestFormParser(unittest.TestCase):
             test_data = f.read()
 
         # Create form parser.
-        self.make(b'boundary')
+        self.make('boundary')
 
         # Write all bytes.
         # NOTE: Can't simply do `for b in test_data`, since that gives
@@ -932,7 +932,7 @@ class TestFormParser(unittest.TestCase):
             print("  " + msg)
 
             # Create form parser.
-            self.make(b'boundary')
+            self.make('boundary')
 
             # Feed with data, and ignore form parser exceptions.
             i = 0
@@ -970,7 +970,7 @@ class TestFormParser(unittest.TestCase):
             print("  Testing with %d random bytes..." % (data_size,))
 
             # Create form parser.
-            self.make(b'boundary')
+            self.make('boundary')
 
             # Feed with data, and ignore form parser exceptions.
             i = 0
@@ -991,12 +991,12 @@ class TestFormParser(unittest.TestCase):
         print("Exceptions: %d" % (exceptions,))
 
     def test_bad_start_boundary(self):
-        self.make(b'boundary')
+        self.make('boundary')
         data = b'--boundary\rfoobar'
         with self.assertRaises(MultipartParseError):
             self.f.write(data)
 
-        self.make(b'boundary')
+        self.make('boundary')
         data = b'--boundaryfoobar'
         with self.assertRaises(MultipartParseError):
             i = self.f.write(data)
@@ -1008,7 +1008,7 @@ class TestFormParser(unittest.TestCase):
         on_field = Mock()
         on_end = Mock()
 
-        f = FormParser(b'application/octet-stream', on_field, on_file, on_end=on_end, file_name=b'foo.txt')
+        f = FormParser('application/octet-stream', on_field, on_file, on_end=on_end, file_name=b'foo.txt')
         self.assertTrue(isinstance(f.parser, OctetStreamParser))
 
         f.write(b'test')
@@ -1053,17 +1053,17 @@ class TestFormParser(unittest.TestCase):
             # ... and assert that we've finished.
             self.assertTrue(on_end.called)
 
-        f = FormParser(b'application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
+        f = FormParser('application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
         self.assertTrue(isinstance(f.parser, QuerystringParser))
         simple_test(f)
 
-        f = FormParser(b'application/x-url-encoded', on_field, on_file, on_end=on_end)
+        f = FormParser('application/x-url-encoded', on_field, on_file, on_end=on_end)
         self.assertTrue(isinstance(f.parser, QuerystringParser))
         simple_test(f)
 
     def test_close_methods(self):
         parser = Mock()
-        f = FormParser(b'application/x-url-encoded', None, None)
+        f = FormParser('application/x-url-encoded', None, None)
         f.parser = parser
 
         f.finalize()
@@ -1075,13 +1075,13 @@ class TestFormParser(unittest.TestCase):
     def test_bad_content_type(self):
         # We should raise a ValueError for a bad Content-Type
         with self.assertRaises(ValueError):
-            f = FormParser(b'application/bad', None, None)
+            f = FormParser('application/bad', None, None)
 
     def test_no_boundary_given(self):
         # We should raise a FormParserError when parsing a multipart message
         # without a boundary.
         with self.assertRaises(FormParserError):
-            f = FormParser(b'multipart/form-data', None, None)
+            f = FormParser('multipart/form-data', None, None)
 
     def test_bad_content_transfer_encoding(self):
         data = b'----boundary\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\nContent-Type: text/plain\r\nContent-Transfer-Encoding: badstuff\r\n\r\nTest\r\n----boundary--\r\n'
@@ -1094,8 +1094,8 @@ class TestFormParser(unittest.TestCase):
 
         # Test with erroring.
         config = {'UPLOAD_ERROR_ON_BAD_CTE': True}
-        f = FormParser(b'multipart/form-data', on_field, on_file,
-                       on_end=on_end, boundary=b'--boundary', config=config)
+        f = FormParser('multipart/form-data', on_field, on_file,
+                       on_end=on_end, boundary='--boundary', config=config)
 
         with self.assertRaises(FormParserError):
             f.write(data)
@@ -1103,8 +1103,8 @@ class TestFormParser(unittest.TestCase):
 
         # Test without erroring.
         config = {'UPLOAD_ERROR_ON_BAD_CTE': False}
-        f = FormParser(b'multipart/form-data', on_field, on_file,
-                       on_end=on_end, boundary=b'--boundary', config=config)
+        f = FormParser('multipart/form-data', on_field, on_file,
+                       on_end=on_end, boundary='--boundary', config=config)
 
         f.write(data)
         f.finalize()
@@ -1117,7 +1117,7 @@ class TestFormParser(unittest.TestCase):
         on_file = Mock()
         on_end = Mock()
 
-        f = FormParser(b'application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
+        f = FormParser('application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
         f.write(b'foo=bar&another&baz=asdf')
         f.finalize()
 
@@ -1137,7 +1137,7 @@ class TestFormParser(unittest.TestCase):
             test_data = f.read()
 
         # Create form parser.
-        self.make(b'boundary')
+        self.make('boundary')
 
         # Set the maximum length that we can process to be halfway through the
         # given data.
@@ -1158,7 +1158,7 @@ class TestFormParser(unittest.TestCase):
         # Create form parser setting the maximum length that we can process to
         # be halfway through the given data.
         size = len(test_data) / 2
-        self.make(b'boundary', config={'MAX_BODY_SIZE': size})
+        self.make('boundary', config={'MAX_BODY_SIZE': size})
 
         i = self.f.write(test_data)
         self.f.finalize()
@@ -1173,7 +1173,7 @@ class TestFormParser(unittest.TestCase):
         on_field = Mock()
         on_end = Mock()
 
-        f = FormParser(b'application/octet-stream', on_field, on_file,
+        f = FormParser('application/octet-stream', on_field, on_file,
                        on_end=on_end, file_name=b'foo.txt',
                        config={'MAX_BODY_SIZE': 10})
 
@@ -1187,6 +1187,54 @@ class TestFormParser(unittest.TestCase):
             q = MultipartParser(b'bound', max_size='foo')
 
 
+class TestHelperFunctions(unittest.TestCase):
+    def test_create_form_parser(self):
+        r = create_form_parser({'Content-Type': 'application/octet-stream'},
+                               None, None)
+        self.assertTrue(isinstance(r, FormParser))
+
+    def test_create_form_parser_error(self):
+        headers = {}
+        with self.assertRaises(ValueError):
+            create_form_parser(headers, None, None)
+
+    def test_parse_form(self):
+        on_field = Mock()
+        on_file = Mock()
+
+        parse_form(
+            {'Content-Type': 'application/octet-stream',
+             },
+            BytesIO(b'123456789012345'),
+            on_field,
+            on_file
+        )
+
+        on_file.assert_called_once()
+
+        # Assert that the first argument of the call (a File object) has size
+        # 15 - i.e. all data is written.
+        self.assertEqual(on_file.call_args[0][0].size, 15)
+
+    def test_parse_form_content_length(self):
+        files = []
+        def on_file(file):
+            files.append(file)
+
+        parse_form(
+            {'Content-Type': 'application/octet-stream',
+             'Content-Length': '10'
+             },
+            BytesIO(b'123456789012345'),
+            None,
+            on_file
+        )
+
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0].size, 10)
+
+
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestFile))
@@ -1197,6 +1245,7 @@ def suite():
     suite.addTest(unittest.makeSuite(TestBase64Decoder))
     suite.addTest(unittest.makeSuite(TestQuotedPrintableDecoder))
     suite.addTest(unittest.makeSuite(TestFormParser))
+    suite.addTest(unittest.makeSuite(TestHelperFunctions))
 
     return suite
 

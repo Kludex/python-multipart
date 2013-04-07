@@ -98,6 +98,11 @@ def parse_options_header(value):
     if not value:
         return (b'', {})
 
+    # If we are passed a string, we assume that it conforms to WSGI and does
+    # not contain any code point that's not in latin-1.
+    if isinstance(value, text_type):            # pragma: no cover
+        value = value.encode('latin-1')
+
     # If we have no options, return the string as-is.
     if b';' not in value:
         return (value.lower().strip(), {})
@@ -130,8 +135,8 @@ class Field(object):
     """A Field object represents a (parsed) form field.  It represents a single
     field with a corresponding name and value.
 
-    The that a :class:`Field` will be instantiated with is as would be found in
-    the following HTML::
+    The name that a :class:`Field` will be instantiated with is the same name
+    that would be found in the following HTML::
 
         <input name="name_goes_here" type="text"/>
 
@@ -353,6 +358,13 @@ class File(object):
         object.
         """
         return self._fileobj
+
+    @property
+    def size(self):
+        """The total size of this file, counted as the number of bytes that
+        currently have been written to the file.
+        """
+        return self._bytes_written
 
     @property
     def in_memory(self):
@@ -644,12 +656,12 @@ class OctetStreamParser(BaseParser):
 
         # Truncate data length.
         data_len = len(data)
-        if self._current_size + data_len > self.max_size:
+        if (self._current_size + data_len) > self.max_size:
             # We truncate the length of data that we are to process.
             new_size = int(self.max_size - self._current_size)
-            logging.warn("Current size is %d (max %d), so truncating data "
-                         "length from %d to %d", self._current_size,
-                         self.max_size, data_len, new_size)
+            logger.warn("Current size is %d (max %d), so truncating data "
+                        "length from %d to %d", self._current_size,
+                        self.max_size, data_len, new_size)
             data_len = new_size
 
         # Increment size, then callback, in case there's an exception.
@@ -712,8 +724,6 @@ class QuerystringParser(BaseParser):
     :param max_size: The maximum size of body to parse.  Defaults to infinity -
                      i.e. unbounded.
     """
-    SPLIT_RE = re.compile(b'[&;]')
-
     def __init__(self, callbacks={}, strict_parsing=False,
                  max_size=float('inf')):
         self.state = STATE_BEFORE_FIELD
@@ -743,12 +753,12 @@ class QuerystringParser(BaseParser):
         """
         # Handle sizing.
         data_len = len(data)
-        if self._current_size + data_len > self.max_size:
+        if (self._current_size + data_len) > self.max_size:
             # We truncate the length of data that we are to process.
             new_size = int(self.max_size - self._current_size)
-            logging.warn("Current size is %d (max %d), so truncating data "
-                         "length from %d to %d", self._current_size,
-                         self.max_size, data_len, new_size)
+            logger.warn("Current size is %d (max %d), so truncating data "
+                        "length from %d to %d", self._current_size,
+                        self.max_size, data_len, new_size)
             data_len = new_size
 
         l = 0
@@ -1000,6 +1010,8 @@ class MultipartParser(BaseParser):
         # self.skip = tuple(skip)
 
         # Save our boundary.
+        if isinstance(boundary, text_type):         # pragma: no cover
+            boundary = boundary.encode('latin-1')
         self.boundary = b'\r\n--' + boundary
 
         # Get a set of characters that belong to our boundary.
@@ -1023,12 +1035,12 @@ class MultipartParser(BaseParser):
         """
         # Handle sizing.
         data_len = len(data)
-        if self._current_size + data_len > self.max_size:
+        if (self._current_size + data_len) > self.max_size:
             # We truncate the length of data that we are to process.
             new_size = int(self.max_size - self._current_size)
-            logging.warn("Current size is %d (max %d), so truncating data "
-                         "length from %d to %d", self._current_size,
-                         self.max_size, data_len, new_size)
+            logger.warn("Current size is %d (max %d), so truncating data "
+                        "length from %d to %d", self._current_size,
+                        self.max_size, data_len, new_size)
             data_len = new_size
 
         l = 0
@@ -1501,7 +1513,7 @@ class FormParser(object):
     #: This is the default configuration for our form parser.
     #: Note: all file sizes should be in bytes.
     DEFAULT_CONFIG = {
-        'MAX_BODY_SIZE': 1024,
+        'MAX_BODY_SIZE': float('inf'),
         'MAX_MEMORY_FILE_SIZE': 1 * 1024 * 1024,
         'UPLOAD_DIR': None,
         'UPLOAD_KEEP_FILENAME': False,
@@ -1512,11 +1524,10 @@ class FormParser(object):
     }
 
     def __init__(self, content_type, on_field, on_file, on_end=None,
-                 boundary=None, content_length=-1, file_name=None,
-                 FileClass=File, FieldClass=Field, config={}):
+                 boundary=None, file_name=None, FileClass=File,
+                 FieldClass=Field, config={}):
 
         # Save variables.
-        self.content_length = content_length
         self.content_type = content_type
         self.boundary = boundary
         self.bytes_received = 0
@@ -1536,7 +1547,7 @@ class FormParser(object):
         self.config.update(config)
 
         # Depending on the Content-Type, we instantiate the correct parser.
-        if content_type == b'application/octet-stream':
+        if content_type == 'application/octet-stream':
             # Work around the lack of 'nonlocal' in Py2
             class vars(object):
                 f = None
@@ -1568,8 +1579,8 @@ class FormParser(object):
             parser = OctetStreamParser(callbacks,
                                        max_size=self.config['MAX_BODY_SIZE'])
 
-        elif (content_type == b'application/x-www-form-urlencoded' or
-              content_type == b'application/x-url-encoded'):
+        elif (content_type == 'application/x-www-form-urlencoded' or
+              content_type == 'application/x-url-encoded'):
 
             name_buffer = []
 
@@ -1620,7 +1631,7 @@ class FormParser(object):
                 max_size=self.config['MAX_BODY_SIZE']
             )
 
-        elif content_type == b'multipart/form-data':
+        elif content_type == 'multipart/form-data':
             if boundary is None:
                 logger.error("No boundary given")
                 raise FormParserError("No boundary given")
@@ -1763,9 +1774,108 @@ class FormParser(object):
             self.parser.close()
 
     def __repr__(self):
-        return "%s(content_type=%r, content_length=%r, parser=%r)" % (
+        return "%s(content_type=%r, parser=%r)" % (
             self.__class__.__name__,
             self.content_type,
-            self.content_length,
             self.parser,
         )
+
+
+def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
+                       config={}):
+    """This function is a helper function to aid in creating a FormParser
+    instances.  Given a dictionary-like headers object, it will determine
+    the correct information needed, instantiate a FormParser with the
+    appropriate values and given callbacks, and then return the corresponding
+    parser.
+
+    :param headers: A dictionary-like object of HTTP headers.  The only
+                    required header is Content-Type.
+
+    :param on_field: Callback to call with each parsed field.
+
+    :param on_file: Callback to call with each parsed file.
+
+    :param trust_x_headers: Whether or not to trust information received from
+                            certain X-Headers - for example, the file name from
+                            X-File-Name.
+
+    :param config: Configuration variables to pass to the FormParser.
+    """
+    content_type = headers.get('Content-Type')
+    if content_type is None:
+        logger.warn("No Content-Type header given")
+        raise ValueError("No Content-Type header given!")
+
+    # Boundaries are optional (the FormParser will raise if one is needed
+    # but not given).
+    content_type, params = parse_options_header(content_type)
+    boundary = params.get(b'boundary')
+
+    # We need content_type to be a string, not a bytes object.
+    content_type = content_type.decode('latin-1')
+
+    # File names are optional.
+    file_name = headers.get('X-File-Name')
+
+    # Instantiate a form parser.
+    form_parser = FormParser(content_type,
+                             on_field,
+                             on_file,
+                             boundary=boundary,
+                             file_name=file_name,
+                             config=config)
+
+    # Return our parser.
+    return form_parser
+
+
+def parse_form(headers, input_stream, on_field, on_file, chunk_size=1048576,
+               **kwargs):
+    """This function is useful if you just want to parse a request body,
+    without too much work.  Pass it a dictionary-like object of the request's
+    headers, and a file-like object for the input stream, along with two
+    callbacks that will get called whenever a field or file is parsed.
+
+    :param headers: A dictionary-like object of HTTP headers.  The only
+                    required header is Content-Type.
+
+    :param input_stream: A file-like object that represents the request body.
+                         The read() method must return bytestrings.
+
+    :param on_field: Callback to call with each parsed field.
+
+    :param on_file: Callback to call with each parsed file.
+
+    :param chunk_size: The maximum size to read from the input stream and write
+                       to the parser at one time.  Defaults to 1 MiB.
+    """
+
+    # Create our form parser.
+    parser = create_form_parser(headers, on_field, on_file)
+
+    # Read chunks of 100KiB and write to the parser, but never read more than
+    # the given Content-Length, if any.
+    content_length = headers.get('Content-Length')
+    if content_length is not None:
+        content_length = int(content_length)
+    else:
+        content_length = float('inf')
+    bytes_read = 0
+
+    while True:
+        # Read only up to the Content-Length given.
+        max_readable = min(content_length - bytes_read, 1048576)
+        buff = input_stream.read(max_readable)
+
+        # Write to the parser and update our length.
+        parser.write(buff)
+        bytes_read += len(buff)
+
+        # If we get a buffer that's smaller than the size requested, or if we
+        # have read up to our content length, we're done.
+        if len(buff) != max_readable or bytes_read == content_length:
+            break
+
+    # Tell our parser that we're done writing data.
+    parser.finalize()
