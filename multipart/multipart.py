@@ -26,9 +26,6 @@ from numbers import Number
 # Unique missing object.
 _missing = object()
 
-# Get logger for this module.
-logger = logging.getLogger(__name__)
-
 # States for the querystring parser.
 STATE_BEFORE_FIELD = 0
 STATE_FIELD_NAME   = 1
@@ -312,6 +309,7 @@ class File(object):
     """
     def __init__(self, file_name, field_name=None, config={}):
         # Save configuration, set other variables default.
+        self.logger = logging.getLogger(__name__)
         self._config = config
         self._in_memory = True
         self._bytes_written = 0
@@ -382,7 +380,9 @@ class File(object):
         warning will be logged to this module's logger.
         """
         if not self._in_memory:
-            logger.warn("Trying to flush to disk when we're not in memory")
+            self.logger.warn(
+                "Trying to flush to disk when we're not in memory"
+            )
             return
 
         # Go back to the start of our file.
@@ -410,7 +410,7 @@ class File(object):
     def _get_disk_file(self):
         """This function is responsible for getting a file object on-disk for us.
         """
-        logger.info("Opening a file on disk")
+        self.logger.info("Opening a file on disk")
 
         file_dir = self._config.get('UPLOAD_DIR')
         keep_filename = self._config.get('UPLOAD_KEEP_FILENAME', False)
@@ -418,7 +418,7 @@ class File(object):
 
         # If we have a directory and are to keep the filename...
         if file_dir is not None and keep_filename:
-            logger.info("Saving with filename in: %r", file_dir)
+            self.logger.info("Saving with filename in: %r", file_dir)
 
             # Build our filename.
             # TODO: what happens if we don't have a filename?
@@ -428,12 +428,12 @@ class File(object):
 
             path = os.path.join(file_dir, fname)
             try:
-                logger.info("Opening file: %r", path)
+                self.logger.info("Opening file: %r", path)
                 tmp_file = open(path, 'w+b')
             except (IOError, OSError) as e:
                 tmp_file = None
 
-                logger.exception("Error opening temporary file")
+                self.logger.exception("Error opening temporary file")
                 raise FileError("Error opening temporary file: %r" % path)
         else:
             # Build options array.
@@ -454,11 +454,12 @@ class File(object):
                 options['dir'] = d
 
             # Create a temporary (named) file with the appropriate settings.
-            logger.info("Creating a temporary file with options: %r", options)
+            self.logger.info("Creating a temporary file with options: %r",
+                             options)
             try:
                 tmp_file = tempfile.NamedTemporaryFile(**options)
             except (IOError, OSError):
-                logger.exception("Error creating named temporary file")
+                self.logger.exception("Error creating named temporary file")
                 raise FileError("Error creating named temporary file")
 
             fname = tmp_file.name
@@ -487,7 +488,7 @@ class File(object):
 
         # If the bytes written isn't the same as the length, just return.
         if bwritten != len(data):
-            logger.warn("bwritten != len(data) (%d != %d)", bwritten,
+            self.logger.warn("bwritten != len(data) (%d != %d)", bwritten,
                         len(data))
             return bwritten
 
@@ -499,7 +500,7 @@ class File(object):
                 self._config.get('MAX_MEMORY_FILE_SIZE') is not None and
                 (self._bytes_written >
                  self._config.get('MAX_MEMORY_FILE_SIZE'))):
-            logger.info("Flushing to disk")
+            self.logger.info("Flushing to disk")
             self.flush_to_disk()
 
         # Return the number of bytes written.
@@ -551,6 +552,9 @@ class BaseParser(object):
     The callback is not passed a copy of the data, since copying severely hurts
     performance.
     """
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+
     def callback(self, name, data=None, start=None, end=None):
         """This function calls a provided callback with some data.  If the
         callback is not set, will do nothing.
@@ -576,10 +580,10 @@ class BaseParser(object):
             if start is not None and start == end:
                 return
 
-            logger.debug("Calling %s with data[%d:%d]", name, start, end)
+            self.logger.debug("Calling %s with data[%d:%d]", name, start, end)
             func(data, start, end)
         else:
-            logger.debug("Calling %s with no data", name)
+            self.logger.debug("Calling %s with no data", name)
             func()
 
     def set_callback(self, name, new_func):
@@ -635,6 +639,7 @@ class OctetStreamParser(BaseParser):
                      i.e. unbounded.
     """
     def __init__(self, callbacks={}, max_size=float('inf')):
+        super(OctetStreamParser, self).__init__()
         self.callbacks = callbacks
         self._started = False
 
@@ -659,7 +664,7 @@ class OctetStreamParser(BaseParser):
         if (self._current_size + data_len) > self.max_size:
             # We truncate the length of data that we are to process.
             new_size = int(self.max_size - self._current_size)
-            logger.warn("Current size is %d (max %d), so truncating data "
+            self.logger.warn("Current size is %d (max %d), so truncating data "
                         "length from %d to %d", self._current_size,
                         self.max_size, data_len, new_size)
             data_len = new_size
@@ -726,6 +731,7 @@ class QuerystringParser(BaseParser):
     """
     def __init__(self, callbacks={}, strict_parsing=False,
                  max_size=float('inf')):
+        super(QuerystringParser, self).__init__()
         self.state = STATE_BEFORE_FIELD
         self._found_sep = False
 
@@ -756,7 +762,7 @@ class QuerystringParser(BaseParser):
         if (self._current_size + data_len) > self.max_size:
             # We truncate the length of data that we are to process.
             new_size = int(self.max_size - self._current_size)
-            logger.warn("Current size is %d (max %d), so truncating data "
+            self.logger.warn("Current size is %d (max %d), so truncating data "
                         "length from %d to %d", self._current_size,
                         self.max_size, data_len, new_size)
             data_len = new_size
@@ -797,7 +803,7 @@ class QuerystringParser(BaseParser):
                             e.offset = i
                             raise e
                         else:
-                            logger.debug("Skipping duplicate ampersand/"
+                            self.logger.debug("Skipping duplicate ampersand/"
                                          "semicolon at %d", i)
                     else:
                         # This case is when we're skipping the (first)
@@ -901,7 +907,7 @@ class QuerystringParser(BaseParser):
 
             else:                   # pragma: no cover (error case)
                 msg = "Reached an unknown state %d at %d" % (state, i)
-                logger.warn(msg)
+                self.logger.warn(msg)
                 e = QuerystringParseError(msg)
                 e.offset = i
                 raise e
@@ -986,6 +992,7 @@ class MultipartParser(BaseParser):
 
     def __init__(self, boundary, callbacks={}, max_size=float('inf')):
         # Initialize parser state.
+        super(MultipartParser, self).__init__()
         self.state = STATE_START
         self.index = self.flags = 0
 
@@ -1038,7 +1045,7 @@ class MultipartParser(BaseParser):
         if (self._current_size + data_len) > self.max_size:
             # We truncate the length of data that we are to process.
             new_size = int(self.max_size - self._current_size)
-            logger.warn("Current size is %d (max %d), so truncating data "
+            self.logger.warn("Current size is %d (max %d), so truncating data "
                         "length from %d to %d", self._current_size,
                         self.max_size, data_len, new_size)
             data_len = new_size
@@ -1102,7 +1109,7 @@ class MultipartParser(BaseParser):
                 # Skip leading newlines
                 if c == CR or c == LF:
                     i += 1
-                    logger.debug("Skipping leading CR/LF at %d", i)
+                    self.logger.debug("Skipping leading CR/LF at %d", i)
                     continue
 
                 # index is used as in index into our boundary.  Set to 0.
@@ -1120,7 +1127,7 @@ class MultipartParser(BaseParser):
                     if c != CR:
                         # Error!
                         msg = "Did not find CR at end of boundary (%d)" % (i,)
-                        logger.warn(msg)
+                        self.logger.warn(msg)
                         e = MultipartParseError(msg)
                         e.offset = i
                         raise e
@@ -1130,7 +1137,7 @@ class MultipartParser(BaseParser):
                 elif index == len(boundary) - 2 + 1:
                     if c != LF:
                         msg = "Did not find LF at end of boundary (%d)" % (i,)
-                        logger.warn(msg)
+                        self.logger.warn(msg)
                         e = MultipartParseError(msg)
                         e.offset = i
                         raise e
@@ -1149,7 +1156,7 @@ class MultipartParser(BaseParser):
                     if c != boundary[index + 2]:
                         msg = "Did not find boundary character %r at index " \
                               "%d" % (c, index + 2)
-                        logger.warn(msg)
+                        self.logger.warn(msg)
                         e = MultipartParseError(msg)
                         e.offset = i
                         raise e
@@ -1191,7 +1198,7 @@ class MultipartParser(BaseParser):
                     # A 0-length header is an error.
                     if index == 1:
                         msg = "Found 0-length header at %d" % (i,)
-                        logger.warn(msg)
+                        self.logger.warn(msg)
                         e = MultipartParseError(msg)
                         e.offset = i
                         raise e
@@ -1209,7 +1216,7 @@ class MultipartParser(BaseParser):
                     if cl < LOWER_A or cl > LOWER_Z:
                         msg = "Found non-alphanumeric character %r in " \
                               "header at %d" % (c, i)
-                        logger.warn(msg)
+                        self.logger.warn(msg)
                         e = MultipartParseError(msg)
                         e.offset = i
                         raise e
@@ -1240,7 +1247,7 @@ class MultipartParser(BaseParser):
                 if c != LF:
                     msg = "Did not find LF character at end of header " \
                           "(found %r)" % (c,)
-                    logger.warn(msg)
+                    self.logger.warn(msg)
                     e = MultipartParseError(msg)
                     e.offset = i
                     raise e
@@ -1256,7 +1263,7 @@ class MultipartParser(BaseParser):
                 # should be a LF, or it's an error.
                 if c != LF:
                     msg = "Did not find LF at end of headers (found %r)" % (c,)
-                    logger.warn(msg)
+                    self.logger.warn(msg)
                     e = MultipartParseError(msg)
                     e.offset = i
                     raise e
@@ -1408,13 +1415,13 @@ class MultipartParser(BaseParser):
 
             elif state == STATE_END:
                 # Do nothing and just consume a byte in the end state.
-                logger.warn("Consuming a byte in the end state")
+                self.logger.warn("Consuming a byte in the end state")
                 pass
 
             else:                   # pragma: no cover (error case)
                 # We got into a strange state somehow!  Just stop processing.
                 msg = "Reached an unknown state %d at %d" % (state, i)
-                logger.warn(msg)
+                self.logger.warn(msg)
                 e = MultipartParseError(msg)
                 e.offset = i
                 raise e
@@ -1527,6 +1534,8 @@ class FormParser(object):
                  boundary=None, file_name=None, FileClass=File,
                  FieldClass=Field, config={}):
 
+        self.logger = logging.getLogger(__name__)
+
         # Save variables.
         self.content_type = content_type
         self.boundary = boundary
@@ -1633,7 +1642,7 @@ class FormParser(object):
 
         elif content_type == 'multipart/form-data':
             if boundary is None:
-                logger.error("No boundary given")
+                self.logger.error("No boundary given")
                 raise FormParserError("No boundary given")
 
             header_name = []
@@ -1711,7 +1720,7 @@ class FormParser(object):
                     vars.writer = QuotedPrintableDecoder(vars.f)
 
                 else:
-                    logger.warn("Unknown Content-Transfer-Encoding: %r",
+                    self.logger.warn("Unknown Content-Transfer-Encoding: %r",
                                 transfer_encoding)
                     if self.config['UPLOAD_ERROR_ON_BAD_CTE']:
                         raise FormParserError(
@@ -1746,7 +1755,7 @@ class FormParser(object):
                                      max_size=self.config['MAX_BODY_SIZE'])
 
         else:
-            logger.warn("Unknown Content-Type: %r", content_type)
+            self.logger.warn("Unknown Content-Type: %r", content_type)
             raise FormParserError("Unknown Content-Type: {0}".format(
                 content_type
             ))
@@ -1804,7 +1813,7 @@ def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
     """
     content_type = headers.get('Content-Type')
     if content_type is None:
-        logger.warn("No Content-Type header given")
+        logging.getLogger(__name__).warn("No Content-Type header given")
         raise ValueError("No Content-Type header given!")
 
     # Boundaries are optional (the FormParser will raise if one is needed
