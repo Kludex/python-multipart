@@ -1,0 +1,4 @@
+[submodule "docs/build/html"]
+	path = docs/build/html
+	url = git://github.com/andrew-d/python-multipart.git
+	branch = gh-pages
