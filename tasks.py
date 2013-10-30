@@ -16,7 +16,7 @@ class g(object):
 
 
 @task
-def test(fast=True):
+def test(all=False):
     test_cmd = [
         'py.test',                      # Test command
         '--cov-report term-missing',    # Print only uncovered lines to stdout
@@ -26,7 +26,7 @@ def test(fast=True):
     ]
 
     # Default to not running the slow tests.
-    if fast:
+    if not all:
         test_cmd.append('-m "not slow_test"')
 
     # Test in this directory

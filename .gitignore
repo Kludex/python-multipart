@@ -13,7 +13,7 @@ tmp/
 *.egg-info
 MANIFEST
 dist
-build
+/build
 eggs
 parts
 bin
