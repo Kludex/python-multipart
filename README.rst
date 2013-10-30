@@ -6,7 +6,9 @@
         :target: http://travis-ci.org/andrew-d/python-multipart
 
 
-python-multipart is an Apache2 licensed streaming multipart parser for Python.  It's still under some development, but test coverage is currently 100%.  Documentation is available `here<http://andrew-d.github.io/python-multipart/>`_.
+python-multipart is an Apache2 licensed streaming multipart parser for Python.  It's still under some development, but test coverage is currently 100%.  Documentation is available `here`_.
+
+.. _here: http://andrew-d.github.io/python-multipart/
 
 Why?
 ----
