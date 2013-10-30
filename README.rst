@@ -6,12 +6,12 @@
         :target: http://travis-ci.org/andrew-d/python-multipart
 
 
-python-multipart is an Apache2 licensed streaming multipart parser for Python.  It's still under some development, but test coverage is currently 100%.
+python-multipart is an Apache2 licensed streaming multipart parser for Python.  It's still under some development, but test coverage is currently 100%.  Documentation is available `here<http://andrew-d.github.io/python-multipart/>`_.
 
 Why?
 ----
 
-Because streaming uploads are awesome for large files.  Examples will be coming soon :)
+Because streaming uploads are awesome for large files.  More examples will be coming soon :)
 
 How to Test
 -----------
