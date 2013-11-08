@@ -9,6 +9,16 @@ This section of the documentation covers all of the public interfaces of
 python-multipart.
 
 
+Helper Functions
+----------------
+
+.. currentmodule:: multipart.multipart
+
+.. autofunction:: parse_form
+
+.. autofunction:: create_form_parser
+
+
 Main Class
 ----------
 
