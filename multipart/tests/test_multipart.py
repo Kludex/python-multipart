@@ -879,6 +879,41 @@ class TestFormParser(unittest.TestCase):
         self.assert_field(b'field', b'test1')
         self.assert_file(b'file', b'file.txt', b'test2')
 
+    def test_feed_blocks(self):
+        """
+        This test parses a simple multipart body 1 byte at a time.
+        """
+        # Load test data.
+        test_file = 'single_file_blocks.http'
+        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+            test_data = f.read()
+
+        for c in range(1, len(test_data) + 1):
+            # Skip first `d` bytes - not interesting
+            for d in range(c):
+
+                # Create form parser.
+                self.make('boundary')
+                # Skip
+                i = 0
+                self.f.write(test_data[:d])
+                i += d
+                for x in range(d, len(test_data), c):
+                    # Write a chunk to achieve condition
+                    #     `i == data_length - 1`
+                    # in boundary search loop (multipatr.py:1302)
+                    b = test_data[x:x + c]
+                    i += self.f.write(b)
+
+                self.f.finalize()
+
+                # Assert we processed everything.
+                self.assertEqual(i, len(test_data))
+
+                # Assert that our field is here.
+                self.assert_field(b'field',
+                                  b'0123456789ABCDEFGHIJ0123456789ABCDEFGHIJ')
+
     @slow_test
     def test_request_body_fuzz(self):
         """
