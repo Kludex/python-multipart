@@ -1303,7 +1303,7 @@ class MultipartParser(BaseParser):
                     # Search forward until we either hit the end of our buffer,
                     # or reach a character that's in our boundary.
                     i += boundary_end
-                    while i < data_length and data[i] not in boundary_chars:
+                    while i < data_length - 1 and data[i] not in boundary_chars:
                         i += boundary_length
 
                     # Reset i back the length of our boundary, which is the
