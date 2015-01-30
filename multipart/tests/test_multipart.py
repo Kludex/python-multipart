@@ -884,7 +884,7 @@ class TestFormParser(unittest.TestCase):
         This test parses a simple multipart body 1 byte at a time.
         """
         # Load test data.
-        test_file = 'single_file_blocks.http'
+        test_file = 'single_field_blocks.http'
         with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
             test_data = f.read()
 
