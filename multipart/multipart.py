@@ -1562,7 +1562,7 @@ class FormParser(object):
                 f = None
 
             def on_start():
-                vars.f = FileClass(file_name, None)
+                vars.f = FileClass(file_name, None, config=self.config)
 
             def on_data(data, start, end):
                 vars.f.write(data[start:end])
@@ -1699,7 +1699,7 @@ class FormParser(object):
                 if file_name is None:
                     vars.f = FieldClass(field_name)
                 else:
-                    vars.f = FileClass(file_name, field_name)
+                    vars.f = FileClass(file_name, field_name, config=self.config)
                     vars.is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
