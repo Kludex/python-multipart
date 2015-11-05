@@ -677,10 +677,14 @@ class TestQuotedPrintableDecoder(unittest.TestCase):
 http_tests_dir = os.path.join(curr_dir, 'test_data', 'http')
 
 # Read in all test cases and load them.
+NON_PARAMETRIZED_TESTS = set(['single_field_blocks'])
 http_tests = []
 for f in os.listdir(http_tests_dir):
     # Only load the HTTP test cases.
     fname, ext = os.path.splitext(f)
+    if fname in NON_PARAMETRIZED_TESTS:
+        continue
+
     if ext == '.http':
         # Get the YAML file and load it too.
         yaml_file = os.path.join(http_tests_dir, fname + '.yaml')
@@ -787,6 +791,7 @@ class TestFormParser(unittest.TestCase):
             processed = self.f.write(param['test'])
             self.f.finalize()
         except MultipartParseError as e:
+            processed = 0
             exc = e
 
         # print(repr(param))
