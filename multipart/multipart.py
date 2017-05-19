@@ -1,6 +1,6 @@
 from __future__ import with_statement, absolute_import, print_function
 
-from .six import (
+from six import (
     binary_type,
     text_type,
     PY3,

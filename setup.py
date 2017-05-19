@@ -25,6 +25,7 @@ setup(name='python-multipart',
       platforms='any',
       zip_safe=False,
       install_requires=[
+          'six',
       ],
       tests_require=[
           'pytest',

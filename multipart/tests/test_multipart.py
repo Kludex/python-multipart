@@ -14,11 +14,11 @@ from .compat import (
     unittest,
 )
 from io import BytesIO
+from six import binary_type, text_type
 
 from mock import MagicMock, Mock, patch
 
 from ..multipart import *
-from ..six import binary_type, text_type
 
 
 # Get the current directory for our later test cases.
