@@ -125,10 +125,14 @@ class QuotedPrintableDecoder(object):
         if len(self.cache) > 0:
             data = self.cache + data
 
-        # Since the longest possible escape is 3 characters long, either in
-        # the form '=XX' or '=\r\n', we encode up to 3 characters before the
-        # end of the string.
-        enc, rest = data[:-3], data[-3:]
+        # If the last 2 characters have an '=' sign in it, then we won't be
+        # able to decode the encoded value and we'll need to save it for the
+        # next decoding step.
+        if data[-2:].find(b'=') != -1:
+            enc, rest = data[:-2], data[-2:]
+        else:
+            enc = data
+            rest = b''
 
         # Encode and write, if we have data.
         if len(enc) > 0:

@@ -672,6 +672,21 @@ class TestQuotedPrintableDecoder(unittest.TestCase):
         f.close()
         parser.close.assert_called_once_with()
 
+    def test_not_aligned(self):
+        """
+        https://github.com/andrew-d/python-multipart/issues/6
+        """
+        self.d.write(b'=3AX')
+        self.assert_data(b':X')
+
+        # Additional offset tests
+        self.d.write(b'=3')
+        self.d.write(b'AX')
+        self.assert_data(b':X')
+
+        self.d.write(b'q=3AX')
+        self.assert_data(b'q:X')
+
 
 # Load our list of HTTP test cases.
 http_tests_dir = os.path.join(curr_dir, 'test_data', 'http')
