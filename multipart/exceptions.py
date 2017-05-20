@@ -1,6 +1,6 @@
 import binascii
 
-from .six import PY3
+from six import PY3
 
 
 class FormParserError(ValueError):
