@@ -1117,8 +1117,6 @@ class MultipartParser(BaseParser):
         while i < length:
             c = data[i]
 
-            #self.logger.debug ("%c STATE %s", c, STATES[state])
-
             if state == STATE_START:
                 # Skip leading newlines
                 if c == CR or c == LF:
