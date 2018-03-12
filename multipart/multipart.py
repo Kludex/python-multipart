@@ -280,6 +280,10 @@ class File(object):
          - None
          - The directory to store uploaded files in.  If this is None, a
            temporary file will be created in the system's standard location.
+       * - UPLOAD_DELETE_TMP
+         - `bool`
+         - True
+         - Delete automatically created TMP file
        * - UPLOAD_KEEP_FILENAME
          - `bool`
          - False
@@ -422,6 +426,7 @@ class File(object):
         file_dir = self._config.get('UPLOAD_DIR')
         keep_filename = self._config.get('UPLOAD_KEEP_FILENAME', False)
         keep_extensions = self._config.get('UPLOAD_KEEP_EXTENSIONS', False)
+        delete_tmp = self._config.get('UPLOAD_DELETE_TMP', True)
 
         # If we have a directory and are to keep the filename...
         if file_dir is not None and keep_filename:
@@ -459,6 +464,7 @@ class File(object):
                     d = d.decode(sys.getfilesystemencoding())
 
                 options['dir'] = d
+            options['delete'] = delete_tmp
 
             # Create a temporary (named) file with the appropriate settings.
             self.logger.info("Creating a temporary file with options: %r",
