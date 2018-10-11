@@ -45,6 +45,13 @@ STATE_PART_DATA                 = 9
 STATE_PART_DATA_END             = 10
 STATE_END                       = 11
 
+STATES = [
+    "START",
+    "START_BOUNDARY", "HEADER_FEILD_START", "HEADER_FIELD", "HEADER_VALUE_START", "HEADER_VALUE",
+    "HEADER_VALUE_ALMOST_DONE", "HEADRES_ALMOST_DONE", "PART_DATA_START", "PART_DATA", "PART_DATA_END", "END"
+]
+
+
 # Flags for the multipart parser.
 FLAG_PART_BOUNDARY              = 1
 FLAG_LAST_BOUNDARY              = 2
@@ -273,6 +280,10 @@ class File(object):
          - None
          - The directory to store uploaded files in.  If this is None, a
            temporary file will be created in the system's standard location.
+       * - UPLOAD_DELETE_TMP
+         - `bool`
+         - True
+         - Delete automatically created TMP file
        * - UPLOAD_KEEP_FILENAME
          - `bool`
          - False
@@ -415,6 +426,7 @@ class File(object):
         file_dir = self._config.get('UPLOAD_DIR')
         keep_filename = self._config.get('UPLOAD_KEEP_FILENAME', False)
         keep_extensions = self._config.get('UPLOAD_KEEP_EXTENSIONS', False)
+        delete_tmp = self._config.get('UPLOAD_DELETE_TMP', True)
 
         # If we have a directory and are to keep the filename...
         if file_dir is not None and keep_filename:
@@ -452,6 +464,7 @@ class File(object):
                     d = d.decode(sys.getfilesystemencoding())
 
                 options['dir'] = d
+            options['delete'] = delete_tmp
 
             # Create a temporary (named) file with the appropriate settings.
             self.logger.info("Creating a temporary file with options: %r",
@@ -484,12 +497,16 @@ class File(object):
 
         :param data: a bytestring
         """
+        pos = self._fileobj.tell()
         bwritten = self._fileobj.write(data)
+        # true file objects write  returns None
+        if bwritten is None:
+            bwritten = self._fileobj.tell() - pos
 
         # If the bytes written isn't the same as the length, just return.
         if bwritten != len(data):
             self.logger.warn("bwritten != len(data) (%d != %d)", bwritten,
-                        len(data))
+                             len(data))
             return bwritten
 
         # Keep track of how many bytes we've written.
@@ -509,7 +526,8 @@ class File(object):
     def on_end(self):
         """This method is called whenever the Field is finalized.
         """
-        pass
+        # Flush the underlying file object
+        self._fileobj.flush()
 
     def finalize(self):
         """Finalize the form file.  This will not close the underlying file,
@@ -1415,7 +1433,7 @@ class MultipartParser(BaseParser):
 
             elif state == STATE_END:
                 # Do nothing and just consume a byte in the end state.
-                self.logger.warn("Consuming a byte in the end state")
+                self.logger.warn("Consuming a byte '%x' in the end state", c)
                 pass
 
             else:                   # pragma: no cover (error case)
