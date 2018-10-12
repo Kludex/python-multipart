@@ -1436,8 +1436,8 @@ class MultipartParser(BaseParser):
 
             elif state == STATE_END:
                 # Do nothing and just consume a byte in the end state.
-                self.logger.warning("Consuming a byte '%x' in the end state", c)
-                pass
+                if c not in (CR, LF):
+                    self.logger.warning("Consuming a byte '0x%x' in the end state", c)
 
             else:                   # pragma: no cover (error case)
                 # We got into a strange state somehow!  Just stop processing.
