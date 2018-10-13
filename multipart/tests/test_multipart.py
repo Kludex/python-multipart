@@ -16,7 +16,10 @@ from .compat import (
 from io import BytesIO
 from six import binary_type, text_type
 
-from mock import MagicMock, Mock, patch
+try:
+    from unittest.mock import MagicMock, Mock, patch
+except ImportError:
+    from mock import MagicMock, Mock, patch
 
 from ..multipart import *
 
