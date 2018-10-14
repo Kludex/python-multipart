@@ -1265,7 +1265,7 @@ class TestHelperFunctions(unittest.TestCase):
             on_file
         )
 
-        on_file.assert_called_once()
+        assert on_file.call_count == 1
 
         # Assert that the first argument of the call (a File object) has size
         # 15 - i.e. all data is written.
