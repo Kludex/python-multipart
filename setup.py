@@ -16,6 +16,15 @@ if sys.version_info[0] >= 3:
 version_re = re.compile(r'((?:\d+)\.(?:\d+)\.(?:\d+))')
 version = version_re.search(version_data).group(0)
 
+tests_require = [
+    'pytest',
+    'pytest-cov',
+    'PyYAML'
+]
+
+if sys.version_info[0:2] < (3, 3):
+    tests_require.append('mock')
+
 setup(name='python-multipart',
       version=version,
       description='A streaming multipart parser for Python',
@@ -27,12 +36,7 @@ setup(name='python-multipart',
       install_requires=[
           'six>=1.4.0',
       ],
-      tests_require=[
-          'pytest',
-          'pytest-cov',
-          'Mock',
-          'PyYAML'
-      ],
+      tests_require=tests_require,
       packages=[
           'multipart',
           'multipart.tests',
