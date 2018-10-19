@@ -3,7 +3,6 @@ from __future__ import with_statement, absolute_import, print_function
 from six import (
     binary_type,
     text_type,
-    PY3,
 )
 
 from .decoders import *
@@ -447,7 +446,6 @@ class File(object):
                 self.logger.info("Opening file: %r", path)
                 tmp_file = open(path, 'w+b')
             except (IOError, OSError) as e:
-                tmp_file = None
 
                 self.logger.exception("Error opening temporary file")
                 raise FileError("Error opening temporary file: %r" % path)
@@ -1815,8 +1813,7 @@ class FormParser(object):
         )
 
 
-def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
-                       config=None):
+def create_form_parser(headers, on_field, on_file, config=None):
     """This function is a helper function to aid in creating a FormParser
     instances.  Given a dictionary-like headers object, it will determine
     the correct information needed, instantiate a FormParser with the
@@ -1829,10 +1826,6 @@ def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
     :param on_field: Callback to call with each parsed field.
 
     :param on_file: Callback to call with each parsed file.
-
-    :param trust_x_headers: Whether or not to trust information received from
-                            certain X-Headers - for example, the file name from
-                            X-File-Name.
 
     :param config: Configuration variables to pass to the FormParser.
     """
@@ -1864,8 +1857,7 @@ def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
     return form_parser
 
 
-def parse_form(headers, input_stream, on_field, on_file, chunk_size=1048576,
-               **kwargs):
+def parse_form(headers, input_stream, on_field, on_file):
     """This function is useful if you just want to parse a request body,
     without too much work.  Pass it a dictionary-like object of the request's
     headers, and a file-like object for the input stream, along with two
@@ -1880,9 +1872,6 @@ def parse_form(headers, input_stream, on_field, on_file, chunk_size=1048576,
     :param on_field: Callback to call with each parsed field.
 
     :param on_file: Callback to call with each parsed file.
-
-    :param chunk_size: The maximum size to read from the input stream and write
-                       to the parser at one time.  Defaults to 1 MiB.
     """
 
     # Create our form parser.
