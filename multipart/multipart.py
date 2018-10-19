@@ -259,6 +259,10 @@ class Field(object):
         )
 
 
+def empty_dict_if_none(dict_or_none):
+    return {} if dict_or_none is None else dict_or_none
+
+
 class File(object):
     """This class represents an uploaded file.  It handles writing file data to
     either an in-memory file or a temporary file on-disk, if the optional
@@ -318,10 +322,10 @@ class File(object):
     :param config: The configuration for this File.  See above for valid
                    configuration keys and their corresponding values.
     """
-    def __init__(self, file_name, field_name=None, config={}):
+    def __init__(self, file_name, field_name=None, config=None):
         # Save configuration, set other variables default.
         self.logger = logging.getLogger(__name__)
-        self._config = config
+        self._config = empty_dict_if_none(config)
         self._in_memory = True
         self._bytes_written = 0
         self._fileobj = BytesIO()
@@ -656,9 +660,9 @@ class OctetStreamParser(BaseParser):
     :param max_size: The maximum size of body to parse.  Defaults to infinity -
                      i.e. unbounded.
     """
-    def __init__(self, callbacks={}, max_size=float('inf')):
+    def __init__(self, callbacks=None, max_size=float('inf')):
         super(OctetStreamParser, self).__init__()
-        self.callbacks = callbacks
+        self.callbacks = empty_dict_if_none(callbacks)
         self._started = False
 
         if not isinstance(max_size, Number) or max_size < 1:
@@ -748,13 +752,13 @@ class QuerystringParser(BaseParser):
     :param max_size: The maximum size of body to parse.  Defaults to infinity -
                      i.e. unbounded.
     """
-    def __init__(self, callbacks={}, strict_parsing=False,
+    def __init__(self, callbacks=None, strict_parsing=False,
                  max_size=float('inf')):
         super(QuerystringParser, self).__init__()
         self.state = STATE_BEFORE_FIELD
         self._found_sep = False
 
-        self.callbacks = callbacks
+        self.callbacks = empty_dict_if_none(callbacks)
 
         # Max-size stuff
         if not isinstance(max_size, Number) or max_size < 1:
@@ -1010,13 +1014,13 @@ class MultipartParser(BaseParser):
                      i.e. unbounded.
     """
 
-    def __init__(self, boundary, callbacks={}, max_size=float('inf')):
+    def __init__(self, boundary, callbacks=None, max_size=float('inf')):
         # Initialize parser state.
         super(MultipartParser, self).__init__()
         self.state = STATE_START
         self.index = self.flags = 0
 
-        self.callbacks = callbacks
+        self.callbacks = empty_dict_if_none(callbacks)
 
         if not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" %
@@ -1553,7 +1557,7 @@ class FormParser(object):
 
     def __init__(self, content_type, on_field, on_file, on_end=None,
                  boundary=None, file_name=None, FileClass=File,
-                 FieldClass=Field, config={}):
+                 FieldClass=Field, config=None):
 
         self.logger = logging.getLogger(__name__)
 
@@ -1574,7 +1578,7 @@ class FormParser(object):
 
         # Set configuration options.
         self.config = self.DEFAULT_CONFIG.copy()
-        self.config.update(config)
+        self.config.update(empty_dict_if_none(config))
 
         # Depending on the Content-Type, we instantiate the correct parser.
         if content_type == 'application/octet-stream':
@@ -1812,7 +1816,7 @@ class FormParser(object):
 
 
 def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
-                       config={}):
+                       config=None):
     """This function is a helper function to aid in creating a FormParser
     instances.  Given a dictionary-like headers object, it will determine
     the correct information needed, instantiate a FormParser with the
@@ -1854,7 +1858,7 @@ def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
                              on_file,
                              boundary=boundary,
                              file_name=file_name,
-                             config=config)
+                             config=empty_dict_if_none(config))
 
     # Return our parser.
     return form_parser
