@@ -1193,6 +1193,13 @@ class MultipartParser(BaseParser):
                 # Set a mark of our header field.
                 set_mark('header_field')
 
+                # Notify that we're starting a header if the next character is
+                # not a CR; a CR at the beginning of the header will cause us
+                # to stop parsing headers in the STATE_HEADER_FIELD state,
+                # below.
+                if c != CR:
+                    self.callback('header_begin')
+
                 # Move to parsing header fields.
                 state = STATE_HEADER_FIELD
                 i -= 1
