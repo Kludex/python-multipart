@@ -478,6 +478,10 @@ class TestQuerystringParser(unittest.TestCase):
             (b'another', b'asdf')
         )
 
+    def test_repr(self):
+        # Issue #29; verify we don't assert on repr()
+        _ignored = repr(self.p)
+
 
 class TestOctetStreamParser(unittest.TestCase):
     def setUp(self):
