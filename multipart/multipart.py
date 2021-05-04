@@ -949,9 +949,9 @@ class QuerystringParser(BaseParser):
         self.callback('end')
 
     def __repr__(self):
-        return "%s(keep_blank_values=%r, strict_parsing=%r, max_size=%r)" % (
+        return "%s(strict_parsing=%r, max_size=%r)" % (
             self.__class__.__name__,
-            self.keep_blank_values, self.strict_parsing, self.max_size
+            self.strict_parsing, self.max_size
         )
 
 
