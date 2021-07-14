@@ -1248,6 +1248,12 @@ class TestFormParser(unittest.TestCase):
         with self.assertRaises(ValueError):
             q = MultipartParser(b'bound', max_size='foo')
 
+    # Issue #38
+    def test_empty_message(self):
+        boundary = b'-'
+        parser = MultipartParser(boundary)
+        parser.write(b'--' + boundary + b'--\r\n')
+
 
 class TestHelperFunctions(unittest.TestCase):
     def test_create_form_parser(self):
