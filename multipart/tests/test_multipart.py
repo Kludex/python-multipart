@@ -12,7 +12,6 @@ from .compat import (
     unittest,
 )
 from io import BytesIO
-from six import binary_type, text_type
 
 try:
     from unittest.mock import MagicMock, Mock, patch

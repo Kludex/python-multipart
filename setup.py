@@ -25,9 +25,6 @@ setup(name='python-multipart',
       license='Apache',
       platforms='any',
       zip_safe=False,
-      install_requires=[
-          'six>=1.4.0',
-      ],
       tests_require=tests_require,
       packages=[
           'multipart',

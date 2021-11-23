@@ -1,9 +1,3 @@
-from six import (
-    binary_type,
-    text_type,
-    PY3,
-)
-
 from .decoders import *
 from .exceptions import *
 
