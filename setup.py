@@ -3,15 +3,11 @@ from __future__ import print_function
 
 import os
 import re
-import sys
 from setuptools import setup
 
 version_file = os.path.join('multipart', '_version.py')
 with open(version_file, 'rb') as f:
-    version_data = f.read().strip()
-
-if sys.version_info[0] >= 3:
-    version_data = version_data.decode('ascii')
+    version_data = f.read().strip().decode('ascii')
 
 version_re = re.compile(r'((?:\d+)\.(?:\d+)\.(?:\d+))')
 version = version_re.search(version_data).group(0)
@@ -21,9 +17,6 @@ tests_require = [
     'pytest-cov',
     'PyYAML'
 ]
-
-if sys.version_info[0:2] < (3, 3):
-    tests_require.append('mock')
 
 setup(name='python-multipart',
       version=version,
@@ -47,10 +40,8 @@ setup(name='python-multipart',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3 :: Only',
+        'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
