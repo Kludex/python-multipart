@@ -5,18 +5,14 @@ import yaml
 import base64
 import random
 import tempfile
+import unittest
 from .compat import (
     parametrize,
     parametrize_class,
     slow_test,
-    unittest,
 )
 from io import BytesIO
-
-try:
-    from unittest.mock import MagicMock, Mock, patch
-except ImportError:
-    from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from ..multipart import *
 

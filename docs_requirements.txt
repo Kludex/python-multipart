@@ -7,7 +7,6 @@ coverage==3.6
 distribute==0.6.34
 docutils==0.10
 invoke==0.2.0
-mock==1.0.1
 pexpect-u==2.5.1
 py==1.10.0
 pytest==6.2.5

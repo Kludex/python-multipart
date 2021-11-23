@@ -1,11 +1,6 @@
 from .decoders import *
 from .exceptions import *
 
-try:
-    from urlparse import parse_qs
-except ImportError:
-    from urllib.parse import parse_qs
-
 import os
 import re
 import sys

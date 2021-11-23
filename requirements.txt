@@ -1,7 +1,6 @@
 atomicwrites==1.2.1
 attrs==19.2.0
 coverage==4.5.1
-mock==2.0.0
 more-itertools==4.3.0
 pbr==4.3.0
 pluggy==1.0.0

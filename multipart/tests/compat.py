@@ -1,8 +1,3 @@
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
 import os
 import re
 import sys
