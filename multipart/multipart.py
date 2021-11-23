@@ -1,5 +1,3 @@
-from __future__ import with_statement, absolute_import, print_function
-
 from six import (
     binary_type,
     text_type,
@@ -74,14 +72,9 @@ NULL = b'\x00'[0]
 # str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte,
 # and joining a list of bytes together.
 # These functions abstract that.
-if PY3:                         # pragma: no cover
-    lower_char = lambda c: c | 0x20
-    ord_char = lambda c: c
-    join_bytes = lambda b: bytes(list(b))
-else:                           # pragma: no cover
-    lower_char = lambda c: c.lower()
-    ord_char = lambda c: ord(c)
-    join_bytes = lambda b: b''.join(list(b))
+lower_char = lambda c: c | 0x20
+ord_char = lambda c: c
+join_bytes = lambda b: bytes(list(b))
 
 # These are regexes for parsing header values.
 SPECIAL_CHARS = re.escape(b'()<>@,;:\\"/[]?={} \t')
@@ -104,7 +97,7 @@ def parse_options_header(value):
 
     # If we are passed a string, we assume that it conforms to WSGI and does
     # not contain any code point that's not in latin-1.
-    if isinstance(value, text_type):            # pragma: no cover
+    if isinstance(value, str):            # pragma: no cover
         value = value.encode('latin-1')
 
     # If we have no options, return the string as-is.
@@ -135,7 +128,7 @@ def parse_options_header(value):
     return ctype, options
 
 
-class Field(object):
+class Field:
     """A Field object represents a (parsed) form field.  It represents a single
     field with a corresponding name and value.
 
@@ -252,14 +245,14 @@ class Field(object):
         else:
             v = repr(self.value)
 
-        return "%s(field_name=%r, value=%s)" % (
+        return "{}(field_name={!r}, value={})".format(
             self.__class__.__name__,
             self.field_name,
             v
         )
 
 
-class File(object):
+class File:
     """This class represents an uploaded file.  It handles writing file data to
     either an in-memory file or a temporary file on-disk, if the optional
     threshold is passed.
@@ -442,7 +435,7 @@ class File(object):
             try:
                 self.logger.info("Opening file: %r", path)
                 tmp_file = open(path, 'w+b')
-            except (IOError, OSError) as e:
+            except OSError as e:
                 tmp_file = None
 
                 self.logger.exception("Error opening temporary file")
@@ -454,13 +447,13 @@ class File(object):
             options = {}
             if keep_extensions:
                 ext = self._ext
-                if isinstance(ext, binary_type):
+                if isinstance(ext, bytes):
                     ext = ext.decode(sys.getfilesystemencoding())
 
                 options['suffix'] = ext
             if file_dir is not None:
                 d = file_dir
-                if isinstance(d, binary_type):
+                if isinstance(d, bytes):
                     d = d.decode(sys.getfilesystemencoding())
 
                 options['dir'] = d
@@ -471,14 +464,14 @@ class File(object):
                              options)
             try:
                 tmp_file = tempfile.NamedTemporaryFile(**options)
-            except (IOError, OSError):
+            except OSError:
                 self.logger.exception("Error creating named temporary file")
                 raise FileError("Error creating named temporary file")
 
             fname = tmp_file.name
 
             # Encode filename as bytes.
-            if isinstance(fname, text_type):
+            if isinstance(fname, str):
                 fname = fname.encode(sys.getfilesystemencoding())
 
         self._actual_file_name = fname
@@ -543,14 +536,14 @@ class File(object):
         self._fileobj.close()
 
     def __repr__(self):
-        return "%s(file_name=%r, field_name=%r)" % (
+        return "{}(file_name={!r}, field_name={!r})".format(
             self.__class__.__name__,
             self.file_name,
             self.field_name
         )
 
 
-class BaseParser(object):
+class BaseParser:
     """This class is the base class for all parsers.  It contains the logic for
     calling and adding callbacks.
 
@@ -657,7 +650,7 @@ class OctetStreamParser(BaseParser):
                      i.e. unbounded.
     """
     def __init__(self, callbacks={}, max_size=float('inf')):
-        super(OctetStreamParser, self).__init__()
+        super().__init__()
         self.callbacks = callbacks
         self._started = False
 
@@ -750,7 +743,7 @@ class QuerystringParser(BaseParser):
     """
     def __init__(self, callbacks={}, strict_parsing=False,
                  max_size=float('inf')):
-        super(QuerystringParser, self).__init__()
+        super().__init__()
         self.state = STATE_BEFORE_FIELD
         self._found_sep = False
 
@@ -949,7 +942,7 @@ class QuerystringParser(BaseParser):
         self.callback('end')
 
     def __repr__(self):
-        return "%s(strict_parsing=%r, max_size=%r)" % (
+        return "{}(strict_parsing={!r}, max_size={!r})".format(
             self.__class__.__name__,
             self.strict_parsing, self.max_size
         )
@@ -1012,7 +1005,7 @@ class MultipartParser(BaseParser):
 
     def __init__(self, boundary, callbacks={}, max_size=float('inf')):
         # Initialize parser state.
-        super(MultipartParser, self).__init__()
+        super().__init__()
         self.state = STATE_START
         self.index = self.flags = 0
 
@@ -1037,7 +1030,7 @@ class MultipartParser(BaseParser):
         # self.skip = tuple(skip)
 
         # Save our boundary.
-        if isinstance(boundary, text_type):         # pragma: no cover
+        if isinstance(boundary, str):         # pragma: no cover
             boundary = boundary.encode('latin-1')
         self.boundary = b'\r\n--' + boundary
 
@@ -1283,7 +1276,7 @@ class MultipartParser(BaseParser):
                 # a CR at the beginning of a header, so our next character
                 # should be a LF, or it's an error.
                 if c != LF:
-                    msg = "Did not find LF at end of headers (found %r)" % (c,)
+                    msg = f"Did not find LF at end of headers (found {c!r})"
                     self.logger.warning(msg)
                     e = MultipartParseError(msg)
                     e.offset = i
@@ -1483,10 +1476,10 @@ class MultipartParser(BaseParser):
         pass
 
     def __repr__(self):
-        return "%s(boundary=%r)" % (self.__class__.__name__, self.boundary)
+        return f"{self.__class__.__name__}(boundary={self.boundary!r})"
 
 
-class FormParser(object):
+class FormParser:
     """This class is the all-in-one form parser.  Given all the information
     necessary to parse a form, it will instantiate the correct parser, create
     the proper :class:`Field` and :class:`File` classes to store the data that
@@ -1579,7 +1572,7 @@ class FormParser(object):
         # Depending on the Content-Type, we instantiate the correct parser.
         if content_type == 'application/octet-stream':
             # Work around the lack of 'nonlocal' in Py2
-            class vars(object):
+            class vars:
                 f = None
 
             def on_start():
@@ -1614,7 +1607,7 @@ class FormParser(object):
 
             name_buffer = []
 
-            class vars(object):
+            class vars:
                 f = None
 
             def on_field_start():
@@ -1671,7 +1664,7 @@ class FormParser(object):
             headers = {}
 
             # No 'nonlocal' on Python 2 :-(
-            class vars(object):
+            class vars:
                 f = None
                 writer = None
                 is_file = False
@@ -1745,7 +1738,7 @@ class FormParser(object):
                                         "%r", transfer_encoding)
                     if self.config['UPLOAD_ERROR_ON_BAD_CTE']:
                         raise FormParserError(
-                            'Unknown Content-Transfer-Encoding "{0}"'.format(
+                            'Unknown Content-Transfer-Encoding "{}"'.format(
                                 transfer_encoding
                             )
                         )
@@ -1777,7 +1770,7 @@ class FormParser(object):
 
         else:
             self.logger.warning("Unknown Content-Type: %r", content_type)
-            raise FormParserError("Unknown Content-Type: {0}".format(
+            raise FormParserError("Unknown Content-Type: {}".format(
                 content_type
             ))
 
@@ -1804,7 +1797,7 @@ class FormParser(object):
             self.parser.close()
 
     def __repr__(self):
-        return "%s(content_type=%r, parser=%r)" % (
+        return "{}(content_type={!r}, parser={!r})".format(
             self.__class__.__name__,
             self.content_type,
             self.parser,

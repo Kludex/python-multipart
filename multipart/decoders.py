@@ -4,7 +4,7 @@ import binascii
 from .exceptions import Base64Error, DecodeError
 
 
-class Base64Decoder(object):
+class Base64Decoder:
     """This object provides an interface to decode a stream of Base64 data.  It
     is instantiated with an "underlying object", and whenever a write()
     operation is performed, it will decode the incoming data as Base64, and
@@ -99,10 +99,10 @@ class Base64Decoder(object):
             self.underlying.finalize()
 
     def __repr__(self):
-        return "%s(underlying=%r)" % (self.__class__.__name__, self.underlying)
+        return f"{self.__class__.__name__}(underlying={self.underlying!r})"
 
 
-class QuotedPrintableDecoder(object):
+class QuotedPrintableDecoder:
     """This object provides an interface to decode a stream of quoted-printable
     data.  It is instantiated with an "underlying object", in the same manner
     as the :class:`multipart.decoders.Base64Decoder` class.  This class behaves
@@ -168,4 +168,4 @@ class QuotedPrintableDecoder(object):
             self.underlying.finalize()
 
     def __repr__(self):
-        return "%s(underlying=%r)" % (self.__class__.__name__, self.underlying)
+        return f"{self.__class__.__name__}(underlying={self.underlying!r})"

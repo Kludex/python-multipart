@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import os
 import re
 import sys
@@ -11,7 +9,7 @@ version_file = os.path.join('multipart', '_version.py')
 version_regex = re.compile(r'((?:\d+)\.(?:\d+)\.(?:\d+))')
 
 # Get around Python 2.X's lack of 'nonlocal' keyword
-class g(object):
+class g:
     test_success = False
 
 
@@ -46,7 +44,7 @@ def bump(type):
 
     m = version_regex.search(file_data)
     if m is None:
-        print("Could not find version in '{0}'!".format(version_file), file=sys.stderr)
+        print(f"Could not find version in '{version_file}'!", file=sys.stderr)
         return
 
     version = m.group(0)
@@ -63,7 +61,7 @@ def bump(type):
     elif type == 'major':
         ver_nums[0] += 1
     else:
-        print("Invalid version type: '%s'" % (type,), file=sys.stderr)
+        print(f"Invalid version type: '{type}'", file=sys.stderr)
         return
 
     # Construct new data and write to file.
@@ -74,7 +72,7 @@ def bump(type):
         f.write(new_data)
 
     # Print information.
-    print("Bumped version from: %s --> %s" % (version, new_ver))
+    print(f"Bumped version from: {version} --> {new_ver}")
 
 
 @task(pre=['test'])

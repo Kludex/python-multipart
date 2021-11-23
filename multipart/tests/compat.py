@@ -20,7 +20,7 @@ def ensure_in_path(path):
     def _samefile(x, y):
         try:
             return os.path.samefile(x, y)
-        except (IOError, OSError):
+        except OSError:
             return False
         except AttributeError:
             # Probably on Windows.

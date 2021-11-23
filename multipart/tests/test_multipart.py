@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import os
 import sys
 import glob
@@ -19,7 +17,7 @@ from six import binary_type, text_type
 try:
     from unittest.mock import MagicMock, Mock, patch
 except ImportError:
-    from mock import MagicMock, Mock, patch
+    from unittest.mock import MagicMock, Mock, patch
 
 from ..multipart import *
 
@@ -29,7 +27,7 @@ curr_dir = os.path.abspath(os.path.dirname(__file__))
 
 
 def force_bytes(val):
-    if isinstance(val, text_type):
+    if isinstance(val, str):
         val = val.encode(sys.getfilesystemencoding())
 
     return val
@@ -427,7 +425,7 @@ class TestQuerystringParser(unittest.TestCase):
             self.reset()
             self.p.strict_parsing = True
 
-            print("%r / %r" % (first, last))
+            print(f"{first!r} / {last!r}")
 
             self.p.write(first)
             self.p.write(last)
@@ -453,7 +451,7 @@ class TestQuerystringParser(unittest.TestCase):
     def test_double_sep(self):
         data = b'foo=bar&&another=asdf'
         for first, last in split_all(data):
-            print(" %r / %r " % (first, last))
+            print(f" {first!r} / {last!r} ")
             self.reset()
 
             cnt = 0
@@ -699,7 +697,7 @@ class TestQuotedPrintableDecoder(unittest.TestCase):
 http_tests_dir = os.path.join(curr_dir, 'test_data', 'http')
 
 # Read in all test cases and load them.
-NON_PARAMETRIZED_TESTS = set(['single_field_blocks'])
+NON_PARAMETRIZED_TESTS = {'single_field_blocks'}
 http_tests = []
 for f in os.listdir(http_tests_dir):
     # Only load the HTTP test cases.
@@ -803,7 +801,7 @@ class TestFormParser(unittest.TestCase):
     def test_http(self, param):
         # Firstly, create our parser with the given boundary.
         boundary = param['result']['boundary']
-        if isinstance(boundary, text_type):
+        if isinstance(boundary, str):
             boundary = boundary.encode('latin-1')
         self.make(boundary)
 
