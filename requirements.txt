@@ -1,11 +1,11 @@
 atomicwrites==1.2.1
-attrs==18.2.0
+attrs==19.2.0
 coverage==4.5.1
 mock==2.0.0
 more-itertools==4.3.0
 pbr==4.3.0
-pluggy==0.7.1
+pluggy==1.0.0
 py==1.10.0
-pytest==3.8.2
+pytest==6.2.5
 PyYAML==5.1
 six==1.11.0
