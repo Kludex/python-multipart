@@ -25,4 +25,4 @@ If you want to test:
 .. code-block:: bash
 
     $ pip install -r requirements.txt
-    $ py.test
+    $ pytest

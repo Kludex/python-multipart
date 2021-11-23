@@ -18,7 +18,7 @@ class g(object):
 @task
 def test(all=False):
     test_cmd = [
-        'py.test',                      # Test command
+        'pytest',                       # Test command
         '--cov-report term-missing',    # Print only uncovered lines to stdout
         '--cov-config .coveragerc',     # Use this file for configuration
         '--cov multipart',              # Test only this module

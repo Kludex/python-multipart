@@ -58,7 +58,7 @@ else:
         return lambda x: x
 
 
-# We don't use the py.test parametrizing function, since it seems to break
+# We don't use the pytest parametrizing function, since it seems to break
 # with unittest.TestCase subclasses.
 def parametrize(field_names, field_values):
     # If we're not given a list of field names, we make it.
