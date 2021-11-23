@@ -1,4 +1,3 @@
-#
 # python-multipart documentation build configuration file, created by
 # sphinx-quickstart on Fri Apr  5 20:24:27 2013.
 #

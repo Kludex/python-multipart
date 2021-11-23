@@ -1,8 +1,3 @@
-import binascii
-
-from six import PY3
-
-
 class FormParserError(ValueError):
     """Base error class for our form parser."""
     pass
@@ -49,10 +44,3 @@ else:                           # pragma: no cover
     class FileError(FormParserError, OSError):
         """Exception class for problems with the File class."""
         pass
-
-# We check which version of Python we're on to figure out what error we need
-# to catch for invalid Base64.
-if PY3:                         # pragma: no cover
-    Base64Error = binascii.Error
-else:                           # pragma: no cover
-    Base64Error = TypeError
