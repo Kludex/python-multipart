@@ -716,7 +716,7 @@ for f in os.listdir(http_tests_dir):
             test_data = f.read()
 
         with open(yaml_file, 'rb') as f:
-            yaml_data = yaml.load(f)
+            yaml_data = yaml.safe_load(f)
 
         http_tests.append({
             'name': fname,
