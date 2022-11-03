@@ -24,5 +24,13 @@ If you want to test:
 
 .. code-block:: bash
 
-    $ pip install -r requirements.txt
+    $ pip install '.[dev]'
     $ pytest
+
+How to build
+------------
+
+.. code-block:: bash
+
+    $ pip install --upgrade build
+    $ python -m build
