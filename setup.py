@@ -30,6 +30,7 @@ setup(name='python-multipart',
           'multipart',
           'multipart.tests',
       ],
+      python_requires='>=3.6',
       classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
