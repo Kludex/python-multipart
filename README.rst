@@ -2,15 +2,15 @@
  Python-Multipart
 ==================
 
-.. image:: https://secure.travis-ci.org/andrew-d/python-multipart.png?branch=master
-        :target: http://travis-ci.org/andrew-d/python-multipart
+.. image:: https://github.com/andrew-d/python-multipart/actions/workflows/test.yaml/badge.svg
+        :target: https://github.com/andrew-d/python-multipart/actions
 
 
 python-multipart is an Apache2 licensed streaming multipart parser for Python.
 Test coverage is currently 100%.
 Documentation is available `here`_.
 
-.. _here: http://andrew-d.github.io/python-multipart/
+.. _here: https://andrew-d.github.io/python-multipart/
 
 Why?
 ----
@@ -25,4 +25,4 @@ If you want to test:
 .. code-block:: bash
 
     $ pip install -r requirements.txt
-    $ py.test
+    $ pytest

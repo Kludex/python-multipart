@@ -1,8 +1,3 @@
-try:
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
 import os
 import re
 import sys
@@ -20,7 +15,7 @@ def ensure_in_path(path):
     def _samefile(x, y):
         try:
             return os.path.samefile(x, y)
-        except (IOError, OSError):
+        except OSError:
             return False
         except AttributeError:
             # Probably on Windows.
@@ -58,7 +53,7 @@ else:
         return lambda x: x
 
 
-# We don't use the py.test parametrizing function, since it seems to break
+# We don't use the pytest parametrizing function, since it seems to break
 # with unittest.TestCase subclasses.
 def parametrize(field_names, field_values):
     # If we're not given a list of field names, we make it.
