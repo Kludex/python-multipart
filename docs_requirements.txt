@@ -1,5 +1,5 @@
 Jinja2==2.11.3
-PyYAML==5.1
+PyYAML==5.4
 Pygments==2.7.4
 Sphinx==1.2b1
 cov-core==1.7
