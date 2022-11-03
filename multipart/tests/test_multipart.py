@@ -1292,15 +1292,15 @@ class TestHelperFunctions(unittest.TestCase):
 
 def suite():
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestFile))
-    suite.addTest(unittest.makeSuite(TestParseOptionsHeader))
-    suite.addTest(unittest.makeSuite(TestBaseParser))
-    suite.addTest(unittest.makeSuite(TestQuerystringParser))
-    suite.addTest(unittest.makeSuite(TestOctetStreamParser))
-    suite.addTest(unittest.makeSuite(TestBase64Decoder))
-    suite.addTest(unittest.makeSuite(TestQuotedPrintableDecoder))
-    suite.addTest(unittest.makeSuite(TestFormParser))
-    suite.addTest(unittest.makeSuite(TestHelperFunctions))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestFile))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestParseOptionsHeader))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBaseParser))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestQuerystringParser))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestOctetStreamParser))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestBase64Decoder))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestQuotedPrintableDecoder))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestFormParser))
+    suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestHelperFunctions))
 
     return suite
 
