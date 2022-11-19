@@ -26,3 +26,12 @@ If you want to test:
 
     $ pip install -r requirements.txt
     $ pytest
+
+
+Release new version
+----
+
+.. code-block:: bash
+
+    $ pip install build
+    $ python3 -m build
