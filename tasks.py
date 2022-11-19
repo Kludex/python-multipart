@@ -5,7 +5,7 @@ import sys
 from invoke import task, run
 
 
-version_file = os.path.join('multipart', '_version.py')
+version_file = os.path.join('multipart', '__init__.py')
 version_regex = re.compile(r'((?:\d+)\.(?:\d+)\.(?:\d+))')
 
 # Get around Python 2.X's lack of 'nonlocal' keyword
@@ -39,7 +39,7 @@ def test(ctx, all=False):
 @task
 def bump(ctx, type):
     # Read and parse version.
-    with open(version_file, 'rb') as f:
+    with open(version_file, 'r') as f:
         file_data = f.read().replace('\r\n', '\n')
 
     m = version_regex.search(file_data)
@@ -68,7 +68,7 @@ def bump(ctx, type):
     new_ver = ".".join(str(x) for x in ver_nums)
     new_data = before + new_ver + after
 
-    with open(version_file, 'wb') as f:
+    with open(version_file, 'w') as f:
         f.write(new_data)
 
     # Print information.
