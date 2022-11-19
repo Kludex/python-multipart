@@ -14,7 +14,7 @@ class g:
 
 
 @task
-def test(all=False):
+def test(ctx, all=False):
     test_cmd = [
         'pytest',                       # Test command
         '--cov-report term-missing',    # Print only uncovered lines to stdout
@@ -37,7 +37,7 @@ def test(all=False):
 
 
 @task
-def bump(type):
+def bump(ctx, type):
     # Read and parse version.
     with open(version_file, 'rb') as f:
         file_data = f.read().replace('\r\n', '\n')
@@ -75,10 +75,14 @@ def bump(type):
     print(f"Bumped version from: {version} --> {new_ver}")
 
 
-@task(pre=['test'])
-def deploy():
+@task(pre=[test])
+def deploy(ctx):
     if not g.test_success:
         print("Tests must pass before deploying!", file=sys.stderr)
         return
 
-    run('python setup.py sdist upload')
+    # # Build source distribution and wheel
+    run('hatch build')
+    #
+    # # Upload distributions from last step to pypi
+    run('hatch publish')

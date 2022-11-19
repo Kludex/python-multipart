@@ -33,7 +33,7 @@ dependencies = []
 dev = [
     "atomicwrites==1.2.1",
     "attrs==19.2.0",
-    "coverage==4.5.1",
+    "coverage==6.5.0",
     "more-itertools==4.3.0",
     "pbr==4.3.0",
     "pluggy==1.0.0",
@@ -41,6 +41,9 @@ dev = [
     "pytest==7.2.0",
     "pytest-cov==4.0.0",
     "PyYAML==5.1",
+    "invoke==1.7.3",
+    "pytest-timeout==2.1.0",
+    "hatch",
 ]
 
 [project.urls]
