@@ -9,7 +9,7 @@ class ParseError(FormParserError):
     """
 
     #: This is the offset in the input data chunk (*NOT* the overall stream) in
-    #: which the parse error occured.  It will be -1 if not specified.
+    #: which the parse error occurred.  It will be -1 if not specified.
     offset = -1
 
 
