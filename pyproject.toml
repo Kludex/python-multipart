@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "python-multipart"
-version = "0.0.6"  # Improvement: Setup to be dynamic from a git tag or release
+dynamic = ["version"]
 description = "A streaming multipart parser for Python"
 readme = "README.rst"
 license = "Apache-2.0"
