@@ -56,6 +56,10 @@ Source = "https://github.com/andrew-d/python-multipart"
 [tool.hatch.version]
 path = "multipart/__init__.py"
 
+[tool.hatch.build.targets.wheel]
+packages = [
+    "multipart",
+]
 [tool.hatch.build.targets.sdist]
 include = [
     "/multipart",
