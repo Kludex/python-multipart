@@ -50,7 +50,6 @@ dev = [
 Homepage = "https://github.com/andrew-d/python-multipart"
 Documentation = "https://andrew-d.github.io/python-multipart/"
 Changelog = "https://github.com/andrew-d/python-multipart/tags"
-# Funding = "https://github.com/sponsors/andrew-d"
 Source = "https://github.com/andrew-d/python-multipart"
 
 [tool.hatch.version]
