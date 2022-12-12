@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "python-multipart"
+dynamic = ["version"]
+description = "A streaming multipart parser for Python"
+readme = "README.rst"
+license = "Apache-2.0"
+requires-python = ">=3.7"
+authors = [
+    { name = "Andrew Dunham", email = "andrew@du.nham.ca" },
+]
+classifiers = [
+    'Development Status :: 5 - Production/Stable',
+    'Environment :: Web Environment',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: Apache Software License',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "atomicwrites==1.2.1",
+    "attrs==19.2.0",
+    "coverage==6.5.0",
+    "more-itertools==4.3.0",
+    "pbr==4.3.0",
+    "pluggy==1.0.0",
+    "py==1.11.0",
+    "pytest==7.2.0",
+    "pytest-cov==4.0.0",
+    "PyYAML==5.1",
+    "invoke==1.7.3",
+    "pytest-timeout==2.1.0",
+    "hatch",
+]
+
+[project.urls]
+Homepage = "https://github.com/andrew-d/python-multipart"
+Documentation = "https://andrew-d.github.io/python-multipart/"
+Changelog = "https://github.com/andrew-d/python-multipart/tags"
+Source = "https://github.com/andrew-d/python-multipart"
+
+[tool.hatch.version]
+path = "multipart/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "multipart",
+]
+[tool.hatch.build.targets.sdist]
+include = [
+    "/multipart",
+]

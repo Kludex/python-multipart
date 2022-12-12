@@ -5,7 +5,7 @@ import sys
 from invoke import task, run
 
 
-version_file = os.path.join('multipart', '_version.py')
+version_file = os.path.join('multipart', '__init__.py')
 version_regex = re.compile(r'((?:\d+)\.(?:\d+)\.(?:\d+))')
 
 # Get around Python 2.X's lack of 'nonlocal' keyword
@@ -14,7 +14,7 @@ class g:
 
 
 @task
-def test(all=False):
+def test(ctx, all=False):
     test_cmd = [
         'pytest',                       # Test command
         '--cov-report term-missing',    # Print only uncovered lines to stdout
@@ -37,9 +37,9 @@ def test(all=False):
 
 
 @task
-def bump(type):
+def bump(ctx, type):
     # Read and parse version.
-    with open(version_file, 'rb') as f:
+    with open(version_file, 'r') as f:
         file_data = f.read().replace('\r\n', '\n')
 
     m = version_regex.search(file_data)
@@ -68,17 +68,21 @@ def bump(type):
     new_ver = ".".join(str(x) for x in ver_nums)
     new_data = before + new_ver + after
 
-    with open(version_file, 'wb') as f:
+    with open(version_file, 'w') as f:
         f.write(new_data)
 
     # Print information.
     print(f"Bumped version from: {version} --> {new_ver}")
 
 
-@task(pre=['test'])
-def deploy():
+@task(pre=[test])
+def deploy(ctx):
     if not g.test_success:
         print("Tests must pass before deploying!", file=sys.stderr)
         return
 
-    run('python setup.py sdist upload')
+    # # Build source distribution and wheel
+    run('hatch build')
+    #
+    # # Upload distributions from last step to pypi
+    run('hatch publish')
