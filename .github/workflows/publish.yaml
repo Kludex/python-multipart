@@ -11,7 +11,7 @@ name: Upload Python Package
 on:
   push:
     tags:        
-      - 'v*'           # Run on every git tag starting with "v". i.e: v1.5.0
+      - '[0-9]+.[0-9]+.[0-9]+'           # Run on every git tag starting with "v". i.e: v1.5.0
 
 permissions:
   contents: read
