@@ -1,8 +1,6 @@
 import os
 import sys
-import glob
 import yaml
-import base64
 import random
 import tempfile
 import unittest
@@ -12,9 +10,9 @@ from .compat import (
     slow_test,
 )
 from io import BytesIO
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock
 
-from ..multipart import *
+from multipart.multipart import *
 
 
 # Get the current directory for our later test cases.

@@ -28,7 +28,7 @@ def test(ctx, all=False):
         test_cmd.append('-m "not slow_test"')
 
     # Test in this directory
-    test_cmd.append(os.path.join("multipart", "tests"))
+    test_cmd.append("tests")
 
     # Run the command.
     # TODO: why does this fail with pty=True?
