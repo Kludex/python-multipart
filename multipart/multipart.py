@@ -34,7 +34,7 @@ STATE_END                       = 11
 
 STATES = [
     "START",
-    "START_BOUNDARY", "HEADER_FEILD_START", "HEADER_FIELD", "HEADER_VALUE_START", "HEADER_VALUE",
+    "START_BOUNDARY", "HEADER_FIELD_START", "HEADER_FIELD", "HEADER_VALUE_START", "HEADER_VALUE",
     "HEADER_VALUE_ALMOST_DONE", "HEADRES_ALMOST_DONE", "PART_DATA_START", "PART_DATA", "PART_DATA_END", "END"
 ]
 
@@ -789,9 +789,9 @@ class QuerystringParser(BaseParser):
             # Depending on our state...
             if state == STATE_BEFORE_FIELD:
                 # If the 'found_sep' flag is set, we've already encountered
-                # and skipped a single seperator.  If so, we check our strict
+                # and skipped a single separator.  If so, we check our strict
                 # parsing flag and decide what to do.  Otherwise, we haven't
-                # yet reached a seperator, and thus, if we do, we need to skip
+                # yet reached a separator, and thus, if we do, we need to skip
                 # it as it will be the boundary between fields that's supposed
                 # to be there.
                 if ch == AMPERSAND or ch == SEMICOLON:
@@ -809,7 +809,7 @@ class QuerystringParser(BaseParser):
                                          "semicolon at %d", i)
                     else:
                         # This case is when we're skipping the (first)
-                        # seperator between fields, so we just set our flag
+                        # separator between fields, so we just set our flag
                         # and continue on.
                         found_sep = True
                 else:
@@ -822,14 +822,14 @@ class QuerystringParser(BaseParser):
                     found_sep = False
 
             elif state == STATE_FIELD_NAME:
-                # Try and find a seperator - we ensure that, if we do, we only
+                # Try and find a separator - we ensure that, if we do, we only
                 # look for the equal sign before it.
                 sep_pos = data.find(b'&', i)
                 if sep_pos == -1:
                     sep_pos = data.find(b';', i)
 
                 # See if we can find an equals sign in the remaining data.  If
-                # so, we can immedately emit the field name and jump to the
+                # so, we can immediately emit the field name and jump to the
                 # data state.
                 if sep_pos != -1:
                     equals_pos = data.find(b'=', i, sep_pos)
@@ -849,7 +849,7 @@ class QuerystringParser(BaseParser):
                     # No equals sign found.
                     if not strict_parsing:
                         # See also comments in the STATE_FIELD_DATA case below.
-                        # If we found the seperator, we emit the name and just
+                        # If we found the separator, we emit the name and just
                         # end - there's no data callback at all (not even with
                         # a blank value).
                         if sep_pos != -1:
@@ -859,13 +859,13 @@ class QuerystringParser(BaseParser):
                             i = sep_pos - 1
                             state = STATE_BEFORE_FIELD
                         else:
-                            # Otherwise, no seperator in this block, so the
+                            # Otherwise, no separator in this block, so the
                             # rest of this chunk must be a name.
                             self.callback('field_name', data, i, length)
                             i = length
 
                     else:
-                        # We're parsing strictly.  If we find a seperator,
+                        # We're parsing strictly.  If we find a separator,
                         # this is an error - we require an equals sign.
                         if sep_pos != -1:
                             e =  QuerystringParseError(
@@ -877,7 +877,7 @@ class QuerystringParser(BaseParser):
                             e.offset = i
                             raise e
 
-                        # No seperator in the rest of this chunk, so it's just
+                        # No separator in the rest of this chunk, so it's just
                         # a field name.
                         self.callback('field_name', data, i, length)
                         i = length
@@ -895,7 +895,7 @@ class QuerystringParser(BaseParser):
                     self.callback('field_data', data, i, sep_pos)
                     self.callback('field_end')
 
-                    # Note that we go to the seperator, which brings us to the
+                    # Note that we go to the separator, which brings us to the
                     # "before field" state.  This allows us to properly emit
                     # "field_start" events only when we actually have data for
                     # a field of some sort.
@@ -1006,7 +1006,7 @@ class MultipartParser(BaseParser):
         self.max_size = max_size
         self._current_size = 0
 
-        # Setup marks.  These are used to track the state of data recieved.
+        # Setup marks.  These are used to track the state of data received.
         self.marks = {}
 
         # TODO: Actually use this rather than the dumb version we currently use
@@ -1500,7 +1500,7 @@ class FormParser:
                       :class:`File`, but you can provide your own class if you
                       wish to customize behaviour.  The class will be
                       instantiated as FileClass(file_name, field_name), and it
-                      must provide the folllowing functions::
+                      must provide the following functions::
                           file_instance.write(data)
                           file_instance.finalize()
                           file_instance.close()
@@ -1509,7 +1509,7 @@ class FormParser:
                        :class:`Field`, but you can provide your own class if
                        you wish to customize behaviour.  The class will be
                        instantiated as FieldClass(field_name), and it must
-                       provide the folllowing functions::
+                       provide the following functions::
                            field_instance.write(data)
                            field_instance.finalize()
                            field_instance.close()

@@ -5,7 +5,7 @@
 branch = False
 # branch = True
 omit =
-    multipart/tests/*
+    tests/*
 
 [report]
 # Regexes for lines to exclude from consideration

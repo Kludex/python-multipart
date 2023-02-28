@@ -1,8 +1,6 @@
 import os
 import sys
-import glob
 import yaml
-import base64
 import random
 import tempfile
 import unittest
@@ -12,9 +10,9 @@ from .compat import (
     slow_test,
 )
 from io import BytesIO
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock
 
-from ..multipart import *
+from multipart.multipart import *
 
 
 # Get the current directory for our later test cases.
@@ -391,7 +389,7 @@ class TestQuerystringParser(unittest.TestCase):
             (b'asdf', b'baz')
         )
 
-    def test_semicolon_seperator(self):
+    def test_semicolon_separator(self):
         self.p.write(b'foo=bar;asdf=baz')
 
         self.assert_fields(
@@ -1070,7 +1068,7 @@ class TestFormParser(unittest.TestCase):
         f.write(b'1234')
         f.finalize()
 
-        # Assert that we only recieved a single file, with the right data, and that we're done.
+        # Assert that we only received a single file, with the right data, and that we're done.
         self.assertFalse(on_field.called)
         self.assertEqual(len(files), 1)
         self.assert_file_data(files[0], b'test1234')
@@ -1094,7 +1092,7 @@ class TestFormParser(unittest.TestCase):
             f.write(b'&test=asdf')
             f.finalize()
 
-            # Assert we only recieved 2 fields...
+            # Assert we only received 2 fields...
             self.assertFalse(on_file.called)
             self.assertEqual(len(fields), 2)
 
@@ -1303,4 +1301,3 @@ def suite():
     suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestHelperFunctions))
 
     return suite
-
