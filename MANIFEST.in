@@ -1,4 +1,0 @@
-include requirements.txt README.md LICENSE.txt
-recursive-include multipart *.py *.yaml *.bare *.http LICENSE*.*
-recursive-exclude multipart *.pyc *.pyo *.pyd
-
