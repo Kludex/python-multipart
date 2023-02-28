@@ -9,9 +9,7 @@ description = "A streaming multipart parser for Python"
 readme = "README.rst"
 license = "Apache-2.0"
 requires-python = ">=3.7"
-authors = [
-    { name = "Andrew Dunham", email = "andrew@du.nham.ca" },
-]
+authors = [{ name = "Andrew Dunham", email = "andrew@du.nham.ca" }]
 classifiers = [
     'Development Status :: 5 - Production/Stable',
     'Environment :: Web Environment',
@@ -56,10 +54,7 @@ Source = "https://github.com/andrew-d/python-multipart"
 path = "multipart/__init__.py"
 
 [tool.hatch.build.targets.wheel]
-packages = [
-    "multipart",
-]
+packages = ["multipart"]
+
 [tool.hatch.build.targets.sdist]
-include = [
-    "/multipart",
-]
+include = ["/multipart", "/tests"]
