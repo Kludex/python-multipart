@@ -1689,8 +1689,7 @@ class FormParser:
                 vars.is_file = False
 
                 # Parse the content-disposition header.
-                # TODO: handle mixed case
-                content_disp = headers.get(b'Content-Disposition')
+                content_disp = get_header(b'Content-Disposition', headers)
                 disp, options = parse_options_header(content_disp)
 
                 # Get the field and filename.
@@ -1708,8 +1707,7 @@ class FormParser:
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                transfer_encoding = headers.get(b'Content-Transfer-Encoding',
-                                                b'7bit')
+                transfer_encoding = get_header(b'Content-Transfer-Encoding', headers, b'7bit')
 
                 if (transfer_encoding == b'binary' or
                         transfer_encoding == b'8bit' or
@@ -1814,7 +1812,7 @@ def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
 
     :param config: Configuration variables to pass to the FormParser.
     """
-    content_type = headers.get('Content-Type')
+    content_type = get_header('Content-Type', headers)
     if content_type is None:
         logging.getLogger(__name__).warning("No Content-Type header given")
         raise ValueError("No Content-Type header given!")
@@ -1828,7 +1826,7 @@ def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
     content_type = content_type.decode('latin-1')
 
     # File names are optional.
-    file_name = headers.get('X-File-Name')
+    file_name = get_header('X-File-Name', headers)
 
     # Instantiate a form parser.
     form_parser = FormParser(content_type,
@@ -1868,7 +1866,7 @@ def parse_form(headers, input_stream, on_field, on_file, chunk_size=1048576,
 
     # Read chunks of 100KiB and write to the parser, but never read more than
     # the given Content-Length, if any.
-    content_length = headers.get('Content-Length')
+    content_length = get_header('Content-Length', headers)
     if content_length is not None:
         content_length = int(content_length)
     else:
@@ -1891,3 +1889,8 @@ def parse_form(headers, input_stream, on_field, on_file, chunk_size=1048576,
 
     # Tell our parser that we're done writing data.
     parser.finalize()
+
+
+def get_header(key, headers, default=None):
+    """Returns header or default after checking common case styles"""
+    return headers.get(key.title()) or headers.get(key.lower()) or headers.get(key.capitalize()) or default
