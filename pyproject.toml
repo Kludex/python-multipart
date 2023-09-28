@@ -47,7 +47,7 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/andrew-d/python-multipart"
 Documentation = "https://andrew-d.github.io/python-multipart/"
-Changelog = "https://github.com/andrew-d/python-multipart/tags"
+Changelog = "https://github.com/andrew-d/python-multipart/blob/master/CHANGELOG.md"
 Source = "https://github.com/andrew-d/python-multipart"
 
 [tool.hatch.version]
