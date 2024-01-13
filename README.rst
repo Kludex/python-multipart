@@ -24,5 +24,5 @@ If you want to test:
 
 .. code-block:: bash
 
-    $ pip install .[dev]
+    $ pip install '.[dev]'
     $ inv test
