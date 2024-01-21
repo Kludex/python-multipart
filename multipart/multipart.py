@@ -165,14 +165,14 @@ class Field:
         f.finalize()
         return f
 
-    def write(self, data):
+    def write(self, data: bytes) -> int:
         """Write some data into the form field.
 
         :param data: a bytestring
         """
         return self.on_data(data)
 
-    def on_data(self, data):
+    def on_data(self, data: bytes) -> int:
         """This method is a callback that will be called whenever data is
         written to the Field.
 
@@ -473,14 +473,14 @@ class File:
         self._actual_file_name = fname
         return tmp_file
 
-    def write(self, data):
+    def write(self, data: bytes) -> int:
         """Write some data to the File.
 
         :param data: a bytestring
         """
         return self.on_data(data)
 
-    def on_data(self, data):
+    def on_data(self, data: bytes) -> int:
         """This method is a callback that will be called whenever data is
         written to the File.
 
@@ -656,7 +656,7 @@ class OctetStreamParser(BaseParser):
         self.max_size = max_size
         self._current_size = 0
 
-    def write(self, data):
+    def write(self, data: bytes) -> int:
         """Write some data to the parser, which will perform size verification,
         and then pass the data to the underlying callback.
 
@@ -755,7 +755,7 @@ class QuerystringParser(BaseParser):
         # Should parsing be strict?
         self.strict_parsing = strict_parsing
 
-    def write(self, data):
+    def write(self, data: bytes) -> int:
         """Write some data to the parser, which will perform size verification,
         parse into either a field name or value, and then pass the
         corresponding data to the underlying callback.  If an error is
@@ -1039,7 +1039,7 @@ class MultipartParser(BaseParser):
         # '--\r\n' is 8 bytes.
         self.lookbehind = [NULL for x in range(len(boundary) + 8)]
 
-    def write(self, data):
+    def write(self, data: bytes) -> int:
         """Write some data to the parser, which will perform size verification,
         and then parse the data into the appropriate location (e.g. header,
         data, etc.), and pass this on to the underlying callback.  If an error
@@ -1574,7 +1574,7 @@ class FormParser:
             def on_start():
                 vars.f = FileClass(file_name, None, config=self.config)
 
-            def on_data(data, start, end):
+            def on_data(data: bytes, start: int, end: int):
                 vars.f.write(data[start:end])
 
             def on_end():
@@ -1772,7 +1772,7 @@ class FormParser:
 
         self.parser = parser
 
-    def write(self, data):
+    def write(self, data: bytes) -> int:
         """Write some data.  The parser will forward this to the appropriate
         underlying parser.
 
