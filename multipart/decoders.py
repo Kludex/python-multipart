@@ -1,5 +1,7 @@
 import base64
 import binascii
+from io import IOBase
+from typing import overload
 
 from .exceptions import DecodeError
 
@@ -33,9 +35,15 @@ class Base64Decoder:
     :param underlying: the underlying object to pass writes to
     """
 
-    def __init__(self, underlying):
+    def __init__(self, underlying: IOBase):
         self.cache = bytearray()
         self.underlying = underlying
+
+    @overload
+    def write(self, data: str) -> int: ...
+
+    @overload
+    def write(self, data: bytes) -> int: ...
 
     def write(self, data):
         """Takes any input data provided, decodes it as base64, and passes it
@@ -95,8 +103,8 @@ class Base64Decoder:
                               'Base64Decoder cache when finalize() is called'
                               % len(self.cache))
 
-        if hasattr(self.underlying, 'finalize'):
-            self.underlying.finalize()
+        if hasattr(self.underlying, 'finalize') and callable(getattr(self.underlying, 'finalize')):
+            self.underlying.finalize() # type:ignore [reportGeneralTypeIssues]
 
     def __repr__(self):
         return f"{self.__class__.__name__}(underlying={self.underlying!r})"
@@ -111,9 +119,15 @@ class QuotedPrintableDecoder:
 
     :param underlying: the underlying object to pass writes to
     """
-    def __init__(self, underlying):
+    def __init__(self, underlying: IOBase):
         self.cache = b''
         self.underlying = underlying
+
+    @overload
+    def write(self, data: str) -> int: ...
+
+    @overload
+    def write(self, data: bytes) -> int: ...
 
     def write(self, data):
         """Takes any input data provided, decodes it as quoted-printable, and
@@ -164,8 +178,8 @@ class QuotedPrintableDecoder:
             self.cache = b''
 
         # Finalize our underlying stream.
-        if hasattr(self.underlying, 'finalize'):
-            self.underlying.finalize()
+        if hasattr(self.underlying, 'finalize') and callable(getattr(self.underlying, 'finalize')):
+            self.underlying.finalize() # type:ignore [reportGeneralTypeIssues]
 
     def __repr__(self):
         return f"{self.__class__.__name__}(underlying={self.underlying!r})"
