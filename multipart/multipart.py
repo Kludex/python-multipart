@@ -9,7 +9,7 @@ import logging
 import tempfile
 from io import BytesIO
 from numbers import Number
-from typing import overload, Dict, Tuple
+from typing import overload, Dict, List, Optional, Tuple, Union
 
 # Unique missing object.
 _missing = object()
@@ -139,15 +139,15 @@ class Field:
 
     :param name: the name of the form field
     """
-    def __init__(self, name):
+    def __init__(self, name: Union[bytes, str]):
         self._name = name
-        self._value = []
+        self._value: List[bytes] = []
 
         # We cache the joined version of _value for speed.
         self._cache = _missing
 
     @classmethod
-    def from_value(klass, name, value):
+    def from_value(cls, name: Union[bytes, str], value: Optional[bytes]):
         """Create an instance of a :class:`Field`, and set the corresponding
         value - either None or an actual value.  This method will also
         finalize the Field itself.
@@ -157,7 +157,7 @@ class Field:
                       None
         """
 
-        f = klass(name)
+        f = cls(name)
         if value is None:
             f.set_none()
         else:
