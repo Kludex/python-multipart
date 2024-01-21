@@ -124,6 +124,8 @@ def parse_options_header(value):
 
 
 class Cache(Generic[T]):
+    __slots__ = ('_value', '_is_set')
+
     def __init__(self):
         self._value: Optional[T] = None
         self._is_set: bool = False
@@ -165,6 +167,8 @@ class Field:
 
     :param name: the name of the form field
     """
+    __slots__ = ('_name', '_value', '_cache')
+
     def __init__(self, name: Union[bytes, str]):
         self._name = name
         self._value: List[bytes] = []
