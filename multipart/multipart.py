@@ -9,6 +9,7 @@ import logging
 import tempfile
 from io import BytesIO
 from numbers import Number
+from typing import overload, Tuple
 
 # Unique missing object.
 _missing = object()
@@ -75,6 +76,12 @@ OPTION_RE_STR = (
 OPTION_RE = re.compile(OPTION_RE_STR)
 QUOTE = b'"'[0]
 
+
+@overload
+def parse_options_header(value: str) -> Tuple[bytes, dict[bytes, bytes]]: ...
+
+@overload
+def parse_options_header(value: bytes) -> Tuple[bytes, dict[bytes, bytes]]: ...
 
 def parse_options_header(value):
     """
