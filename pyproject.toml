@@ -39,7 +39,7 @@ dev = [
     "pytest==7.2.0",
     "pytest-cov==4.0.0",
     "PyYAML==5.1",
-    "invoke==1.7.3",
+    "invoke==2.2.0",
     "pytest-timeout==2.1.0",
     "hatch",
 ]
