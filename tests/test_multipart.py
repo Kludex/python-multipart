@@ -12,7 +12,26 @@ from .compat import (
 from io import BytesIO
 from unittest.mock import Mock
 
-from multipart.multipart import *
+from multipart.multipart import (
+    BaseParser,
+    Field,
+    File,
+    FormParser,
+    MultipartParser,
+    OctetStreamParser,
+    QuerystringParser,
+    create_form_parser,
+    parse_form,
+    parse_options_header,
+)
+from multipart.decoders import Base64Decoder, QuotedPrintableDecoder
+from multipart.exceptions import (
+    DecodeError,
+    FileError,
+    FormParserError,
+    MultipartParseError,
+    QuerystringParseError,
+)
 
 
 # Get the current directory for our later test cases.
