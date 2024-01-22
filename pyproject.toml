@@ -58,3 +58,10 @@ packages = ["multipart"]
 
 [tool.hatch.build.targets.sdist]
 include = ["/multipart", "/tests"]
+
+[tool.pyright]
+include = ["multipart", "tests"]
+exclude = [
+    "**/__pycache__",
+]
+reportUndefinedVariable = false # TODO: required because pyright does not work with __future__.annotations

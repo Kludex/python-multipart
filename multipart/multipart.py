@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FormParserError, MultipartParseError, QuerystringParseError, FileError
 
@@ -9,7 +11,7 @@ import logging
 import tempfile
 from io import BytesIO
 from numbers import Number
-from typing import overload, Dict, Generic, List, Optional, Tuple, TypeVar, Union
+from typing import overload, Generic, TypeVar
 
 T = TypeVar("T")
 
