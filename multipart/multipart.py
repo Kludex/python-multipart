@@ -339,10 +339,10 @@ class File:
     :param config: The configuration for this File.  See above for valid
                    configuration keys and their corresponding values.
     """
-    def __init__(self, file_name, field_name=None, config={}):
+    def __init__(self, file_name, field_name=None, config=None):
         # Save configuration, set other variables default.
         self.logger = logging.getLogger(__name__)
-        self._config = config
+        self._config = {} if config is None else config
         self._in_memory = True
         self._bytes_written = 0
         self._fileobj = BytesIO()
