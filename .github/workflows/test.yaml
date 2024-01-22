@@ -28,6 +28,4 @@ jobs:
           pip install .[dev]
       - name: Test with pytest
         run: |
-          # This should be inv test but invoke does not have python3.11 support yet.
-          # See https://github.com/pyinvoke/invoke/issues/891 for details
-          pytest
+          inv test
