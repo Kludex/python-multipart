@@ -593,6 +593,7 @@ class BaseParser:
     """
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.callbacks: Dict[Callable] = {}
 
     def callback(self, name, data=None, start=None, end=None):
         """This function calls a provided callback with some data.  If the
@@ -1832,8 +1833,8 @@ class FormParser:
         )
 
 
-def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
-                       config={}):
+def create_form_parser(headers: Mapping, on_field: Callable, on_file: Callable, trust_x_headers: bool=False,
+                       config={}) -> FormParser:
     """This function is a helper function to aid in creating a FormParser
     instances.  Given a dictionary-like headers object, it will determine
     the correct information needed, instantiate a FormParser with the
@@ -1881,7 +1882,7 @@ def create_form_parser(headers, on_field, on_file, trust_x_headers=False,
     return form_parser
 
 
-def parse_form(headers, input_stream, on_field, on_file, chunk_size=1048576,
+def parse_form(headers: Mapping, input_stream: BytesIO, on_field: Callable, on_file: Callable, chunk_size: int=1048576,
                **kwargs):
     """This function is useful if you just want to parse a request body,
     without too much work.  Pass it a dictionary-like object of the request's
@@ -1905,19 +1906,22 @@ def parse_form(headers, input_stream, on_field, on_file, chunk_size=1048576,
     # Create our form parser.
     parser = create_form_parser(headers, on_field, on_file)
 
-    # Read chunks of 100KiB and write to the parser, but never read more than
+    # Read chunks of chunk_size and write to the parser, but never read more than
     # the given Content-Length, if any.
     content_length = headers.get('Content-Length')
-    if content_length is not None:
-        content_length = int(content_length)
+    if content_length is None:
+        calculate_max_readable_bytes = lambda _: chunk_size
     else:
-        content_length = float('inf')
+        content_length = int(content_length)
+        calculate_max_readable_bytes = lambda bytes_read: min(content_length - bytes_read, chunk_size)
+
     bytes_read = 0
 
     while True:
         # Read only up to the Content-Length given.
-        max_readable = min(content_length - bytes_read, 1048576)
-        buff = input_stream.read(max_readable)
+        max_readable_bytes = calculate_max_readable_bytes(bytes_read)
+        # TODO: why not simply use f.read(chunk_size) and let it reach EOF by itself?
+        buff = input_stream.read(max_readable_bytes)
 
         # Write to the parser and update our length.
         parser.write(buff)
@@ -1925,7 +1929,7 @@ def parse_form(headers, input_stream, on_field, on_file, chunk_size=1048576,
 
         # If we get a buffer that's smaller than the size requested, or if we
         # have read up to our content length, we're done.
-        if len(buff) != max_readable or bytes_read == content_length:
+        if len(buff) != max_readable_bytes or bytes_read == content_length:
             break
 
     # Tell our parser that we're done writing data.
