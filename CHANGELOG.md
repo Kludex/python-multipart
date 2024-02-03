@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.7 (2024-02-03)
+
+* Refactor header option parser to use the standard library instead of a custom RegEx [#75](https://github.com/andrew-d/python-multipart/pull/75).
+
 ## 0.0.6 (2023-02-27)
 
 * Migrate package installation to `pyproject.toml` (PEP 621) [#54](https://github.com/andrew-d/python-multipart/pull/54).
