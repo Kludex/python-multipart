@@ -463,7 +463,7 @@ class File:
             try:
                 self.logger.info("Opening file: %r", path)
                 tmp_file = open(path, 'w+b')
-            except OSError as e:
+            except OSError:
                 tmp_file = None
 
                 self.logger.exception("Error opening temporary file")
