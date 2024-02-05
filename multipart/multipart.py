@@ -78,13 +78,7 @@ OPTION_RE = re.compile(OPTION_RE_STR)
 QUOTE = b'"'[0]
 
 
-@overload
-def parse_options_header(value: str) -> Tuple[bytes, Dict[bytes, bytes]]: ...
-
-@overload
-def parse_options_header(value: bytes) -> Tuple[bytes, Dict[bytes, bytes]]: ...
-
-def parse_options_header(value):
+def parse_options_header(value: Union[str, bytes]):
     """
     Parses a Content-Type header into a value in the following format:
         (content_type, {parameters})
