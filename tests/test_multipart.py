@@ -271,6 +271,11 @@ class TestParseOptionsHeader(unittest.TestCase):
 
         self.assertEqual(p[b'filename'], b'file.txt')
 
+    def test_handles_rfc_2231(self):
+        t, p = parse_options_header(b'text/plain; param*=us-ascii\'en-us\'encoded%20message')
+
+        self.assertEqual(p[b'param'], b'encoded message')
+
 
 class TestBaseParser(unittest.TestCase):
     def setUp(self):
