@@ -2,7 +2,6 @@ from .decoders import *
 from .exceptions import *
 
 import os
-import re
 import sys
 import shutil
 import logging
@@ -66,16 +65,6 @@ NULL = b'\x00'[0]
 lower_char = lambda c: c | 0x20
 ord_char = lambda c: c
 join_bytes = lambda b: bytes(list(b))
-
-# These are regexes for parsing header values.
-SPECIAL_CHARS = re.escape(b'()<>@,;:\\"/[]?={} \t')
-QUOTED_STR = br'"(?:\\.|[^"])*"'
-VALUE_STR = br'(?:[^' + SPECIAL_CHARS + br']+|' + QUOTED_STR + br')'
-OPTION_RE_STR = (
-    br'(?:;|^)\s*([^' + SPECIAL_CHARS + br']+)\s*=\s*(' + VALUE_STR + br')'
-)
-OPTION_RE = re.compile(OPTION_RE_STR)
-QUOTE = b'"'[0]
 
 
 def parse_options_header(value: Union[str, bytes]) -> Tuple[bytes, Dict[bytes, bytes]]:
