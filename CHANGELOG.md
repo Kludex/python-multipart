@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.8 (2024-02-09)
+
+* Check if Message.get_params return 3-tuple instead of str on parse_options_header [#79](https://github.com/Kludex/python-multipart/pull/79).
+* Cleanup unused regex patterns [#82](https://github.com/Kludex/python-multipart/pull/82).
+
 ## 0.0.7 (2024-02-03)
 
 * Refactor header option parser to use the standard library instead of a custom RegEx [#75](https://github.com/andrew-d/python-multipart/pull/75).
