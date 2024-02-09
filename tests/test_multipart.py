@@ -270,6 +270,11 @@ class TestParseOptionsHeader(unittest.TestCase):
         t, p = parse_options_header(b'text/plain; filename="C:\\this\\is\\a\\path\\file.txt"')
 
         self.assertEqual(p[b'filename'], b'file.txt')
+    
+    def test_redos_attack_header(self):
+        t, p = parse_options_header(b'application/x-www-form-urlencoded; !="\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\')
+        # If vulnerable, this test wouldn't finish, the line above would hang
+        self.assertIn(b'"\\', p[b'!'])
 
 
 class TestBaseParser(unittest.TestCase):
