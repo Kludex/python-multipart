@@ -110,6 +110,9 @@ def parse_options_header(value: Union[str, bytes]) -> Tuple[bytes, Dict[bytes, b
     options = {}
     for param in params:
         key, value = param
+        # If the value return from get_params() is a 3-tuple, the last
+        # element corresponds to the value.
+        # See: https://docs.python.org/3/library/email.compat32-message.html
         if isinstance(value, tuple):
             value = value[-1]
         # If the value is a filename, we need to fix a bug on IE6 that sends
