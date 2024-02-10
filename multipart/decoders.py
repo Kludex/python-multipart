@@ -59,8 +59,7 @@ class Base64Decoder:
             try:
                 decoded = base64.b64decode(val)
             except binascii.Error:
-                raise DecodeError('There was an error raised while decoding '
-                                  'base64-encoded data.')
+                raise DecodeError("There was an error raised while decoding base64-encoded data.")
 
             self.underlying.write(decoded)
 
@@ -69,7 +68,7 @@ class Base64Decoder:
         if remaining_len > 0:
             self.cache = data[-remaining_len:]
         else:
-            self.cache = b''
+            self.cache = b""
 
         # Return the length of the data to indicate no error.
         return len(data)
@@ -78,7 +77,7 @@ class Base64Decoder:
         """Close this decoder.  If the underlying object has a `close()`
         method, this function will call it.
         """
-        if hasattr(self.underlying, 'close'):
+        if hasattr(self.underlying, "close"):
             self.underlying.close()
 
     def finalize(self):
@@ -91,11 +90,11 @@ class Base64Decoder:
         call it.
         """
         if len(self.cache) > 0:
-            raise DecodeError('There are %d bytes remaining in the '
-                              'Base64Decoder cache when finalize() is called'
-                              % len(self.cache))
+            raise DecodeError(
+                "There are %d bytes remaining in the Base64Decoder cache when finalize() is called" % len(self.cache)
+            )
 
-        if hasattr(self.underlying, 'finalize'):
+        if hasattr(self.underlying, "finalize"):
             self.underlying.finalize()
 
     def __repr__(self):
@@ -111,8 +110,9 @@ class QuotedPrintableDecoder:
 
     :param underlying: the underlying object to pass writes to
     """
+
     def __init__(self, underlying):
-        self.cache = b''
+        self.cache = b""
         self.underlying = underlying
 
     def write(self, data):
@@ -128,11 +128,11 @@ class QuotedPrintableDecoder:
         # If the last 2 characters have an '=' sign in it, then we won't be
         # able to decode the encoded value and we'll need to save it for the
         # next decoding step.
-        if data[-2:].find(b'=') != -1:
+        if data[-2:].find(b"=") != -1:
             enc, rest = data[:-2], data[-2:]
         else:
             enc = data
-            rest = b''
+            rest = b""
 
         # Encode and write, if we have data.
         if len(enc) > 0:
@@ -146,7 +146,7 @@ class QuotedPrintableDecoder:
         """Close this decoder.  If the underlying object has a `close()`
         method, this function will call it.
         """
-        if hasattr(self.underlying, 'close'):
+        if hasattr(self.underlying, "close"):
             self.underlying.close()
 
     def finalize(self):
@@ -161,10 +161,10 @@ class QuotedPrintableDecoder:
         # If we have a cache, write and then remove it.
         if len(self.cache) > 0:
             self.underlying.write(binascii.a2b_qp(self.cache))
-            self.cache = b''
+            self.cache = b""
 
         # Finalize our underlying stream.
-        if hasattr(self.underlying, 'finalize'):
+        if hasattr(self.underlying, "finalize"):
             self.underlying.finalize()
 
     def __repr__(self):

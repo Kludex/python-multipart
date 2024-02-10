@@ -41,6 +41,7 @@ dev = [
     "PyYAML==6.0.1",
     "invoke==2.2.0",
     "pytest-timeout==2.2.0",
+    "ruff==0.2.1",
     "hatch",
 ]
 
@@ -58,3 +59,15 @@ packages = ["multipart"]
 
 [tool.hatch.build.targets.sdist]
 include = ["/multipart", "/tests"]
+
+[tool.ruff]
+line-length = 120
+select = ["E", "F", "I", "FA"]
+ignore = ["B904", "B028", "F841", "E741"]
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+split-on-trailing-comma = false
