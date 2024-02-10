@@ -656,7 +656,7 @@ class OctetStreamParser(BaseParser):
             # We truncate the length of data that we are to process.
             new_size = int(self.max_size - self._current_size)
             self.logger.warning(
-                "Current size is %d (max %d), so truncating " "data length from %d to %d",
+                "Current size is %d (max %d), so truncating data length from %d to %d",
                 self._current_size,
                 self.max_size,
                 data_len,
@@ -757,7 +757,7 @@ class QuerystringParser(BaseParser):
             # We truncate the length of data that we are to process.
             new_size = int(self.max_size - self._current_size)
             self.logger.warning(
-                "Current size is %d (max %d), so truncating " "data length from %d to %d",
+                "Current size is %d (max %d), so truncating data length from %d to %d",
                 self._current_size,
                 self.max_size,
                 data_len,
@@ -794,11 +794,11 @@ class QuerystringParser(BaseParser):
                     if found_sep:
                         # If we're parsing strictly, we disallow blank chunks.
                         if strict_parsing:
-                            e = QuerystringParseError("Skipping duplicate ampersand/semicolon at " "%d" % i)
+                            e = QuerystringParseError("Skipping duplicate ampersand/semicolon at %d" % i)
                             e.offset = i
                             raise e
                         else:
-                            self.logger.debug("Skipping duplicate ampersand/" "semicolon at %d", i)
+                            self.logger.debug("Skipping duplicate ampersand/semicolon at %d", i)
                     else:
                         # This case is when we're skipping the (first)
                         # separator between fields, so we just set our flag
@@ -1037,7 +1037,7 @@ class MultipartParser(BaseParser):
             # We truncate the length of data that we are to process.
             new_size = int(self.max_size - self._current_size)
             self.logger.warning(
-                "Current size is %d (max %d), so truncating " "data length from %d to %d",
+                "Current size is %d (max %d), so truncating data length from %d to %d",
                 self._current_size,
                 self.max_size,
                 data_len,
@@ -1707,7 +1707,7 @@ class FormParser:
                     vars.writer = QuotedPrintableDecoder(vars.f)
 
                 else:
-                    self.logger.warning("Unknown Content-Transfer-Encoding: " "%r", transfer_encoding)
+                    self.logger.warning("Unknown Content-Transfer-Encoding: %r", transfer_encoding)
                     if self.config["UPLOAD_ERROR_ON_BAD_CTE"]:
                         raise FormParserError('Unknown Content-Transfer-Encoding "{}"'.format(transfer_encoding))
                     else:
