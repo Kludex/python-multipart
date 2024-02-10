@@ -9,7 +9,7 @@ from email.message import Message
 from enum import IntEnum
 from io import BytesIO
 from numbers import Number
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
@@ -33,7 +33,7 @@ if TYPE_CHECKING:  # pragma: no cover
         on_part_begin: Callable[[], None]
         on_part_data: Callable[[bytes, int, int], None]
         on_part_end: Callable[[], None]
-        on_headers_begin: Callable[[], None]
+        on_header_begin: Callable[[], None]
         on_header_field: Callable[[bytes, int, int], None]
         on_header_value: Callable[[bytes, int, int], None]
         on_header_end: Callable[[], None]
@@ -592,10 +592,12 @@ class BaseParser:
     performance.
     """
 
+    callbacks: dict[str, Callable[..., Any]]
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    def callback(self, name: str, data=None, start=None, end=None):
+    def callback(self, name: str, data: bytes | None = None, start: int | None = None, end: int | None = None):
         """This function calls a provided callback with some data.  If the
         callback is not set, will do nothing.
 
@@ -1047,7 +1049,7 @@ class MultipartParser(BaseParser):
         self._current_size = 0
 
         # Setup marks.  These are used to track the state of data received.
-        self.marks = {}
+        self.marks: dict[str, int] = {}
 
         # TODO: Actually use this rather than the dumb version we currently use
         # # Precompute the skip table for the Boyer-Moore-Horspool algorithm.
@@ -1118,11 +1120,11 @@ class MultipartParser(BaseParser):
         i = 0
 
         # Set a mark.
-        def set_mark(name):
+        def set_mark(name: str):
             self.marks[name] = i
 
         # Remove a mark.
-        def delete_mark(name, reset=False):
+        def delete_mark(name: str, reset: bool = False):
             self.marks.pop(name, None)
 
         # Helper function that makes calling a callback with data easier. The
@@ -1130,7 +1132,7 @@ class MultipartParser(BaseParser):
         # end of the buffer, and reset the mark, instead of deleting it.  This
         # is used at the end of the function to call our callbacks with any
         # remaining data in this chunk.
-        def data_callback(name, remaining=False):
+        def data_callback(name: str, remaining: bool = False):
             marked_index = self.marks.get(name)
             if marked_index is None:
                 return
@@ -1216,6 +1218,13 @@ class MultipartParser(BaseParser):
 
                 # Set a mark of our header field.
                 set_mark("header_field")
+
+                # Notify that we're starting a header if the next character is
+                # not a CR; a CR at the beginning of the header will cause us
+                # to stop parsing headers in the MultipartState.HEADER_FIELD state,
+                # below.
+                if c != CR:
+                    self.callback("header_begin")
 
                 # Move to parsing header fields.
                 state = MultipartState.HEADER_FIELD
