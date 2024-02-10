@@ -333,9 +333,9 @@ class TestQuerystringParser(unittest.TestCase):
             del name_buffer[:]
             del data_buffer[:]
 
-        callbacks = {"on_field_name": on_field_name, "on_field_data": on_field_data, "on_field_end": on_field_end}
-
-        self.p = QuerystringParser(callbacks)
+        self.p = QuerystringParser(
+            callbacks={"on_field_name": on_field_name, "on_field_data": on_field_data, "on_field_end": on_field_end}
+        )
 
     def test_simple_querystring(self):
         self.p.write(b"foo=bar")
@@ -464,18 +464,16 @@ class TestOctetStreamParser(unittest.TestCase):
         self.started = 0
         self.finished = 0
 
-        def on_start():
+        def on_start() -> None:
             self.started += 1
 
-        def on_data(data, start, end):
+        def on_data(data: bytes, start: int, end: int) -> None:
             self.d.append(data[start:end])
 
-        def on_end():
+        def on_end() -> None:
             self.finished += 1
 
-        callbacks = {"on_start": on_start, "on_data": on_data, "on_end": on_end}
-
-        self.p = OctetStreamParser(callbacks)
+        self.p = OctetStreamParser(callbacks={"on_start": on_start, "on_data": on_data, "on_end": on_end})
 
     def assert_data(self, data, finalize=True):
         self.assertEqual(b"".join(self.d), data)
