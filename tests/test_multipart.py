@@ -39,53 +39,53 @@ def force_bytes(val):
 
 class TestField(unittest.TestCase):
     def setUp(self):
-        self.f = Field('foo')
+        self.f = Field("foo")
 
     def test_name(self):
-        self.assertEqual(self.f.field_name, 'foo')
+        self.assertEqual(self.f.field_name, "foo")
 
     def test_data(self):
-        self.f.write(b'test123')
-        self.assertEqual(self.f.value, b'test123')
+        self.f.write(b"test123")
+        self.assertEqual(self.f.value, b"test123")
 
     def test_cache_expiration(self):
-        self.f.write(b'test')
-        self.assertEqual(self.f.value, b'test')
-        self.f.write(b'123')
-        self.assertEqual(self.f.value, b'test123')
+        self.f.write(b"test")
+        self.assertEqual(self.f.value, b"test")
+        self.f.write(b"123")
+        self.assertEqual(self.f.value, b"test123")
 
     def test_finalize(self):
-        self.f.write(b'test123')
+        self.f.write(b"test123")
         self.f.finalize()
-        self.assertEqual(self.f.value, b'test123')
+        self.assertEqual(self.f.value, b"test123")
 
     def test_close(self):
-        self.f.write(b'test123')
+        self.f.write(b"test123")
         self.f.close()
-        self.assertEqual(self.f.value, b'test123')
+        self.assertEqual(self.f.value, b"test123")
 
     def test_from_value(self):
-        f = Field.from_value(b'name', b'value')
-        self.assertEqual(f.field_name, b'name')
-        self.assertEqual(f.value, b'value')
+        f = Field.from_value(b"name", b"value")
+        self.assertEqual(f.field_name, b"name")
+        self.assertEqual(f.value, b"value")
 
-        f2 = Field.from_value(b'name', None)
+        f2 = Field.from_value(b"name", None)
         self.assertEqual(f2.value, None)
 
     def test_equality(self):
-        f1 = Field.from_value(b'name', b'value')
-        f2 = Field.from_value(b'name', b'value')
+        f1 = Field.from_value(b"name", b"value")
+        f2 = Field.from_value(b"name", b"value")
 
         self.assertEqual(f1, f2)
 
     def test_equality_with_other(self):
-        f = Field.from_value(b'foo', b'bar')
-        self.assertFalse(f == b'foo')
-        self.assertFalse(b'foo' == f)
+        f = Field.from_value(b"foo", b"bar")
+        self.assertFalse(f == b"foo")
+        self.assertFalse(b"foo" == f)
 
     def test_set_none(self):
-        f = Field(b'foo')
-        self.assertEqual(f.value, b'')
+        f = Field(b"foo")
+        self.assertEqual(f.value, b"")
 
         f.set_none()
         self.assertEqual(f.value, None)
@@ -95,7 +95,7 @@ class TestFile(unittest.TestCase):
     def setUp(self):
         self.c = {}
         self.d = force_bytes(tempfile.mkdtemp())
-        self.f = File(b'foo.txt', config=self.c)
+        self.f = File(b"foo.txt", config=self.c)
 
     def assert_data(self, data):
         f = self.f.file_object
@@ -109,26 +109,26 @@ class TestFile(unittest.TestCase):
         self.assertTrue(os.path.exists(full_path))
 
     def test_simple(self):
-        self.f.write(b'foobar')
-        self.assert_data(b'foobar')
+        self.f.write(b"foobar")
+        self.assert_data(b"foobar")
 
     def test_invalid_write(self):
         m = Mock()
         m.write.return_value = 5
         self.f._fileobj = m
-        v = self.f.write(b'foobar')
+        v = self.f.write(b"foobar")
         self.assertEqual(v, 5)
 
     def test_file_fallback(self):
-        self.c['MAX_MEMORY_FILE_SIZE'] = 1
+        self.c["MAX_MEMORY_FILE_SIZE"] = 1
 
-        self.f.write(b'1')
+        self.f.write(b"1")
         self.assertTrue(self.f.in_memory)
-        self.assert_data(b'1')
+        self.assert_data(b"1")
 
-        self.f.write(b'123')
+        self.f.write(b"123")
         self.assertFalse(self.f.in_memory)
-        self.assert_data(b'123')
+        self.assert_data(b"123")
 
         # Test flushing too.
         old_obj = self.f.file_object
@@ -137,23 +137,23 @@ class TestFile(unittest.TestCase):
         self.assertIs(self.f.file_object, old_obj)
 
     def test_file_fallback_with_data(self):
-        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+        self.c["MAX_MEMORY_FILE_SIZE"] = 10
 
-        self.f.write(b'1' * 10)
+        self.f.write(b"1" * 10)
         self.assertTrue(self.f.in_memory)
 
-        self.f.write(b'2' * 10)
+        self.f.write(b"2" * 10)
         self.assertFalse(self.f.in_memory)
 
-        self.assert_data(b'11111111112222222222')
+        self.assert_data(b"11111111112222222222")
 
     def test_file_name(self):
         # Write to this dir.
-        self.c['UPLOAD_DIR'] = self.d
-        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+        self.c["UPLOAD_DIR"] = self.d
+        self.c["MAX_MEMORY_FILE_SIZE"] = 10
 
         # Write.
-        self.f.write(b'12345678901')
+        self.f.write(b"12345678901")
         self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
@@ -162,124 +162,124 @@ class TestFile(unittest.TestCase):
 
     def test_file_full_name(self):
         # Write to this dir.
-        self.c['UPLOAD_DIR'] = self.d
-        self.c['UPLOAD_KEEP_FILENAME'] = True
-        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+        self.c["UPLOAD_DIR"] = self.d
+        self.c["UPLOAD_KEEP_FILENAME"] = True
+        self.c["MAX_MEMORY_FILE_SIZE"] = 10
 
         # Write.
-        self.f.write(b'12345678901')
+        self.f.write(b"12345678901")
         self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
-        self.assertEqual(self.f.actual_file_name, b'foo')
+        self.assertEqual(self.f.actual_file_name, b"foo")
         self.assert_exists()
 
     def test_file_full_name_with_ext(self):
-        self.c['UPLOAD_DIR'] = self.d
-        self.c['UPLOAD_KEEP_FILENAME'] = True
-        self.c['UPLOAD_KEEP_EXTENSIONS'] = True
-        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+        self.c["UPLOAD_DIR"] = self.d
+        self.c["UPLOAD_KEEP_FILENAME"] = True
+        self.c["UPLOAD_KEEP_EXTENSIONS"] = True
+        self.c["MAX_MEMORY_FILE_SIZE"] = 10
 
         # Write.
-        self.f.write(b'12345678901')
+        self.f.write(b"12345678901")
         self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
-        self.assertEqual(self.f.actual_file_name, b'foo.txt')
+        self.assertEqual(self.f.actual_file_name, b"foo.txt")
         self.assert_exists()
 
     def test_no_dir_with_extension(self):
-        self.c['UPLOAD_KEEP_EXTENSIONS'] = True
-        self.c['MAX_MEMORY_FILE_SIZE'] = 10
+        self.c["UPLOAD_KEEP_EXTENSIONS"] = True
+        self.c["MAX_MEMORY_FILE_SIZE"] = 10
 
         # Write.
-        self.f.write(b'12345678901')
+        self.f.write(b"12345678901")
         self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
         ext = os.path.splitext(self.f.actual_file_name)[1]
-        self.assertEqual(ext, b'.txt')
+        self.assertEqual(ext, b".txt")
         self.assert_exists()
 
     def test_invalid_dir_with_name(self):
         # Write to this dir.
-        self.c['UPLOAD_DIR'] = force_bytes(os.path.join('/', 'tmp', 'notexisting'))
-        self.c['UPLOAD_KEEP_FILENAME'] = True
-        self.c['MAX_MEMORY_FILE_SIZE'] = 5
+        self.c["UPLOAD_DIR"] = force_bytes(os.path.join("/", "tmp", "notexisting"))
+        self.c["UPLOAD_KEEP_FILENAME"] = True
+        self.c["MAX_MEMORY_FILE_SIZE"] = 5
 
         # Write.
         with self.assertRaises(FileError):
-            self.f.write(b'1234567890')
+            self.f.write(b"1234567890")
 
     def test_invalid_dir_no_name(self):
         # Write to this dir.
-        self.c['UPLOAD_DIR'] = force_bytes(os.path.join('/', 'tmp', 'notexisting'))
-        self.c['UPLOAD_KEEP_FILENAME'] = False
-        self.c['MAX_MEMORY_FILE_SIZE'] = 5
+        self.c["UPLOAD_DIR"] = force_bytes(os.path.join("/", "tmp", "notexisting"))
+        self.c["UPLOAD_KEEP_FILENAME"] = False
+        self.c["MAX_MEMORY_FILE_SIZE"] = 5
 
         # Write.
         with self.assertRaises(FileError):
-            self.f.write(b'1234567890')
+            self.f.write(b"1234567890")
 
     # TODO: test uploading two files with the same name.
 
 
 class TestParseOptionsHeader(unittest.TestCase):
     def test_simple(self):
-        t, p = parse_options_header('application/json')
-        self.assertEqual(t, b'application/json')
+        t, p = parse_options_header("application/json")
+        self.assertEqual(t, b"application/json")
         self.assertEqual(p, {})
 
     def test_blank(self):
-        t, p = parse_options_header('')
-        self.assertEqual(t, b'')
+        t, p = parse_options_header("")
+        self.assertEqual(t, b"")
         self.assertEqual(p, {})
 
     def test_single_param(self):
-        t, p = parse_options_header('application/json;par=val')
-        self.assertEqual(t, b'application/json')
-        self.assertEqual(p, {b'par': b'val'})
+        t, p = parse_options_header("application/json;par=val")
+        self.assertEqual(t, b"application/json")
+        self.assertEqual(p, {b"par": b"val"})
 
     def test_single_param_with_spaces(self):
-        t, p = parse_options_header(b'application/json;     par=val')
-        self.assertEqual(t, b'application/json')
-        self.assertEqual(p, {b'par': b'val'})
+        t, p = parse_options_header(b"application/json;     par=val")
+        self.assertEqual(t, b"application/json")
+        self.assertEqual(p, {b"par": b"val"})
 
     def test_multiple_params(self):
-        t, p = parse_options_header(b'application/json;par=val;asdf=foo')
-        self.assertEqual(t, b'application/json')
-        self.assertEqual(p, {b'par': b'val', b'asdf': b'foo'})
+        t, p = parse_options_header(b"application/json;par=val;asdf=foo")
+        self.assertEqual(t, b"application/json")
+        self.assertEqual(p, {b"par": b"val", b"asdf": b"foo"})
 
     def test_quoted_param(self):
         t, p = parse_options_header(b'application/json;param="quoted"')
-        self.assertEqual(t, b'application/json')
-        self.assertEqual(p, {b'param': b'quoted'})
+        self.assertEqual(t, b"application/json")
+        self.assertEqual(p, {b"param": b"quoted"})
 
     def test_quoted_param_with_semicolon(self):
         t, p = parse_options_header(b'application/json;param="quoted;with;semicolons"')
-        self.assertEqual(p[b'param'], b'quoted;with;semicolons')
+        self.assertEqual(p[b"param"], b"quoted;with;semicolons")
 
     def test_quoted_param_with_escapes(self):
         t, p = parse_options_header(b'application/json;param="This \\" is \\" a \\" quote"')
-        self.assertEqual(p[b'param'], b'This " is " a " quote')
+        self.assertEqual(p[b"param"], b'This " is " a " quote')
 
     def test_handles_ie6_bug(self):
         t, p = parse_options_header(b'text/plain; filename="C:\\this\\is\\a\\path\\file.txt"')
 
-        self.assertEqual(p[b'filename'], b'file.txt')
+        self.assertEqual(p[b"filename"], b"file.txt")
 
     def test_redos_attack_header(self):
         t, p = parse_options_header(
             b'application/x-www-form-urlencoded; !="'
-            b'\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\'
+            b"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
         )
         # If vulnerable, this test wouldn't finish, the line above would hang
-        self.assertIn(b'"\\', p[b'!'])
+        self.assertIn(b'"\\', p[b"!"])
 
     def test_handles_rfc_2231(self):
         t, p = parse_options_header(b"text/plain; param*=us-ascii'en-us'encoded%20message")
 
-        self.assertEqual(p[b'param'], b'encoded message')
+        self.assertEqual(p[b"param"], b"encoded message")
 
 
 class TestBaseParser(unittest.TestCase):
@@ -294,22 +294,22 @@ class TestBaseParser(unittest.TestCase):
         def on_foo():
             l[0] += 1
 
-        self.b.set_callback('foo', on_foo)
-        self.b.callback('foo')
+        self.b.set_callback("foo", on_foo)
+        self.b.callback("foo")
         self.assertEqual(l[0], 1)
 
-        self.b.set_callback('foo', None)
-        self.b.callback('foo')
+        self.b.set_callback("foo", None)
+        self.b.callback("foo")
         self.assertEqual(l[0], 1)
 
 
 class TestQuerystringParser(unittest.TestCase):
     def assert_fields(self, *args, **kwargs):
-        if kwargs.pop('finalize', True):
+        if kwargs.pop("finalize", True):
             self.p.finalize()
 
         self.assertEqual(self.f, list(args))
-        if kwargs.get('reset', True):
+        if kwargs.get("reset", True):
             self.f = []
 
     def setUp(self):
@@ -328,92 +328,92 @@ class TestQuerystringParser(unittest.TestCase):
             data_buffer.append(data[start:end])
 
         def on_field_end():
-            self.f.append((b''.join(name_buffer), b''.join(data_buffer)))
+            self.f.append((b"".join(name_buffer), b"".join(data_buffer)))
 
             del name_buffer[:]
             del data_buffer[:]
 
-        callbacks = {'on_field_name': on_field_name, 'on_field_data': on_field_data, 'on_field_end': on_field_end}
+        callbacks = {"on_field_name": on_field_name, "on_field_data": on_field_data, "on_field_end": on_field_end}
 
         self.p = QuerystringParser(callbacks)
 
     def test_simple_querystring(self):
-        self.p.write(b'foo=bar')
+        self.p.write(b"foo=bar")
 
-        self.assert_fields((b'foo', b'bar'))
+        self.assert_fields((b"foo", b"bar"))
 
     def test_querystring_blank_beginning(self):
-        self.p.write(b'&foo=bar')
+        self.p.write(b"&foo=bar")
 
-        self.assert_fields((b'foo', b'bar'))
+        self.assert_fields((b"foo", b"bar"))
 
     def test_querystring_blank_end(self):
-        self.p.write(b'foo=bar&')
+        self.p.write(b"foo=bar&")
 
-        self.assert_fields((b'foo', b'bar'))
+        self.assert_fields((b"foo", b"bar"))
 
     def test_multiple_querystring(self):
-        self.p.write(b'foo=bar&asdf=baz')
+        self.p.write(b"foo=bar&asdf=baz")
 
-        self.assert_fields((b'foo', b'bar'), (b'asdf', b'baz'))
+        self.assert_fields((b"foo", b"bar"), (b"asdf", b"baz"))
 
     def test_streaming_simple(self):
-        self.p.write(b'foo=bar&')
-        self.assert_fields((b'foo', b'bar'), finalize=False)
+        self.p.write(b"foo=bar&")
+        self.assert_fields((b"foo", b"bar"), finalize=False)
 
-        self.p.write(b'asdf=baz')
-        self.assert_fields((b'asdf', b'baz'))
+        self.p.write(b"asdf=baz")
+        self.assert_fields((b"asdf", b"baz"))
 
     def test_streaming_break(self):
-        self.p.write(b'foo=one')
+        self.p.write(b"foo=one")
         self.assert_fields(finalize=False)
 
-        self.p.write(b'two')
+        self.p.write(b"two")
         self.assert_fields(finalize=False)
 
-        self.p.write(b'three')
+        self.p.write(b"three")
         self.assert_fields(finalize=False)
 
-        self.p.write(b'&asd')
-        self.assert_fields((b'foo', b'onetwothree'), finalize=False)
+        self.p.write(b"&asd")
+        self.assert_fields((b"foo", b"onetwothree"), finalize=False)
 
-        self.p.write(b'f=baz')
-        self.assert_fields((b'asdf', b'baz'))
+        self.p.write(b"f=baz")
+        self.assert_fields((b"asdf", b"baz"))
 
     def test_semicolon_separator(self):
-        self.p.write(b'foo=bar;asdf=baz')
+        self.p.write(b"foo=bar;asdf=baz")
 
-        self.assert_fields((b'foo', b'bar'), (b'asdf', b'baz'))
+        self.assert_fields((b"foo", b"bar"), (b"asdf", b"baz"))
 
     def test_too_large_field(self):
         self.p.max_size = 15
 
         # Note: len = 8
-        self.p.write(b'foo=bar&')
-        self.assert_fields((b'foo', b'bar'), finalize=False)
+        self.p.write(b"foo=bar&")
+        self.assert_fields((b"foo", b"bar"), finalize=False)
 
         # Note: len = 8, only 7 bytes processed
-        self.p.write(b'a=123456')
-        self.assert_fields((b'a', b'12345'))
+        self.p.write(b"a=123456")
+        self.assert_fields((b"a", b"12345"))
 
     def test_invalid_max_size(self):
         with self.assertRaises(ValueError):
             p = QuerystringParser(max_size=-100)
 
     def test_strict_parsing_pass(self):
-        data = b'foo=bar&another=asdf'
+        data = b"foo=bar&another=asdf"
         for first, last in split_all(data):
             self.reset()
             self.p.strict_parsing = True
 
-            print(f'{first!r} / {last!r}')
+            print(f"{first!r} / {last!r}")
 
             self.p.write(first)
             self.p.write(last)
-            self.assert_fields((b'foo', b'bar'), (b'another', b'asdf'))
+            self.assert_fields((b"foo", b"bar"), (b"another", b"asdf"))
 
     def test_strict_parsing_fail_double_sep(self):
-        data = b'foo=bar&&another=asdf'
+        data = b"foo=bar&&another=asdf"
         for first, last in split_all(data):
             self.reset()
             self.p.strict_parsing = True
@@ -430,28 +430,28 @@ class TestQuerystringParser(unittest.TestCase):
                 self.assertEqual(cm.exception.offset, 8 - cnt)
 
     def test_double_sep(self):
-        data = b'foo=bar&&another=asdf'
+        data = b"foo=bar&&another=asdf"
         for first, last in split_all(data):
-            print(f' {first!r} / {last!r} ')
+            print(f" {first!r} / {last!r} ")
             self.reset()
 
             cnt = 0
             cnt += self.p.write(first)
             cnt += self.p.write(last)
 
-            self.assert_fields((b'foo', b'bar'), (b'another', b'asdf'))
+            self.assert_fields((b"foo", b"bar"), (b"another", b"asdf"))
 
     def test_strict_parsing_fail_no_value(self):
         self.p.strict_parsing = True
         with self.assertRaises(QuerystringParseError) as cm:
-            self.p.write(b'foo=bar&blank&another=asdf')
+            self.p.write(b"foo=bar&blank&another=asdf")
 
         if cm is not None:
             self.assertEqual(cm.exception.offset, 8)
 
     def test_success_no_value(self):
-        self.p.write(b'foo=bar&blank&another=asdf')
-        self.assert_fields((b'foo', b'bar'), (b'blank', b''), (b'another', b'asdf'))
+        self.p.write(b"foo=bar&blank&another=asdf")
+        self.assert_fields((b"foo", b"bar"), (b"blank", b""), (b"another", b"asdf"))
 
     def test_repr(self):
         # Issue #29; verify we don't assert on repr()
@@ -473,12 +473,12 @@ class TestOctetStreamParser(unittest.TestCase):
         def on_end():
             self.finished += 1
 
-        callbacks = {'on_start': on_start, 'on_data': on_data, 'on_end': on_end}
+        callbacks = {"on_start": on_start, "on_data": on_data, "on_end": on_end}
 
         self.p = OctetStreamParser(callbacks)
 
     def assert_data(self, data, finalize=True):
-        self.assertEqual(b''.join(self.d), data)
+        self.assertEqual(b"".join(self.d), data)
         self.d = []
 
     def assert_started(self, val=True):
@@ -498,9 +498,9 @@ class TestOctetStreamParser(unittest.TestCase):
         self.assert_started(False)
 
         # Write something, it should then be started + have data
-        self.p.write(b'foobar')
+        self.p.write(b"foobar")
         self.assert_started()
-        self.assert_data(b'foobar')
+        self.assert_data(b"foobar")
 
         # Finalize, and check
         self.assert_finished(False)
@@ -508,26 +508,26 @@ class TestOctetStreamParser(unittest.TestCase):
         self.assert_finished()
 
     def test_multiple_chunks(self):
-        self.p.write(b'foo')
-        self.p.write(b'bar')
-        self.p.write(b'baz')
+        self.p.write(b"foo")
+        self.p.write(b"bar")
+        self.p.write(b"baz")
         self.p.finalize()
 
-        self.assert_data(b'foobarbaz')
+        self.assert_data(b"foobarbaz")
         self.assert_finished()
 
     def test_max_size(self):
         self.p.max_size = 5
 
-        self.p.write(b'0123456789')
+        self.p.write(b"0123456789")
         self.p.finalize()
 
-        self.assert_data(b'01234')
+        self.assert_data(b"01234")
         self.assert_finished()
 
     def test_invalid_max_size(self):
         with self.assertRaises(ValueError):
-            q = OctetStreamParser(max_size='foo')
+            q = OctetStreamParser(max_size="foo")
 
 
 class TestBase64Decoder(unittest.TestCase):
@@ -546,37 +546,37 @@ class TestBase64Decoder(unittest.TestCase):
         self.f.truncate()
 
     def test_simple(self):
-        self.d.write(b'Zm9vYmFy')
-        self.assert_data(b'foobar')
+        self.d.write(b"Zm9vYmFy")
+        self.assert_data(b"foobar")
 
     def test_bad(self):
         with self.assertRaises(DecodeError):
-            self.d.write(b'Zm9v!mFy')
+            self.d.write(b"Zm9v!mFy")
 
     def test_split_properly(self):
-        self.d.write(b'Zm9v')
-        self.d.write(b'YmFy')
-        self.assert_data(b'foobar')
+        self.d.write(b"Zm9v")
+        self.d.write(b"YmFy")
+        self.assert_data(b"foobar")
 
     def test_bad_split(self):
-        buff = b'Zm9v'
+        buff = b"Zm9v"
         for i in range(1, 4):
             first, second = buff[:i], buff[i:]
 
             self.setUp()
             self.d.write(first)
             self.d.write(second)
-            self.assert_data(b'foo')
+            self.assert_data(b"foo")
 
     def test_long_bad_split(self):
-        buff = b'Zm9vYmFy'
+        buff = b"Zm9vYmFy"
         for i in range(5, 8):
             first, second = buff[:i], buff[i:]
 
             self.setUp()
             self.d.write(first)
             self.d.write(second)
-            self.assert_data(b'foobar')
+            self.assert_data(b"foobar")
 
     def test_close_and_finalize(self):
         parser = Mock()
@@ -589,7 +589,7 @@ class TestBase64Decoder(unittest.TestCase):
         parser.close.assert_called_once_with()
 
     def test_bad_length(self):
-        self.d.write(b'Zm9vYmF')  # missing ending 'y'
+        self.d.write(b"Zm9vYmF")  # missing ending 'y'
 
         with self.assertRaises(DecodeError):
             self.d.finalize()
@@ -610,35 +610,35 @@ class TestQuotedPrintableDecoder(unittest.TestCase):
         self.f.truncate()
 
     def test_simple(self):
-        self.d.write(b'foobar')
-        self.assert_data(b'foobar')
+        self.d.write(b"foobar")
+        self.assert_data(b"foobar")
 
     def test_with_escape(self):
-        self.d.write(b'foo=3Dbar')
-        self.assert_data(b'foo=bar')
+        self.d.write(b"foo=3Dbar")
+        self.assert_data(b"foo=bar")
 
     def test_with_newline_escape(self):
-        self.d.write(b'foo=\r\nbar')
-        self.assert_data(b'foobar')
+        self.d.write(b"foo=\r\nbar")
+        self.assert_data(b"foobar")
 
     def test_with_only_newline_escape(self):
-        self.d.write(b'foo=\nbar')
-        self.assert_data(b'foobar')
+        self.d.write(b"foo=\nbar")
+        self.assert_data(b"foobar")
 
     def test_with_split_escape(self):
-        self.d.write(b'foo=3')
-        self.d.write(b'Dbar')
-        self.assert_data(b'foo=bar')
+        self.d.write(b"foo=3")
+        self.d.write(b"Dbar")
+        self.assert_data(b"foo=bar")
 
     def test_with_split_newline_escape_1(self):
-        self.d.write(b'foo=\r')
-        self.d.write(b'\nbar')
-        self.assert_data(b'foobar')
+        self.d.write(b"foo=\r")
+        self.d.write(b"\nbar")
+        self.assert_data(b"foobar")
 
     def test_with_split_newline_escape_2(self):
-        self.d.write(b'foo=')
-        self.d.write(b'\r\nbar')
-        self.assert_data(b'foobar')
+        self.d.write(b"foo=")
+        self.d.write(b"\r\nbar")
+        self.assert_data(b"foobar")
 
     def test_close_and_finalize(self):
         parser = Mock()
@@ -654,23 +654,23 @@ class TestQuotedPrintableDecoder(unittest.TestCase):
         """
         https://github.com/andrew-d/python-multipart/issues/6
         """
-        self.d.write(b'=3AX')
-        self.assert_data(b':X')
+        self.d.write(b"=3AX")
+        self.assert_data(b":X")
 
         # Additional offset tests
-        self.d.write(b'=3')
-        self.d.write(b'AX')
-        self.assert_data(b':X')
+        self.d.write(b"=3")
+        self.d.write(b"AX")
+        self.assert_data(b":X")
 
-        self.d.write(b'q=3AX')
-        self.assert_data(b'q:X')
+        self.d.write(b"q=3AX")
+        self.assert_data(b"q:X")
 
 
 # Load our list of HTTP test cases.
-http_tests_dir = os.path.join(curr_dir, 'test_data', 'http')
+http_tests_dir = os.path.join(curr_dir, "test_data", "http")
 
 # Read in all test cases and load them.
-NON_PARAMETRIZED_TESTS = {'single_field_blocks'}
+NON_PARAMETRIZED_TESTS = {"single_field_blocks"}
 http_tests = []
 for f in os.listdir(http_tests_dir):
     # Only load the HTTP test cases.
@@ -678,18 +678,18 @@ for f in os.listdir(http_tests_dir):
     if fname in NON_PARAMETRIZED_TESTS:
         continue
 
-    if ext == '.http':
+    if ext == ".http":
         # Get the YAML file and load it too.
-        yaml_file = os.path.join(http_tests_dir, fname + '.yaml')
+        yaml_file = os.path.join(http_tests_dir, fname + ".yaml")
 
         # Load both.
-        with open(os.path.join(http_tests_dir, f), 'rb') as f:
+        with open(os.path.join(http_tests_dir, f), "rb") as f:
             test_data = f.read()
 
-        with open(yaml_file, 'rb') as f:
+        with open(yaml_file, "rb") as f:
             yaml_data = yaml.safe_load(f)
 
-        http_tests.append({'name': fname, 'test': test_data, 'result': yaml_data})
+        http_tests.append({"name": fname, "test": test_data, "result": yaml_data})
 
 
 def split_all(val):
@@ -720,7 +720,7 @@ class TestFormParser(unittest.TestCase):
             self.ended = True
 
         # Get a form-parser instance.
-        self.f = FormParser('multipart/form-data', on_field, on_file, on_end, boundary=boundary, config=config)
+        self.f = FormParser("multipart/form-data", on_field, on_file, on_end, boundary=boundary, config=config)
 
     def assert_file_data(self, f, data):
         o = f.file_object
@@ -765,18 +765,18 @@ class TestFormParser(unittest.TestCase):
         # Remove it for future iterations.
         self.fields.remove(found)
 
-    @parametrize('param', http_tests)
+    @parametrize("param", http_tests)
     def test_http(self, param):
         # Firstly, create our parser with the given boundary.
-        boundary = param['result']['boundary']
+        boundary = param["result"]["boundary"]
         if isinstance(boundary, str):
-            boundary = boundary.encode('latin-1')
+            boundary = boundary.encode("latin-1")
         self.make(boundary)
 
         # Now, we feed the parser with data.
         exc = None
         try:
-            processed = self.f.write(param['test'])
+            processed = self.f.write(param["test"])
             self.f.finalize()
         except MultipartParseError as e:
             processed = 0
@@ -788,25 +788,25 @@ class TestFormParser(unittest.TestCase):
         # print(repr(self.files))
 
         # Do we expect an error?
-        if 'error' in param['result']['expected']:
+        if "error" in param["result"]["expected"]:
             self.assertIsNotNone(exc)
-            self.assertEqual(param['result']['expected']['error'], exc.offset)
+            self.assertEqual(param["result"]["expected"]["error"], exc.offset)
             return
 
         # No error!
-        self.assertEqual(processed, len(param['test']))
+        self.assertEqual(processed, len(param["test"]))
 
         # Assert that the parser gave us the appropriate fields/files.
-        for e in param['result']['expected']:
+        for e in param["result"]["expected"]:
             # Get our type and name.
-            type = e['type']
-            name = e['name'].encode('latin-1')
+            type = e["type"]
+            name = e["name"].encode("latin-1")
 
-            if type == 'field':
-                self.assert_field(name, e['data'])
+            if type == "field":
+                self.assert_field(name, e["data"])
 
-            elif type == 'file':
-                self.assert_file(name, e['file_name'].encode('latin-1'), e['data'])
+            elif type == "file":
+                self.assert_file(name, e["file_name"].encode("latin-1"), e["data"])
 
             else:
                 assert False
@@ -817,14 +817,14 @@ class TestFormParser(unittest.TestCase):
         through every possible split.
         """
         # Load test data.
-        test_file = 'single_field_single_file.http'
-        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+        test_file = "single_field_single_file.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
             test_data = f.read()
 
         # We split the file through all cases.
         for first, last in split_all(test_data):
             # Create form parser.
-            self.make('boundary')
+            self.make("boundary")
 
             # Feed with data in 2 chunks.
             i = 0
@@ -836,20 +836,20 @@ class TestFormParser(unittest.TestCase):
             self.assertEqual(i, len(test_data))
 
             # Assert that our file and field are here.
-            self.assert_field(b'field', b'test1')
-            self.assert_file(b'file', b'file.txt', b'test2')
+            self.assert_field(b"field", b"test1")
+            self.assert_file(b"file", b"file.txt", b"test2")
 
     def test_feed_single_bytes(self):
         """
         This test parses a simple multipart body 1 byte at a time.
         """
         # Load test data.
-        test_file = 'single_field_single_file.http'
-        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+        test_file = "single_field_single_file.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
             test_data = f.read()
 
         # Create form parser.
-        self.make('boundary')
+        self.make("boundary")
 
         # Write all bytes.
         # NOTE: Can't simply do `for b in test_data`, since that gives
@@ -865,23 +865,23 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(i, len(test_data))
 
         # Assert that our file and field are here.
-        self.assert_field(b'field', b'test1')
-        self.assert_file(b'file', b'file.txt', b'test2')
+        self.assert_field(b"field", b"test1")
+        self.assert_file(b"file", b"file.txt", b"test2")
 
     def test_feed_blocks(self):
         """
         This test parses a simple multipart body 1 byte at a time.
         """
         # Load test data.
-        test_file = 'single_field_blocks.http'
-        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+        test_file = "single_field_blocks.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
             test_data = f.read()
 
         for c in range(1, len(test_data) + 1):
             # Skip first `d` bytes - not interesting
             for d in range(c):
                 # Create form parser.
-                self.make('boundary')
+                self.make("boundary")
                 # Skip
                 i = 0
                 self.f.write(test_data[:d])
@@ -899,7 +899,7 @@ class TestFormParser(unittest.TestCase):
                 self.assertEqual(i, len(test_data))
 
                 # Assert that our field is here.
-                self.assert_field(b'field', b'0123456789ABCDEFGHIJ0123456789ABCDEFGHIJ')
+                self.assert_field(b"field", b"0123456789ABCDEFGHIJ0123456789ABCDEFGHIJ")
 
     @slow_test
     def test_request_body_fuzz(self):
@@ -912,8 +912,8 @@ class TestFormParser(unittest.TestCase):
             - Randomly swapping two bytes
         """
         # Load test data.
-        test_file = 'single_field_single_file.http'
-        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+        test_file = "single_field_single_file.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
             test_data = f.read()
 
         iterations = 1000
@@ -921,7 +921,7 @@ class TestFormParser(unittest.TestCase):
         failures = 0
         exceptions = 0
 
-        print('Running %d iterations of fuzz testing:' % (iterations,))
+        print("Running %d iterations of fuzz testing:" % (iterations,))
         for i in range(iterations):
             # Create a bytearray to mutate.
             fuzz_data = bytearray(test_data)
@@ -934,27 +934,27 @@ class TestFormParser(unittest.TestCase):
                 b = random.randrange(256)
 
                 fuzz_data.insert(i, b)
-                msg = 'Inserting byte %r at offset %d' % (b, i)
+                msg = "Inserting byte %r at offset %d" % (b, i)
 
             elif choice == 2:
                 # Remove a random byte.
                 i = random.randrange(len(test_data))
                 del fuzz_data[i]
 
-                msg = 'Deleting byte at offset %d' % (i,)
+                msg = "Deleting byte at offset %d" % (i,)
 
             elif choice == 3:
                 # Swap two bytes.
                 i = random.randrange(len(test_data) - 1)
                 fuzz_data[i], fuzz_data[i + 1] = fuzz_data[i + 1], fuzz_data[i]
 
-                msg = 'Swapping bytes %d and %d' % (i, i + 1)
+                msg = "Swapping bytes %d and %d" % (i, i + 1)
 
             # Print message, so if this crashes, we can inspect the output.
-            print('  ' + msg)
+            print("  " + msg)
 
             # Create form parser.
-            self.make('boundary')
+            self.make("boundary")
 
             # Feed with data, and ignore form parser exceptions.
             i = 0
@@ -969,10 +969,10 @@ class TestFormParser(unittest.TestCase):
                 else:
                     failures += 1
 
-        print('--------------------------------------------------')
-        print('Successes:  %d' % (successes,))
-        print('Failures:   %d' % (failures,))
-        print('Exceptions: %d' % (exceptions,))
+        print("--------------------------------------------------")
+        print("Successes:  %d" % (successes,))
+        print("Failures:   %d" % (failures,))
+        print("Exceptions: %d" % (exceptions,))
 
     @slow_test
     def test_request_body_fuzz_random_data(self):
@@ -985,14 +985,14 @@ class TestFormParser(unittest.TestCase):
         failures = 0
         exceptions = 0
 
-        print('Running %d iterations of fuzz testing:' % (iterations,))
+        print("Running %d iterations of fuzz testing:" % (iterations,))
         for i in range(iterations):
             data_size = random.randrange(100, 4096)
             data = os.urandom(data_size)
-            print('  Testing with %d random bytes...' % (data_size,))
+            print("  Testing with %d random bytes..." % (data_size,))
 
             # Create form parser.
-            self.make('boundary')
+            self.make("boundary")
 
             # Feed with data, and ignore form parser exceptions.
             i = 0
@@ -1007,19 +1007,19 @@ class TestFormParser(unittest.TestCase):
                 else:
                     failures += 1
 
-        print('--------------------------------------------------')
-        print('Successes:  %d' % (successes,))
-        print('Failures:   %d' % (failures,))
-        print('Exceptions: %d' % (exceptions,))
+        print("--------------------------------------------------")
+        print("Successes:  %d" % (successes,))
+        print("Failures:   %d" % (failures,))
+        print("Exceptions: %d" % (exceptions,))
 
     def test_bad_start_boundary(self):
-        self.make('boundary')
-        data = b'--boundary\rfoobar'
+        self.make("boundary")
+        data = b"--boundary\rfoobar"
         with self.assertRaises(MultipartParseError):
             self.f.write(data)
 
-        self.make('boundary')
-        data = b'--boundaryfoobar'
+        self.make("boundary")
+        data = b"--boundaryfoobar"
         with self.assertRaises(MultipartParseError):
             i = self.f.write(data)
 
@@ -1032,17 +1032,17 @@ class TestFormParser(unittest.TestCase):
         on_field = Mock()
         on_end = Mock()
 
-        f = FormParser('application/octet-stream', on_field, on_file, on_end=on_end, file_name=b'foo.txt')
+        f = FormParser("application/octet-stream", on_field, on_file, on_end=on_end, file_name=b"foo.txt")
         self.assertTrue(isinstance(f.parser, OctetStreamParser))
 
-        f.write(b'test')
-        f.write(b'1234')
+        f.write(b"test")
+        f.write(b"1234")
         f.finalize()
 
         # Assert that we only received a single file, with the right data, and that we're done.
         self.assertFalse(on_field.called)
         self.assertEqual(len(files), 1)
-        self.assert_file_data(files[0], b'test1234')
+        self.assert_file_data(files[0], b"test1234")
         self.assertTrue(on_end.called)
 
     def test_querystring(self):
@@ -1061,8 +1061,8 @@ class TestFormParser(unittest.TestCase):
             on_end.reset_mock()
 
             # Write test data.
-            f.write(b'foo=bar')
-            f.write(b'&test=asdf')
+            f.write(b"foo=bar")
+            f.write(b"&test=asdf")
             f.finalize()
 
             # Assert we only received 2 fields...
@@ -1070,26 +1070,26 @@ class TestFormParser(unittest.TestCase):
             self.assertEqual(len(fields), 2)
 
             # ...assert that we have the correct data...
-            self.assertEqual(fields[0].field_name, b'foo')
-            self.assertEqual(fields[0].value, b'bar')
+            self.assertEqual(fields[0].field_name, b"foo")
+            self.assertEqual(fields[0].value, b"bar")
 
-            self.assertEqual(fields[1].field_name, b'test')
-            self.assertEqual(fields[1].value, b'asdf')
+            self.assertEqual(fields[1].field_name, b"test")
+            self.assertEqual(fields[1].value, b"asdf")
 
             # ... and assert that we've finished.
             self.assertTrue(on_end.called)
 
-        f = FormParser('application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
+        f = FormParser("application/x-www-form-urlencoded", on_field, on_file, on_end=on_end)
         self.assertTrue(isinstance(f.parser, QuerystringParser))
         simple_test(f)
 
-        f = FormParser('application/x-url-encoded', on_field, on_file, on_end=on_end)
+        f = FormParser("application/x-url-encoded", on_field, on_file, on_end=on_end)
         self.assertTrue(isinstance(f.parser, QuerystringParser))
         simple_test(f)
 
     def test_close_methods(self):
         parser = Mock()
-        f = FormParser('application/x-url-encoded', None, None)
+        f = FormParser("application/x-url-encoded", None, None)
         f.parser = parser
 
         f.finalize()
@@ -1101,20 +1101,20 @@ class TestFormParser(unittest.TestCase):
     def test_bad_content_type(self):
         # We should raise a ValueError for a bad Content-Type
         with self.assertRaises(ValueError):
-            f = FormParser('application/bad', None, None)
+            f = FormParser("application/bad", None, None)
 
     def test_no_boundary_given(self):
         # We should raise a FormParserError when parsing a multipart message
         # without a boundary.
         with self.assertRaises(FormParserError):
-            f = FormParser('multipart/form-data', None, None)
+            f = FormParser("multipart/form-data", None, None)
 
     def test_bad_content_transfer_encoding(self):
         data = (
             b'----boundary\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\n'
-            b'Content-Type: text/plain\r\n'
-            b'Content-Transfer-Encoding: badstuff\r\n\r\n'
-            b'Test\r\n----boundary--\r\n'
+            b"Content-Type: text/plain\r\n"
+            b"Content-Transfer-Encoding: badstuff\r\n\r\n"
+            b"Test\r\n----boundary--\r\n"
         )
 
         files = []
@@ -1126,20 +1126,20 @@ class TestFormParser(unittest.TestCase):
         on_end = Mock()
 
         # Test with erroring.
-        config = {'UPLOAD_ERROR_ON_BAD_CTE': True}
-        f = FormParser('multipart/form-data', on_field, on_file, on_end=on_end, boundary='--boundary', config=config)
+        config = {"UPLOAD_ERROR_ON_BAD_CTE": True}
+        f = FormParser("multipart/form-data", on_field, on_file, on_end=on_end, boundary="--boundary", config=config)
 
         with self.assertRaises(FormParserError):
             f.write(data)
             f.finalize()
 
         # Test without erroring.
-        config = {'UPLOAD_ERROR_ON_BAD_CTE': False}
-        f = FormParser('multipart/form-data', on_field, on_file, on_end=on_end, boundary='--boundary', config=config)
+        config = {"UPLOAD_ERROR_ON_BAD_CTE": False}
+        f = FormParser("multipart/form-data", on_field, on_file, on_end=on_end, boundary="--boundary", config=config)
 
         f.write(data)
         f.finalize()
-        self.assert_file_data(files[0], b'Test')
+        self.assert_file_data(files[0], b"Test")
 
     def test_handles_None_fields(self):
         fields = []
@@ -1150,27 +1150,27 @@ class TestFormParser(unittest.TestCase):
         on_file = Mock()
         on_end = Mock()
 
-        f = FormParser('application/x-www-form-urlencoded', on_field, on_file, on_end=on_end)
-        f.write(b'foo=bar&another&baz=asdf')
+        f = FormParser("application/x-www-form-urlencoded", on_field, on_file, on_end=on_end)
+        f.write(b"foo=bar&another&baz=asdf")
         f.finalize()
 
-        self.assertEqual(fields[0].field_name, b'foo')
-        self.assertEqual(fields[0].value, b'bar')
+        self.assertEqual(fields[0].field_name, b"foo")
+        self.assertEqual(fields[0].value, b"bar")
 
-        self.assertEqual(fields[1].field_name, b'another')
+        self.assertEqual(fields[1].field_name, b"another")
         self.assertEqual(fields[1].value, None)
 
-        self.assertEqual(fields[2].field_name, b'baz')
-        self.assertEqual(fields[2].value, b'asdf')
+        self.assertEqual(fields[2].field_name, b"baz")
+        self.assertEqual(fields[2].value, b"asdf")
 
     def test_max_size_multipart(self):
         # Load test data.
-        test_file = 'single_field_single_file.http'
-        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+        test_file = "single_field_single_file.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
             test_data = f.read()
 
         # Create form parser.
-        self.make('boundary')
+        self.make("boundary")
 
         # Set the maximum length that we can process to be halfway through the
         # given data.
@@ -1184,14 +1184,14 @@ class TestFormParser(unittest.TestCase):
 
     def test_max_size_form_parser(self):
         # Load test data.
-        test_file = 'single_field_single_file.http'
-        with open(os.path.join(http_tests_dir, test_file), 'rb') as f:
+        test_file = "single_field_single_file.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
             test_data = f.read()
 
         # Create form parser setting the maximum length that we can process to
         # be halfway through the given data.
         size = len(test_data) / 2
-        self.make('boundary', config={'MAX_BODY_SIZE': size})
+        self.make("boundary", config={"MAX_BODY_SIZE": size})
 
         i = self.f.write(test_data)
         self.f.finalize()
@@ -1209,27 +1209,27 @@ class TestFormParser(unittest.TestCase):
         on_end = Mock()
 
         f = FormParser(
-            'application/octet-stream',
+            "application/octet-stream",
             on_field,
             on_file,
             on_end=on_end,
-            file_name=b'foo.txt',
-            config={'MAX_BODY_SIZE': 10},
+            file_name=b"foo.txt",
+            config={"MAX_BODY_SIZE": 10},
         )
 
-        f.write(b'0123456789012345689')
+        f.write(b"0123456789012345689")
         f.finalize()
 
-        self.assert_file_data(files[0], b'0123456789')
+        self.assert_file_data(files[0], b"0123456789")
 
     def test_invalid_max_size_multipart(self):
         with self.assertRaises(ValueError):
-            q = MultipartParser(b'bound', max_size='foo')
+            q = MultipartParser(b"bound", max_size="foo")
 
 
 class TestHelperFunctions(unittest.TestCase):
     def test_create_form_parser(self):
-        r = create_form_parser({'Content-Type': 'application/octet-stream'}, None, None)
+        r = create_form_parser({"Content-Type": "application/octet-stream"}, None, None)
         self.assertTrue(isinstance(r, FormParser))
 
     def test_create_form_parser_error(self):
@@ -1241,7 +1241,7 @@ class TestHelperFunctions(unittest.TestCase):
         on_field = Mock()
         on_file = Mock()
 
-        parse_form({'Content-Type': 'application/octet-stream'}, BytesIO(b'123456789012345'), on_field, on_file)
+        parse_form({"Content-Type": "application/octet-stream"}, BytesIO(b"123456789012345"), on_field, on_file)
 
         assert on_file.call_count == 1
 
@@ -1256,8 +1256,8 @@ class TestHelperFunctions(unittest.TestCase):
             files.append(file)
 
         parse_form(
-            {'Content-Type': 'application/octet-stream', 'Content-Length': '10'},
-            BytesIO(b'123456789012345'),
+            {"Content-Type": "application/octet-stream", "Content-Length": "10"},
+            BytesIO(b"123456789012345"),
             None,
             on_file,
         )
