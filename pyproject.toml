@@ -41,6 +41,7 @@ dev = [
     "PyYAML==6.0.1",
     "invoke==2.2.0",
     "pytest-timeout==2.2.0",
+    "ruff==0.2.1",
     "hatch",
 ]
 
