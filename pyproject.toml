@@ -6,10 +6,13 @@ build-backend = "hatchling.build"
 name = "python-multipart"
 dynamic = ["version"]
 description = "A streaming multipart parser for Python"
-readme = "README.rst"
+readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.8"
-authors = [{ name = "Andrew Dunham", email = "andrew@du.nham.ca" }]
+authors = [
+    { name = "Andrew Dunham", email = "andrew@du.nham.ca" },
+    { name = "Marcelo Trylesinski", email = "marcelotryle@gmail.com" },
+]
 classifiers = [
     'Development Status :: 5 - Production/Stable',
     'Environment :: Web Environment',
@@ -46,10 +49,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/andrew-d/python-multipart"
+Homepage = "https://github.com/Kludex/python-multipart"
 Documentation = "https://andrew-d.github.io/python-multipart/"
-Changelog = "https://github.com/andrew-d/python-multipart/blob/master/CHANGELOG.md"
-Source = "https://github.com/andrew-d/python-multipart"
+Changelog = "https://github.com/Kludex/python-multipart/blob/master/CHANGELOG.md"
+Source = "https://github.com/Kludex/python-multipart"
 
 [tool.hatch.version]
 path = "multipart/__init__.py"
