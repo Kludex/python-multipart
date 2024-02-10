@@ -17,10 +17,17 @@ from .exceptions import FileError, FormParserError, MultipartParseError, Queryst
 # Unique missing object.
 _missing = object()
 
-# States for the querystring parser.
-STATE_BEFORE_FIELD = 0
-STATE_FIELD_NAME = 1
-STATE_FIELD_DATA = 2
+
+class QuerystringState(IntEnum):
+    """Querystring parser states.
+
+    These are used to keep track of the state of the parser, and are used to determine
+    what to do when new data is encountered.
+    """
+
+    BEFORE_FIELD = 0
+    FIELD_NAME = 1
+    FIELD_DATA = 2
 
 
 class MultipartState(IntEnum):
@@ -727,7 +734,7 @@ class QuerystringParser(BaseParser):
 
     def __init__(self, callbacks={}, strict_parsing=False, max_size=float("inf")):
         super().__init__()
-        self.state = STATE_BEFORE_FIELD
+        self.state = QuerystringState.BEFORE_FIELD
         self._found_sep = False
 
         self.callbacks = callbacks
@@ -783,7 +790,7 @@ class QuerystringParser(BaseParser):
             ch = data[i]
 
             # Depending on our state...
-            if state == STATE_BEFORE_FIELD:
+            if state == QuerystringState.BEFORE_FIELD:
                 # If the 'found_sep' flag is set, we've already encountered
                 # and skipped a single separator.  If so, we check our strict
                 # parsing flag and decide what to do.  Otherwise, we haven't
@@ -810,10 +817,10 @@ class QuerystringParser(BaseParser):
                     # this state.
                     self.callback("field_start")
                     i -= 1
-                    state = STATE_FIELD_NAME
+                    state = QuerystringState.FIELD_NAME
                     found_sep = False
 
-            elif state == STATE_FIELD_NAME:
+            elif state == QuerystringState.FIELD_NAME:
                 # Try and find a separator - we ensure that, if we do, we only
                 # look for the equal sign before it.
                 sep_pos = data.find(b"&", i)
@@ -836,11 +843,11 @@ class QuerystringParser(BaseParser):
                     # added to it below, which means the next iteration of this
                     # loop will inspect the character after the equals sign.
                     i = equals_pos
-                    state = STATE_FIELD_DATA
+                    state = QuerystringState.FIELD_DATA
                 else:
                     # No equals sign found.
                     if not strict_parsing:
-                        # See also comments in the STATE_FIELD_DATA case below.
+                        # See also comments in the QuerystringState.FIELD_DATA case below.
                         # If we found the separator, we emit the name and just
                         # end - there's no data callback at all (not even with
                         # a blank value).
@@ -849,7 +856,7 @@ class QuerystringParser(BaseParser):
                             self.callback("field_end")
 
                             i = sep_pos - 1
-                            state = STATE_BEFORE_FIELD
+                            state = QuerystringState.BEFORE_FIELD
                         else:
                             # Otherwise, no separator in this block, so the
                             # rest of this chunk must be a name.
@@ -873,7 +880,7 @@ class QuerystringParser(BaseParser):
                         self.callback("field_name", data, i, length)
                         i = length
 
-            elif state == STATE_FIELD_DATA:
+            elif state == QuerystringState.FIELD_DATA:
                 # Try finding either an ampersand or a semicolon after this
                 # position.
                 sep_pos = data.find(b"&", i)
@@ -891,7 +898,7 @@ class QuerystringParser(BaseParser):
                     # "field_start" events only when we actually have data for
                     # a field of some sort.
                     i = sep_pos - 1
-                    state = STATE_BEFORE_FIELD
+                    state = QuerystringState.BEFORE_FIELD
 
                 # Otherwise, emit the rest as data and finish.
                 else:
@@ -917,7 +924,7 @@ class QuerystringParser(BaseParser):
         then the on_end callback.
         """
         # If we're currently in the middle of a field, we finish it.
-        if self.state == STATE_FIELD_DATA:
+        if self.state == QuerystringState.FIELD_DATA:
             self.callback("field_end")
         self.callback("end")
 
