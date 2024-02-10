@@ -58,3 +58,15 @@ packages = ["multipart"]
 
 [tool.hatch.build.targets.sdist]
 include = ["/multipart", "/tests"]
+
+[tool.ruff]
+line-length = 120
+select = ["E", "F", "I", "FA"]
+ignore = ["B904", "B028"]
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+split-on-trailing-comma = false
