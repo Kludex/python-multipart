@@ -188,20 +188,6 @@ class TestFile(unittest.TestCase):
         self.assertEqual(self.f.actual_file_name, b"foo.txt")
         self.assert_exists()
 
-    def test_file_full_name_with_ext(self):
-        self.c["UPLOAD_DIR"] = self.d
-        self.c["UPLOAD_KEEP_FILENAME"] = True
-        self.c["UPLOAD_KEEP_EXTENSIONS"] = True
-        self.c["MAX_MEMORY_FILE_SIZE"] = 10
-
-        # Write.
-        self.f.write(b"12345678901")
-        self.assertFalse(self.f.in_memory)
-
-        # Assert that the file exists
-        self.assertEqual(self.f.actual_file_name, b"foo.txt")
-        self.assert_exists()
-
     def test_no_dir_with_extension(self):
         self.c["UPLOAD_KEEP_EXTENSIONS"] = True
         self.c["MAX_MEMORY_FILE_SIZE"] = 10
@@ -284,7 +270,8 @@ class TestParseOptionsHeader(unittest.TestCase):
 
     def test_redos_attack_header(self):
         t, p = parse_options_header(
-            b'application/x-www-form-urlencoded; !="\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\'
+            b'application/x-www-form-urlencoded; !="'
+            b"\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\"
         )
         # If vulnerable, this test wouldn't finish, the line above would hang
         self.assertIn(b'"\\', p[b"!"])
@@ -1123,7 +1110,12 @@ class TestFormParser(unittest.TestCase):
             f = FormParser("multipart/form-data", None, None)
 
     def test_bad_content_transfer_encoding(self):
-        data = b'----boundary\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\nContent-Type: text/plain\r\nContent-Transfer-Encoding: badstuff\r\n\r\nTest\r\n----boundary--\r\n'
+        data = (
+            b'----boundary\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\n'
+            b"Content-Type: text/plain\r\n"
+            b"Content-Transfer-Encoding: badstuff\r\n\r\n"
+            b"Test\r\n----boundary--\r\n"
+        )
 
         files = []
 

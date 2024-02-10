@@ -62,13 +62,21 @@ LOWER_A = b"a"[0]
 LOWER_Z = b"z"[0]
 NULL = b"\x00"[0]
 
+
 # Lower-casing a character is different, because of the difference between
 # str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte,
 # and joining a list of bytes together.
 # These functions abstract that.
-lower_char = lambda c: c | 0x20
-ord_char = lambda c: c
-join_bytes = lambda b: bytes(list(b))
+def lower_char(c):
+    return c | 0x20
+
+
+def ord_char(c):
+    return c
+
+
+def join_bytes(b):
+    return bytes(list(b))
 
 
 def parse_options_header(value: Union[str, bytes]) -> Tuple[bytes, Dict[bytes, bytes]]:

@@ -62,7 +62,8 @@ include = ["/multipart", "/tests"]
 [tool.ruff]
 line-length = 120
 select = ["E", "F", "I", "FA"]
-ignore = ["B904", "B028"]
+ignore = ["B904", "B028", "F841", "E741"]
+flake8-quotes = { inline-quotes = 'single', multiline-quotes = 'double' }
 
 [tool.ruff.format]
 skip-magic-trailing-comma = true
