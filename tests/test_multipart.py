@@ -1222,7 +1222,36 @@ class TestFormParser(unittest.TestCase):
 
     def test_invalid_max_size_multipart(self):
         with self.assertRaises(ValueError):
-            q = MultipartParser(b"bound", max_size="foo")
+            MultipartParser(b"bound", max_size="foo")
+
+    def test_header_begin_callback(self):
+        """
+        This test verifies we call the `on_header_begin` callback.
+        See GitHub issue #23
+        """
+        # Load test data.
+        test_file = "single_field_single_file.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
+            test_data = f.read()
+
+        calls = 0
+
+        def on_header_begin() -> None:
+            nonlocal calls
+            calls += 1
+
+        parser = MultipartParser("boundary", callbacks={"on_header_begin": on_header_begin}, max_size=1000)
+
+        # Create multipart parser and feed it
+        i = parser.write(test_data)
+        parser.finalize()
+
+        # Assert we processed everything.
+        self.assertEqual(i, len(test_data))
+
+        # Assert that we called our 'header_begin' callback three times; once
+        # for each header in the multipart message.
+        self.assertEqual(calls, 3)
 
 
 class TestHelperFunctions(unittest.TestCase):
