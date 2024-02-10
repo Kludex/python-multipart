@@ -11,7 +11,7 @@ name: Upload Python Package
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+.*'           # Run on every git tag with semantic versioning. i.e: 1.5.0 or 1.5.0rc1
+      - '*'
 
 permissions:
   contents: read
