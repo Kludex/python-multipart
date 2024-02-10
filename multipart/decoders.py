@@ -59,8 +59,7 @@ class Base64Decoder:
             try:
                 decoded = base64.b64decode(val)
             except binascii.Error:
-                raise DecodeError('There was an error raised while decoding '
-                                  'base64-encoded data.')
+                raise DecodeError('There was an error raised while decoding ' 'base64-encoded data.')
 
             self.underlying.write(decoded)
 
@@ -91,15 +90,15 @@ class Base64Decoder:
         call it.
         """
         if len(self.cache) > 0:
-            raise DecodeError('There are %d bytes remaining in the '
-                              'Base64Decoder cache when finalize() is called'
-                              % len(self.cache))
+            raise DecodeError(
+                'There are %d bytes remaining in the ' 'Base64Decoder cache when finalize() is called' % len(self.cache)
+            )
 
         if hasattr(self.underlying, 'finalize'):
             self.underlying.finalize()
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(underlying={self.underlying!r})"
+        return f'{self.__class__.__name__}(underlying={self.underlying!r})'
 
 
 class QuotedPrintableDecoder:
@@ -111,6 +110,7 @@ class QuotedPrintableDecoder:
 
     :param underlying: the underlying object to pass writes to
     """
+
     def __init__(self, underlying):
         self.cache = b''
         self.underlying = underlying
@@ -168,4 +168,4 @@ class QuotedPrintableDecoder:
             self.underlying.finalize()
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(underlying={self.underlying!r})"
+        return f'{self.__class__.__name__}(underlying={self.underlying!r})'

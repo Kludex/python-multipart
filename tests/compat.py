@@ -10,7 +10,7 @@ def ensure_in_path(path):
     Ensure that a given path is in the sys.path array
     """
     if not os.path.isdir(path):
-        raise RuntimeError("Tried to add nonexisting path")
+        raise RuntimeError('Tried to add nonexisting path')
 
     def _samefile(x, y):
         try:
@@ -66,8 +66,8 @@ def parametrize(field_names, field_values):
     # Create a decorator that saves this list of field names and values on the
     # function for later parametrizing.
     def decorator(func):
-        func.__dict__["param_names"] = field_names
-        func.__dict__["param_values"] = field_values
+        func.__dict__['param_names'] = field_names
+        func.__dict__['param_values'] = field_values
         return func
 
     return decorator
@@ -75,7 +75,7 @@ def parametrize(field_names, field_values):
 
 # This is a metaclass that actually performs the parametrization.
 class ParametrizingMetaclass(type):
-    IDENTIFIER_RE = re.compile("[^A-Za-z0-9]")
+    IDENTIFIER_RE = re.compile('[^A-Za-z0-9]')
 
     def __new__(klass, name, bases, attrs):
         new_attrs = attrs.copy()
@@ -84,8 +84,8 @@ class ParametrizingMetaclass(type):
             if not isinstance(attr, types.FunctionType):
                 continue
 
-            param_names = attr.__dict__.pop("param_names", None)
-            param_values = attr.__dict__.pop("param_values", None)
+            param_names = attr.__dict__.pop('param_names', None)
+            param_values = attr.__dict__.pop('param_values', None)
             if param_names is None or param_values is None:
                 continue
 
@@ -94,11 +94,11 @@ class ParametrizingMetaclass(type):
                 assert len(param_names) == len(values)
 
                 # Get a repr of the values, and fix it to be a valid identifier
-                human = "_".join([klass.IDENTIFIER_RE.sub("", repr(x)) for x in values])
+                human = '_'.join([klass.IDENTIFIER_RE.sub('', repr(x)) for x in values])
 
                 # Create a new name.
                 # new_name = attr.__name__ + "_%d" % i
-                new_name = attr.__name__ + "__" + human
+                new_name = attr.__name__ + '__' + human
 
                 # Create a replacement function.
                 def create_new_func(func, names, values):
