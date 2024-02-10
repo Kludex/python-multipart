@@ -77,7 +77,7 @@ if TYPE_CHECKING:  # pragma: no cover
             ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
-    OnFileCallback = Callable[[FieldProtocol], None]
+    OnFileCallback = Callable[[FileProtocol], None]
 
 
 # Unique missing object.
