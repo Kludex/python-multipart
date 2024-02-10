@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.9 (2024-02-10)
+
+* Add support for Python 3.12 [#85](https://github.com/Kludex/python-multipart/pull/85).
+* Drop support for Python 3.7 [#95](https://github.com/Kludex/python-multipart/pull/95).
+* Add `MultipartState(IntEnum)` [#96](https://github.com/Kludex/python-multipart/pull/96).
+* Add `QuerystringState` [#97](https://github.com/Kludex/python-multipart/pull/97).
+* Add `TypedDict` callbacks [#98](https://github.com/Kludex/python-multipart/pull/98).
+* Add config `TypedDict`s [#99](https://github.com/Kludex/python-multipart/pull/99).
+
 ## 0.0.8 (2024-02-09)
 
 * Check if Message.get_params return 3-tuple instead of str on parse_options_header [#79](https://github.com/Kludex/python-multipart/pull/79).
