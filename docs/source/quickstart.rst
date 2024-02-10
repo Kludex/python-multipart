@@ -21,10 +21,10 @@ in a simple WSGI application::
 
         # The following two callbacks just append the name to the return value.
         def on_field(field):
-            ret.append("Parsed field named: %s" % (field.field_name,))
+            ret.append(b"Parsed field named: %s" % (field.field_name,))
 
         def on_file(file):
-            ret.append("Parsed file named: %s" % (file.field_name,))
+            ret.append(b"Parsed file named: %s" % (file.field_name,))
 
         # Create headers object.  We need to convert from WSGI to the actual
         # name of the header, since this library does not assume that you are
@@ -40,10 +40,12 @@ in a simple WSGI application::
 
         # Return something.
         start_response('200 OK', [('Content-type', 'text/plain')])
-        ret.append('\n')
+        ret.append(b'\n')
         return ret
-    
+
     from wsgiref.simple_server import make_server
+    from wsgiref.validate import validator
+
     httpd = make_server('', 8123, simple_app)
     print("Serving on port 8123...")
     httpd.serve_forever()
