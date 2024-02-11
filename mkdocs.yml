@@ -1,0 +1,107 @@
+site_name: python-multipart
+site_url: https://kludex.github.io/python-multipart/
+site_author: Marcelo Trylesinski,Andrew Dunham
+site_description: A streaming multipart parser for Python.
+repo_name: kludex/python-multipart
+repo_url: https://github.com//kludex/python-multipart
+edit_uri: https://github.com/kludex/python-multipart/tree/master/docs
+copyright: Python-multipart 2024. All rights reserved.
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/kludex/python-multipart
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/python-multipart
+
+
+
+
+nav:
+  - Home: index.md
+  - API:
+    - Helper-functions: helper-functions.md
+    - Main-class: main-class.md
+    - Parsers: parsers.md
+    - Support-classes: support-classes.md
+    - Decoders: decoders.md
+    - Exceptions: exceptions.md
+  - Contribute:
+    - License: license.md
+    - Changelog: changelog.md
+
+
+theme:
+  name: 'material'
+  custom_dir: docs/theme
+  features:
+    - navigation.tracking
+    - content.code.copy
+    - content.tooltips
+    - content.code.annotate
+    - navigation.tabs
+
+  palette:
+    # Palette for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+    features:
+      - content.code.copy
+      - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            parameter_headings: true
+            paths: [python-multipart]
+            load_external_modules: true
+            allow_inspection: true
+            show_bases: true
+            group_by_category: true
+            docstring_style: google
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            show_category_heading: true
+            domains: [std, py]
+  - git-committers:
+      repository: kludex/python-multipart
+      branch: develop
+      token: !ENV ["GITHUB_TOKEN"]
+  - git-revision-date-localized:
+      enable_creation_date: true
+
+
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+
