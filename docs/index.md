@@ -1,15 +1,8 @@
----
-hide:
-  - navigation
----
-
 # Python-Multipart
 
 Python-Multipart is a streaming multipart parser for Python.
 
 ## Quickstart
-
-Python-Multipart foo bar baz
 
 ### Simple Example
 

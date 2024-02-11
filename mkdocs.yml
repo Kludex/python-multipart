@@ -1,11 +1,10 @@
-site_name: python-multipart
+site_name: Python Multipart
 site_url: https://kludex.github.io/python-multipart/
 site_author: Marcelo Trylesinski,Andrew Dunham
 site_description: A streaming multipart parser for Python.
 repo_name: kludex/python-multipart
 repo_url: https://github.com//kludex/python-multipart
 edit_uri: https://github.com/kludex/python-multipart/tree/master/docs
-copyright: Python-multipart 2024. All rights reserved.
 
 extra:
   social:
@@ -14,32 +13,14 @@ extra:
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/python-multipart
 
-
-
-
-nav:
-  - Home: index.md
-  - API:
-    - Helper-functions: helper-functions.md
-    - Main-class: main-class.md
-    - Parsers: parsers.md
-    - Support-classes: support-classes.md
-    - Decoders: decoders.md
-    - Exceptions: exceptions.md
-  - Contribute:
-    - License: license.md
-    - Changelog: changelog.md
-
-
 theme:
-  name: 'material'
-  custom_dir: docs/theme
+  name: "material"
   features:
     - navigation.tracking
     - content.code.copy
     - content.tooltips
     - content.code.annotate
-    - navigation.tabs
+    - navigation.sections
 
   palette:
     # Palette for light mode
@@ -60,6 +41,11 @@ theme:
       - content.code.copy
       - content.code.annotate
 
+nav:
+  - Introduction: index.md
+  - API Reference: api.md
+  - Changelog: changelog.md
+
 plugins:
   - search
   - mkdocstrings:
@@ -78,14 +64,6 @@ plugins:
             show_symbol_type_toc: true
             show_category_heading: true
             domains: [std, py]
-  - git-committers:
-      repository: kludex/python-multipart
-      branch: develop
-      token: !ENV ["GITHUB_TOKEN"]
-  - git-revision-date-localized:
-      enable_creation_date: true
-
-
 
 markdown_extensions:
   - admonition
@@ -104,4 +82,3 @@ markdown_extensions:
       check_paths: true
   - pymdownx.highlight:
       anchor_linenums: true
-
