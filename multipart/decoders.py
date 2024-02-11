@@ -73,7 +73,7 @@ class Base64Decoder:
         # Return the length of the data to indicate no error.
         return len(data)
 
-    def close(self):
+    def close(self) -> None:
         """Close this decoder.  If the underlying object has a `close()`
         method, this function will call it.
         """
