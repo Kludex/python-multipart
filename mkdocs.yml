@@ -73,7 +73,7 @@ plugins:
             allow_inspection: true
             show_bases: true
             group_by_category: true
-            docstring_style: google
+            docstring_style: sphinx
             show_symbol_type_heading: true
             show_symbol_type_toc: true
             show_category_heading: true
