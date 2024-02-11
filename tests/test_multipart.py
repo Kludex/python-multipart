@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import random
 import sys
@@ -288,19 +290,19 @@ class TestBaseParser(unittest.TestCase):
         self.b.callbacks = {}
 
     def test_callbacks(self):
-        # The stupid list-ness is to get around lack of nonlocal on py2
-        l = [0]
+        called = 0
 
         def on_foo():
-            l[0] += 1
+            nonlocal called
+            called += 1
 
         self.b.set_callback("foo", on_foo)
         self.b.callback("foo")
-        self.assertEqual(l[0], 1)
+        self.assertEqual(called, 1)
 
         self.b.set_callback("foo", None)
         self.b.callback("foo")
-        self.assertEqual(l[0], 1)
+        self.assertEqual(called, 1)
 
 
 class TestQuerystringParser(unittest.TestCase):
@@ -316,15 +318,15 @@ class TestQuerystringParser(unittest.TestCase):
         self.reset()
 
     def reset(self):
-        self.f = []
+        self.f: list[tuple[bytes, bytes]] = []
 
-        name_buffer = []
-        data_buffer = []
+        name_buffer: list[bytes] = []
+        data_buffer: list[bytes] = []
 
-        def on_field_name(data, start, end):
+        def on_field_name(data: bytes, start: int, end: int) -> None:
             name_buffer.append(data[start:end])
 
-        def on_field_data(data, start, end):
+        def on_field_data(data: bytes, start: int, end: int) -> None:
             data_buffer.append(data[start:end])
 
         def on_field_end():
@@ -705,13 +707,13 @@ def split_all(val):
 class TestFormParser(unittest.TestCase):
     def make(self, boundary, config={}):
         self.ended = False
-        self.files = []
-        self.fields = []
+        self.files: list[File] = []
+        self.fields: list[Field] = []
 
-        def on_field(f):
+        def on_field(f: Field) -> None:
             self.fields.append(f)
 
-        def on_file(f):
+        def on_file(f: File) -> None:
             self.files.append(f)
 
         def on_end():
