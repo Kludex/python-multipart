@@ -141,15 +141,15 @@ NULL = b"\x00"[0]
 # str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte,
 # and joining a list of bytes together.
 # These functions abstract that.
-def lower_char(c):
+def lower_char(c: int) -> int:
     return c | 0x20
 
 
-def ord_char(c):
+def ord_char(c: int) -> int:
     return c
 
 
-def join_bytes(b):
+def join_bytes(b: bytes) -> bytes:
     return bytes(list(b))
 
 
@@ -290,7 +290,7 @@ class Field:
         return self._name
 
     @property
-    def value(self):
+    def value(self) -> bytes | None:
         """This property returns the value of the form field."""
         if self._cache is _missing:
             self._cache = b"".join(self._value)
@@ -424,7 +424,7 @@ class File:
         return self._fileobj
 
     @property
-    def size(self):
+    def size(self) -> int:
         """The total size of this file, counted as the number of bytes that
         currently have been written to the file.
         """
@@ -1142,7 +1142,7 @@ class MultipartParser(BaseParser):
             self.marks[name] = i
 
         # Remove a mark.
-        def delete_mark(name: str, reset: bool = False):
+        def delete_mark(name: str, reset: bool = False) -> None:
             self.marks.pop(name, None)
 
         # Helper function that makes calling a callback with data easier. The
@@ -1150,7 +1150,7 @@ class MultipartParser(BaseParser):
         # end of the buffer, and reset the mark, instead of deleting it.  This
         # is used at the end of the function to call our callbacks with any
         # remaining data in this chunk.
-        def data_callback(name: str, remaining: bool = False):
+        def data_callback(name: str, remaining: bool = False) -> None:
             marked_index = self.marks.get(name)
             if marked_index is None:
                 return
@@ -1531,7 +1531,7 @@ class MultipartParser(BaseParser):
         # error or otherwise state that we're not finished parsing.
         pass
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}(boundary={self.boundary!r})"
 
 
