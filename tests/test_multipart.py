@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from io import BytesIO
+from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
 import yaml
@@ -27,6 +28,9 @@ from multipart.multipart import (
 )
 
 from .compat import parametrize, parametrize_class, slow_test
+
+if TYPE_CHECKING:
+    from multipart.multipart import FileConfig
 
 # Get the current directory for our later test cases.
 curr_dir = os.path.abspath(os.path.dirname(__file__))
@@ -95,7 +99,7 @@ class TestField(unittest.TestCase):
 
 class TestFile(unittest.TestCase):
     def setUp(self):
-        self.c = {}
+        self.c: FileConfig = {}
         self.d = force_bytes(tempfile.mkdtemp())
         self.f = File(b"foo.txt", config=self.c)
 
