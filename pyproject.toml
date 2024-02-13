@@ -72,6 +72,8 @@ include = ["/multipart", "/tests"]
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "FA"]
 ignore = ["B904", "B028", "F841", "E741"]
 
