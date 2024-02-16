@@ -16,7 +16,7 @@ from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Callable, Protocol, TypedDict
+    from typing import Callable, Protocol, TypedDict, Mapping
 
     class QuerystringCallbacks(TypedDict, total=False):
         on_field_start: Callable[[], None]
@@ -608,8 +608,9 @@ class BaseParser:
     performance.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, callbacks: Mapping) -> None:
         self.logger = logging.getLogger(__name__)
+        self.callbacks = callbacks
 
     def callback(self, name: str, data: bytes | None = None, start: int | None = None, end: int | None = None):
         """This function calls a provided callback with some data.  If the
@@ -653,9 +654,9 @@ class BaseParser:
                          exist).
         """
         if new_func is None:
-            self.callbacks.pop("on_" + name, None)
+            self.callbacks.pop("on_" + name, None) # TODO: MutableMapping breaks compatibility with TypedDict
         else:
-            self.callbacks["on_" + name] = new_func
+            self.callbacks["on_" + name] = new_func # TODO: MutableMapping breaks compatibility with TypedDict
 
     def close(self):
         pass  # pragma: no cover
@@ -696,8 +697,7 @@ class OctetStreamParser(BaseParser):
     """
 
     def __init__(self, callbacks: OctetStreamCallbacks = {}, max_size: float = float("inf")):
-        super().__init__()
-        self.callbacks = callbacks
+        super().__init__(callbacks)
         self._started = False
 
         if not isinstance(max_size, Number) or max_size < 1:
@@ -795,11 +795,9 @@ class QuerystringParser(BaseParser):
     def __init__(
         self, callbacks: QuerystringCallbacks = {}, strict_parsing: bool = False, max_size: float = float("inf")
     ) -> None:
-        super().__init__()
+        super().__init__(callbacks)
         self.state = QuerystringState.BEFORE_FIELD
         self._found_sep = False
-
-        self.callbacks = callbacks
 
         # Max-size stuff
         if not isinstance(max_size, Number) or max_size < 1:
@@ -1055,11 +1053,9 @@ class MultipartParser(BaseParser):
         self, boundary: bytes | str, callbacks: MultipartCallbacks = {}, max_size: float = float("inf")
     ) -> None:
         # Initialize parser state.
-        super().__init__()
+        super().__init__(callbacks)
         self.state = MultipartState.START
         self.index = self.flags = 0
-
-        self.callbacks = callbacks
 
         if not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" % max_size)
