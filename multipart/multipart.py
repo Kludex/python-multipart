@@ -16,7 +16,7 @@ from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Callable, Protocol, TypedDict, Mapping
+    from typing import Callable, Mapping, Protocol, TypedDict
 
     class QuerystringCallbacks(TypedDict, total=False):
         on_field_start: Callable[[], None]
