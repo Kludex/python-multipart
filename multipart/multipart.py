@@ -304,7 +304,7 @@ class Field:
             return NotImplemented
 
     def __repr__(self) -> str:
-        if len(self.value) > 97:
+        if self.value is not None and len(self.value) > 97:
             # We get the repr, and then insert three dots before the final
             # quote.
             v = repr(self.value[:97])[:-1] + "...'"
