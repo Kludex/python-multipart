@@ -16,21 +16,22 @@ from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Callable, Mapping, Protocol, TypedDict
+    from typing import Callable, Protocol, TypedDict
 
-    class QuerystringCallbacks(TypedDict, total=False):
+    class BaseCallbacks(TypedDict, total=False):
+        on_end: Callable[[], None]
+
+    class QuerystringCallbacks(BaseCallbacks, total=False):
         on_field_start: Callable[[], None]
         on_field_name: Callable[[bytes, int, int], None]
         on_field_data: Callable[[bytes, int, int], None]
         on_field_end: Callable[[], None]
-        on_end: Callable[[], None]
 
-    class OctetStreamCallbacks(TypedDict, total=False):
+    class OctetStreamCallbacks(BaseCallbacks, total=False):
         on_start: Callable[[], None]
         on_data: Callable[[bytes, int, int], None]
-        on_end: Callable[[], None]
 
-    class MultipartCallbacks(TypedDict, total=False):
+    class MultipartCallbacks(BaseCallbacks, total=False):
         on_part_begin: Callable[[], None]
         on_part_data: Callable[[bytes, int, int], None]
         on_part_end: Callable[[], None]
@@ -39,7 +40,6 @@ if TYPE_CHECKING:  # pragma: no cover
         on_header_value: Callable[[bytes, int, int], None]
         on_header_end: Callable[[], None]
         on_headers_finished: Callable[[], None]
-        on_end: Callable[[], None]
 
     class FormParserConfig(TypedDict):
         UPLOAD_DIR: str | None
@@ -608,7 +608,7 @@ class BaseParser:
     performance.
     """
 
-    def __init__(self, callbacks: Mapping) -> None:
+    def __init__(self, callbacks: BaseCallbacks) -> None:
         self.logger = logging.getLogger(__name__)
         self.callbacks = callbacks
 
@@ -654,9 +654,9 @@ class BaseParser:
                          exist).
         """
         if new_func is None:
-            self.callbacks.pop("on_" + name, None) # TODO: MutableMapping breaks compatibility with TypedDict
+            self.callbacks.pop("on_" + name, None)
         else:
-            self.callbacks["on_" + name] = new_func # TODO: MutableMapping breaks compatibility with TypedDict
+            self.callbacks["on_" + name] = new_func
 
     def close(self):
         pass  # pragma: no cover
