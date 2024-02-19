@@ -46,6 +46,7 @@ dev = [
     "pytest-timeout==2.2.0",
     "ruff==0.2.1",
     "hatch",
+    "atheris==2.3.0",
 ]
 docs = [
     "mkdocs==1.5.3",
