@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
 import yaml
+from pytest import mark
 
 from multipart.decoders import Base64Decoder, QuotedPrintableDecoder
 from multipart.exceptions import DecodeError, FileError, FormParserError, MultipartParseError
@@ -27,7 +28,7 @@ from multipart.multipart import (
     parse_options_header,
 )
 
-from .compat import parametrize, parametrize_class, slow_test
+from .compat import parametrize, parametrize_class
 
 if TYPE_CHECKING:
     from multipart.multipart import FileConfig
@@ -905,7 +906,7 @@ class TestFormParser(unittest.TestCase):
                 # Assert that our field is here.
                 self.assert_field(b"field", b"0123456789ABCDEFGHIJ0123456789ABCDEFGHIJ")
 
-    @slow_test
+    @mark.slow_test
     def test_request_body_fuzz(self):
         """
         This test randomly fuzzes the request body to ensure that no strange
@@ -978,7 +979,7 @@ class TestFormParser(unittest.TestCase):
         print("Failures:   %d" % (failures,))
         print("Exceptions: %d" % (exceptions,))
 
-    @slow_test
+    @mark.slow_test
     def test_request_body_fuzz_random_data(self):
         """
         This test will fuzz the multipart parser with some number of iterations

@@ -70,6 +70,11 @@ packages = ["multipart"]
 [tool.hatch.build.targets.sdist]
 include = ["/multipart", "/tests"]
 
+[tool.pytest.ini_options]
+markers = [
+    "slow_test: marks tests as slow (deselect with '-m \"not slow_test\"')",
+]
+
 [tool.ruff]
 line-length = 120
 
