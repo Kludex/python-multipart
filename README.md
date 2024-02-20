@@ -6,7 +6,7 @@
 
 ---
 
-`python-multipart` is an Apache2 licensed streaming multipart parser for Python.
+`python-multipart` is an Apache2-licensed streaming multipart parser for Python.
 Test coverage is currently 100%.
 
 ## Why?
