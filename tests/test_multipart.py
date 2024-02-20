@@ -9,7 +9,6 @@ from io import BytesIO
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
-import pytest
 import yaml
 
 from multipart.decoders import Base64Decoder, QuotedPrintableDecoder
