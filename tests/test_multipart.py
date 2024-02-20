@@ -906,7 +906,6 @@ class TestFormParser(unittest.TestCase):
                 # Assert that our field is here.
                 self.assert_field(b"field", b"0123456789ABCDEFGHIJ0123456789ABCDEFGHIJ")
 
-    @pytest.mark.slow_test
     def test_request_body_fuzz(self):
         """
         This test randomly fuzzes the request body to ensure that no strange
@@ -979,7 +978,6 @@ class TestFormParser(unittest.TestCase):
         print("Failures:   %d" % (failures,))
         print("Exceptions: %d" % (exceptions,))
 
-    @pytest.mark.slow_test
     def test_request_body_fuzz_random_data(self):
         """
         This test will fuzz the multipart parser with some number of iterations
