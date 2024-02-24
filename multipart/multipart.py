@@ -1149,8 +1149,7 @@ class MultipartParser(BaseParser):
 
                 else:
                     # Check to ensure our boundary matches
-                    e = boundary[i2 =  index + 2]
-                    if c != e:
+                    if c != (e = boundary[i2 =  index + 2]):
                         msg = "Expected boundary character %r, got %r at index %d" % (e, c, i2)
                         self.logger.warning(msg)
                         e = MultipartParseError(msg)
