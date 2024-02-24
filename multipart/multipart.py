@@ -1,4 +1,4 @@
-from __future__ import annotations
+Update multipart.pyfrom __future__ import annotations
 
 import logging
 import os
@@ -1149,7 +1149,9 @@ class MultipartParser(BaseParser):
 
                 else:
                     # Check to ensure our boundary matches
-                    if c != (e := boundary[i2 :=  index + 2]):
+                    i2 =  index + 2
+                    e = boundary[i2]
+                    if c != e:
                         msg = "Expected boundary character %r, got %r at index %d" % (e, c, i2)
                         self.logger.warning(msg)
                         e = MultipartParseError(msg)
