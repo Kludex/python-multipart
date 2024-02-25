@@ -55,7 +55,7 @@ Date: Sun, 07 Apr 2013 01:40:52 GMT
 Server: WSGIServer/0.1 Python/2.7.3
 Content-type: text/plain
 
-Parsed field named: foo
+Parsed value parameter named: foo
 ```
 
 For a more in-depth example showing how the various parts fit together, check out the next section.
