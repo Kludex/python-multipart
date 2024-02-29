@@ -1938,7 +1938,7 @@ def parse_form(
     bytes_read = 0
 
     # If the input stream is a text stream, use its binary buffer
-    if isinstance (input_stream, type (sys. stdin)):
+    if isinstance (input_stream, io .TextIOBase):
         input_stream = input_stream .buffer
 
     while True:
