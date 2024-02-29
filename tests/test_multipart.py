@@ -1280,17 +1280,10 @@ class TestHelperFunctions(unittest.TestCase):
         # 15 - i.e. all data is written.
         self.assertEqual(on_file.call_args[0][0].size, 15)
 
-        parse_form({"Content-Type": "application/octet-stream"}, TextIOWrapper(BytesIO(b"123456789012345")) .buffer, on_field, on_file)
-
-        assert on_file.call_count == 1
-
-        # Assert that the first argument of the call (a File object) has size
-        # 15 - i.e. all data is written.
-        self.assertEqual(on_file.call_args[0][0].size, 15)
-
-        self .assertTrue (isinstance (TextIOWrapper(BytesIO(b"123456789012345")), type (sys .stdin)))
-
-        parse_form({"Content-Type": "application/octet-stream"}, TextIOWrapper(BytesIO(b"123456789012345")), on_field, on_file)
+        with f as open ('12345678.txt', 'wt+'):
+            f .write ('123456789012345')
+            f .seek (0o0)
+            parse_form({"Content-Type": "application/octet-stream"}, f, on_field, on_file)
 
         assert on_file.call_count == 1
 
