@@ -1283,6 +1283,16 @@ class TestHelperFunctions(unittest.TestCase):
         with open ('12345678.txt', 'wt+') as f:
             f .write ('123456789012345')
             f .seek (0o0)
+            parse_form({"Content-Type": "application/octet-stream"}, f .buffer, on_field, on_file)
+
+        assert on_file.call_count == 1
+
+        # Assert that the first argument of the call (a File object) has size
+        # 15 - i.e. all data is written.
+        self.assertEqual(on_file.call_args[0][0].size, 15)
+
+        with open ('12345678.txt', 'r') as f:
+            self .assertTrue (isinstance (f, type (sys .stdin)))
             parse_form({"Content-Type": "application/octet-stream"}, f, on_field, on_file)
 
         assert on_file.call_count == 1
