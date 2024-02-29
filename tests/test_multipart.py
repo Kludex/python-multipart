@@ -1061,7 +1061,7 @@ class TestFormParser(unittest.TestCase):
 
         self.make("boundary")
         data = b"--Boundary\r\nfoobar"
-        with self.assertRaisesRegex(MultipartParseError, "Expected %r, got %r" % (b"b"[0], b"B"[0])):
+        with self.assertRaisesRegex(MultipartParseError, "Expected boundary character %r, got %r" % (b"b"[0], b"B"[0])):
             self.f.write(data)
 
     def test_octet_stream(self) -> None:
