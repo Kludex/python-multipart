@@ -5,7 +5,7 @@ import random
 import sys
 import tempfile
 import unittest
-from io import BytesIO, TextIOWrapper
+from io import BytesIO
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
@@ -1280,7 +1280,7 @@ class TestHelperFunctions(unittest.TestCase):
         # 15 - i.e. all data is written.
         self.assertEqual(on_file.call_args[0][0].size, 15)
 
-        with f as open ('12345678.txt', 'wt+'):
+        with open ('12345678.txt', 'wt+') as f:
             f .write ('123456789012345')
             f .seek (0o0)
             parse_form({"Content-Type": "application/octet-stream"}, f, on_field, on_file)
