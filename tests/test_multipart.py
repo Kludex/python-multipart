@@ -1057,7 +1057,12 @@ class TestFormParser(unittest.TestCase):
         self.make("boundary")
         data = b"--boundaryfoobar"
         with self.assertRaises(MultipartParseError):
-            i = self.f.write(data)
+            self.f.write(data)
+
+        self.make("boundary")
+        data = b"--Boundary\r\nfoobar"
+        with self.assertRaisesRegex(MultipartParseError, "Expected %r, got %r" % (b"b"[0], b"B"[0])):
+            self.f.write(data)
 
     def test_octet_stream(self) -> None:
         files: list[File] = []
