@@ -5,7 +5,7 @@ import random
 import sys
 import tempfile
 import unittest
-from io import BytesIO
+from io import BytesIO, TextIOWrapper
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
@@ -1273,6 +1273,14 @@ class TestHelperFunctions(unittest.TestCase):
         on_file = Mock()
 
         parse_form({"Content-Type": "application/octet-stream"}, BytesIO(b"123456789012345"), on_field, on_file)
+
+        assert on_file.call_count == 1
+
+        # Assert that the first argument of the call (a File object) has size
+        # 15 - i.e. all data is written.
+        self.assertEqual(on_file.call_args[0][0].size, 15)
+
+        parse_form({"Content-Type": "application/octet-stream"}, TextIOWrapper(BytesIO(b"123456789012345")), on_field, on_file)
 
         assert on_file.call_count == 1
 
