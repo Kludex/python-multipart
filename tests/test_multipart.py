@@ -5,7 +5,7 @@ import random
 import sys
 import tempfile
 import unittest
-from io import BytesIO
+from io import BytesIO, TextIOBase
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
@@ -1302,7 +1302,7 @@ class TestHelperFunctions(unittest.TestCase):
         with open ('12345678.txt', 'wt+') as f:
             f .write ('123456789012345')
             f .seek (0o0)
-            self .assertTrue (isinstance (f, type (sys .stdin)))
+            self .assertTrue (isinstance (f, TextIOBase))
             parse_form({"Content-Type": "application/octet-stream"}, f, on_field, on_file)
 
         assert on_file.call_count == 1
