@@ -322,47 +322,13 @@ class File:
     There are some options that can be passed to the File to change behavior
     of the class.  Valid options are as follows:
 
-    .. list-table::
-       :widths: 15 5 5 30
-       :header-rows: 1
-
-       * - Name
-         - Type
-         - Default
-         - Description
-       * - UPLOAD_DIR
-         - `str`
-         - None
-         - The directory to store uploaded files in.  If this is None, a
-           temporary file will be created in the system's standard location.
-       * - UPLOAD_DELETE_TMP
-         - `bool`
-         - True
-         - Delete automatically created TMP file
-       * - UPLOAD_KEEP_FILENAME
-         - `bool`
-         - False
-         - Whether or not to keep the filename of the uploaded file.  If True,
-           then the filename will be converted to a safe representation (e.g.
-           by removing any invalid path segments), and then saved with the
-           same name).  Otherwise, a temporary name will be used.
-       * - UPLOAD_KEEP_EXTENSIONS
-         - `bool`
-         - False
-         - Whether or not to keep the uploaded file's extension.  If False, the
-           file will be saved with the default temporary extension (usually
-           ".tmp").  Otherwise, the file's extension will be maintained.  Note
-           that this will properly combine with the UPLOAD_KEEP_FILENAME
-           setting.
-       * - MAX_MEMORY_FILE_SIZE
-         - `int`
-         - 1 MiB
-         - The maximum number of bytes of a File to keep in memory.  By
-           default, the contents of a File are kept into memory until a certain
-           limit is reached, after which the contents of the File are written
-           to a temporary file.  This behavior can be disabled by setting this
-           value to an appropriately large value (or, for example, infinity,
-           such as `float('inf')`.
+    | Name                  | Type  | Default | Description |
+    |-----------------------|-------|---------|-------------|
+    | UPLOAD_DIR            | `str` | None    | The directory to store uploaded files in. If this is None, a temporary file will be created in the system's standard location. |
+    | UPLOAD_DELETE_TMP     | `bool`| True    | Delete automatically created TMP file |
+    | UPLOAD_KEEP_FILENAME  | `bool`| False   | Whether or not to keep the filename of the uploaded file. If True, then the filename will be converted to a safe representation (e.g. by removing any invalid path segments), and then saved with the same name). Otherwise, a temporary name will be used. |
+    | UPLOAD_KEEP_EXTENSIONS| `bool`| False   | Whether or not to keep the uploaded file's extension. If False, the file will be saved with the default temporary extension (usually ".tmp"). Otherwise, the file's extension will be maintained. Note that this will properly combine with the UPLOAD_KEEP_FILENAME setting. |
+    | MAX_MEMORY_FILE_SIZE  | `int` | 1 MiB   | The maximum number of bytes of a File to keep in memory. By default, the contents of a File are kept into memory until a certain limit is reached, after which the contents of the File are written to a temporary file. This behavior can be disabled by setting this value to an appropriately large value (or, for example, infinity, such as `float('inf')`. |
 
     :param file_name: The name of the file that this :class:`File` represents
 
@@ -372,7 +338,7 @@ class File:
 
     :param config: The configuration for this File.  See above for valid
                    configuration keys and their corresponding values.
-    """
+    """ # noqa: E501
 
     def __init__(self, file_name: bytes | None, field_name: bytes | None = None, config: FileConfig = {}) -> None:
         # Save configuration, set other variables default.
@@ -748,28 +714,13 @@ class QuerystringParser(BaseParser):
     """This is a streaming querystring parser.  It will consume data, and call
     the callbacks given when it has data.
 
-    .. list-table::
-       :widths: 15 10 30
-       :header-rows: 1
-
-       * - Callback Name
-         - Parameters
-         - Description
-       * - on_field_start
-         - None
-         - Called when a new field is encountered.
-       * - on_field_name
-         - data, start, end
-         - Called when a portion of a field's name is encountered.
-       * - on_field_data
-         - data, start, end
-         - Called when a portion of a field's data is encountered.
-       * - on_field_end
-         - None
-         - Called when the end of a field is encountered.
-       * - on_end
-         - None
-         - Called when the parser is finished parsing all data.
+    | Callback Name  | Parameters      | Description                                         |
+    |----------------|-----------------|-----------------------------------------------------|
+    | on_field_start | None            | Called when a new field is encountered.             |
+    | on_field_name  | data, start, end| Called when a portion of a field's name is encountered. |
+    | on_field_data  | data, start, end| Called when a portion of a field's data is encountered. |
+    | on_field_end   | None            | Called when the end of a field is encountered.      |
+    | on_end         | None            | Called when the parser is finished parsing all data.|
 
     :param callbacks: A dictionary of callbacks.  See the documentation for
                       :class:`BaseParser`.
@@ -788,7 +739,7 @@ class QuerystringParser(BaseParser):
 
     :param max_size: The maximum size of body to parse.  Defaults to infinity -
                      i.e. unbounded.
-    """
+    """ # noqa: E501
 
     state: QuerystringState
 
@@ -999,46 +950,17 @@ class QuerystringParser(BaseParser):
 class MultipartParser(BaseParser):
     """This class is a streaming multipart/form-data parser.
 
-    .. list-table::
-       :widths: 15 10 30
-       :header-rows: 1
-
-       * - Callback Name
-         - Parameters
-         - Description
-       * - on_part_begin
-         - None
-         - Called when a new part of the multipart message is encountered.
-       * - on_part_data
-         - data, start, end
-         - Called when a portion of a part's data is encountered.
-       * - on_part_end
-         - None
-         - Called when the end of a part is reached.
-       * - on_header_begin
-         - None
-         - Called when we've found a new header in a part of a multipart
-           message
-       * - on_header_field
-         - data, start, end
-         - Called each time an additional portion of a header is read (i.e. the
-           part of the header that is before the colon; the "Foo" in
-           "Foo: Bar").
-       * - on_header_value
-         - data, start, end
-         - Called when we get data for a header.
-       * - on_header_end
-         - None
-         - Called when the current header is finished - i.e. we've reached the
-           newline at the end of the header.
-       * - on_headers_finished
-         - None
-         - Called when all headers are finished, and before the part data
-           starts.
-       * - on_end
-         - None
-         - Called when the parser is finished parsing all data.
-
+    | Callback Name      | Parameters      | Description |
+    |--------------------|-----------------|-------------|
+    | on_part_begin      | None            | Called when a new part of the multipart message is encountered. |
+    | on_part_data       | data, start, end| Called when a portion of a part's data is encountered. |
+    | on_part_end        | None            | Called when the end of a part is reached. |
+    | on_header_begin    | None            | Called when we've found a new header in a part of a multipart message |
+    | on_header_field    | data, start, end| Called each time an additional portion of a header is read (i.e. the part of the header that is before the colon; the "Foo" in "Foo: Bar"). |
+    | on_header_value    | data, start, end| Called when we get data for a header. |
+    | on_header_end      | None            | Called when the current header is finished - i.e. we've reached the newline at the end of the header. |
+    | on_headers_finished| None            | Called when all headers are finished, and before the part data starts. |
+    | on_end             | None            | Called when the parser is finished parsing all data. |
 
     :param boundary: The multipart boundary.  This is required, and must match
                      what is given in the HTTP request - usually in the
@@ -1049,7 +971,7 @@ class MultipartParser(BaseParser):
 
     :param max_size: The maximum size of body to parse.  Defaults to infinity -
                      i.e. unbounded.
-    """
+    """ # noqa: E501
 
     def __init__(
         self, boundary: bytes | str, callbacks: MultipartCallbacks = {}, max_size: float = float("inf")
