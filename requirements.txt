@@ -1,11 +1,11 @@
 atomicwrites==1.4.1
 attrs==23.2.0
-coverage==7.4.1
+coverage==7.4.3
 more-itertools==10.2.0
 pbr==6.0.0
 pluggy==1.4.0
 py==1.11.0
-pytest==8.0.0
+pytest==8.0.2
 PyYAML==6.0.1
-ruff==0.2.1
+ruff==0.3.0
 atheris==2.3.0

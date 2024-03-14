@@ -32,29 +32,6 @@ def ensure_in_path(path):
     sys.path.insert(0, path)
 
 
-# Check if pytest is imported.  If so, we use it to create marking decorators.
-# If not, we just create a function that does nothing.
-try:
-    import pytest
-except ImportError:
-    pytest = None
-
-if pytest is not None:
-    slow_test = pytest.mark.slow_test
-    xfail = pytest.mark.xfail
-
-else:
-
-    def slow_test(x):
-        return x
-
-    def xfail(*args, **kwargs):
-        if len(args) > 0 and isinstance(args[0], types.FunctionType):
-            return args[0]
-
-        return lambda x: x
-
-
 # We don't use the pytest parametrizing function, since it seems to break
 # with unittest.TestCase subclasses.
 def parametrize(field_names, field_values):

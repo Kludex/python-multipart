@@ -154,10 +154,7 @@ def join_bytes(b: bytes) -> bytes:
 
 
 def parse_options_header(value: str | bytes) -> tuple[bytes, dict[bytes, bytes]]:
-    """
-    Parses a Content-Type header into a value in the following format:
-        (content_type, {parameters})
-    """
+    """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
     # Uses email.message.Message to parse the header as described in PEP 594.
     # Ref: https://peps.python.org/pep-0594/#cgi
     if not value:
@@ -182,7 +179,7 @@ def parse_options_header(value: str | bytes) -> tuple[bytes, dict[bytes, bytes]]
     # If there were no parameters, this would have already returned above
     assert params, "At least the content type value should be present"
     ctype = params.pop(0)[0].encode("latin-1")
-    options = {}
+    options: dict[bytes, bytes] = {}
     for param in params:
         key, value = param
         # If the value returned from get_params() is a 3-tuple, the last
@@ -212,10 +209,11 @@ class Field:
     will be called when data is written to the Field, and when the Field is
     finalized, respectively.
 
-    :param name: the name of the form field
+    Args:
+        name: The name of the form field.
     """
 
-    def __init__(self, name: bytes):
+    def __init__(self, name: bytes) -> None:
         self._name = name
         self._value: list[bytes] = []
 
@@ -228,9 +226,12 @@ class Field:
         value - either None or an actual value.  This method will also
         finalize the Field itself.
 
-        :param name: the name of the form field
-        :param value: the value of the form field - either a bytestring or
-                      None
+        Args:
+            name: the name of the form field.
+            value: the value of the form field - either a bytestring or None.
+
+        Returns:
+            A new instance of a [`Field`][multipart.Field].
         """
 
         f = cls(name)
@@ -244,7 +245,11 @@ class Field:
     def write(self, data: bytes) -> int:
         """Write some data into the form field.
 
-        :param data: a bytestring
+        Args:
+            data: The data to write to the field.
+
+        Returns:
+            The number of bytes written.
         """
         return self.on_data(data)
 
@@ -252,7 +257,11 @@ class Field:
         """This method is a callback that will be called whenever data is
         written to the Field.
 
-        :param data: a bytestring
+        Args:
+            data: The data to write to the field.
+
+        Returns:
+            The number of bytes written.
         """
         self._value.append(data)
         self._cache = _missing
@@ -322,57 +331,20 @@ class File:
     There are some options that can be passed to the File to change behavior
     of the class.  Valid options are as follows:
 
-    .. list-table::
-       :widths: 15 5 5 30
-       :header-rows: 1
+    | Name                  | Type  | Default | Description |
+    |-----------------------|-------|---------|-------------|
+    | UPLOAD_DIR            | `str` | None    | The directory to store uploaded files in. If this is None, a temporary file will be created in the system's standard location. |
+    | UPLOAD_DELETE_TMP     | `bool`| True    | Delete automatically created TMP file |
+    | UPLOAD_KEEP_FILENAME  | `bool`| False   | Whether or not to keep the filename of the uploaded file. If True, then the filename will be converted to a safe representation (e.g. by removing any invalid path segments), and then saved with the same name). Otherwise, a temporary name will be used. |
+    | UPLOAD_KEEP_EXTENSIONS| `bool`| False   | Whether or not to keep the uploaded file's extension. If False, the file will be saved with the default temporary extension (usually ".tmp"). Otherwise, the file's extension will be maintained. Note that this will properly combine with the UPLOAD_KEEP_FILENAME setting. |
+    | MAX_MEMORY_FILE_SIZE  | `int` | 1 MiB   | The maximum number of bytes of a File to keep in memory. By default, the contents of a File are kept into memory until a certain limit is reached, after which the contents of the File are written to a temporary file. This behavior can be disabled by setting this value to an appropriately large value (or, for example, infinity, such as `float('inf')`. |
 
-       * - Name
-         - Type
-         - Default
-         - Description
-       * - UPLOAD_DIR
-         - `str`
-         - None
-         - The directory to store uploaded files in.  If this is None, a
-           temporary file will be created in the system's standard location.
-       * - UPLOAD_DELETE_TMP
-         - `bool`
-         - True
-         - Delete automatically created TMP file
-       * - UPLOAD_KEEP_FILENAME
-         - `bool`
-         - False
-         - Whether or not to keep the filename of the uploaded file.  If True,
-           then the filename will be converted to a safe representation (e.g.
-           by removing any invalid path segments), and then saved with the
-           same name).  Otherwise, a temporary name will be used.
-       * - UPLOAD_KEEP_EXTENSIONS
-         - `bool`
-         - False
-         - Whether or not to keep the uploaded file's extension.  If False, the
-           file will be saved with the default temporary extension (usually
-           ".tmp").  Otherwise, the file's extension will be maintained.  Note
-           that this will properly combine with the UPLOAD_KEEP_FILENAME
-           setting.
-       * - MAX_MEMORY_FILE_SIZE
-         - `int`
-         - 1 MiB
-         - The maximum number of bytes of a File to keep in memory.  By
-           default, the contents of a File are kept into memory until a certain
-           limit is reached, after which the contents of the File are written
-           to a temporary file.  This behavior can be disabled by setting this
-           value to an appropriately large value (or, for example, infinity,
-           such as `float('inf')`.
-
-    :param file_name: The name of the file that this :class:`File` represents
-
-    :param field_name: The field name that uploaded this file.  Note that this
-                       can be None, if, for example, the file was uploaded
-                       with Content-Type application/octet-stream
-
-    :param config: The configuration for this File.  See above for valid
-                   configuration keys and their corresponding values.
-    """
+    Args:
+        file_name: The name of the file that this [`File`][multipart.File] represents.
+        field_name: The name of the form field that this file was uploaded with.  This can be None, if, for example,
+            the file was uploaded with Content-Type application/octet-stream.
+        config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
+    """  # noqa: E501
 
     def __init__(self, file_name: bytes | None, field_name: bytes | None = None, config: FileConfig = {}) -> None:
         # Save configuration, set other variables default.
@@ -540,7 +512,11 @@ class File:
         """This method is a callback that will be called whenever data is
         written to the File.
 
-        :param data: a bytestring
+        Args:
+            data: The data to write to the file.
+
+        Returns:
+            The number of bytes written.
         """
         pos = self._fileobj.tell()
         bwritten = self._fileobj.write(data)
@@ -615,15 +591,12 @@ class BaseParser:
         """This function calls a provided callback with some data.  If the
         callback is not set, will do nothing.
 
-        :param name: The name of the callback to call (as a string).
-
-        :param data: Data to pass to the callback.  If None, then it is
-                     assumed that the callback is a notification callback,
-                     and no parameters are given.
-
-        :param end: An integer that is passed to the data callback.
-
-        :param start: An integer that is passed to the data callback.
+        Args:
+            name: The name of the callback to call (as a string).
+            data: Data to pass to the callback.  If None, then it is assumed that the callback is a notification
+                callback, and no parameters are given.
+            end: An integer that is passed to the data callback.
+            start: An integer that is passed to the data callback.
         """
         name = "on_" + name
         func = self.callbacks.get(name)
@@ -671,28 +644,15 @@ class OctetStreamParser(BaseParser):
     """This parser parses an octet-stream request body and calls callbacks when
     incoming data is received.  Callbacks are as follows:
 
-    .. list-table::
-       :widths: 15 10 30
-       :header-rows: 1
+    | Callback Name  | Parameters      | Description                                         |
+    |----------------|-----------------|-----------------------------------------------------|
+    | on_start       | None            | Called when the first data is parsed.               |
+    | on_data        | data, start, end| Called for each data chunk that is parsed.           |
+    | on_end         | None            | Called when the parser is finished parsing all data.|
 
-       * - Callback Name
-         - Parameters
-         - Description
-       * - on_start
-         - None
-         - Called when the first data is parsed.
-       * - on_data
-         - data, start, end
-         - Called for each data chunk that is parsed.
-       * - on_end
-         - None
-         - Called when the parser is finished parsing all data.
-
-    :param callbacks: A dictionary of callbacks.  See the documentation for
-                      :class:`BaseParser`.
-
-    :param max_size: The maximum size of body to parse.  Defaults to infinity -
-                     i.e. unbounded.
+    Args:
+        callbacks: A dictionary of callbacks.  See the documentation for [`BaseParser`][multipart.BaseParser].
+        max_size: The maximum size of body to parse.  Defaults to infinity - i.e. unbounded.
     """
 
     def __init__(self, callbacks: OctetStreamCallbacks = {}, max_size: float = float("inf")):
@@ -709,7 +669,11 @@ class OctetStreamParser(BaseParser):
         """Write some data to the parser, which will perform size verification,
         and then pass the data to the underlying callback.
 
-        :param data: a bytestring
+        Args:
+            data: The data to write to the parser.
+
+        Returns:
+            The number of bytes written.
         """
         if not self._started:
             self.callback("start")
@@ -748,47 +712,23 @@ class QuerystringParser(BaseParser):
     """This is a streaming querystring parser.  It will consume data, and call
     the callbacks given when it has data.
 
-    .. list-table::
-       :widths: 15 10 30
-       :header-rows: 1
+    | Callback Name  | Parameters      | Description                                         |
+    |----------------|-----------------|-----------------------------------------------------|
+    | on_field_start | None            | Called when a new field is encountered.             |
+    | on_field_name  | data, start, end| Called when a portion of a field's name is encountered. |
+    | on_field_data  | data, start, end| Called when a portion of a field's data is encountered. |
+    | on_field_end   | None            | Called when the end of a field is encountered.      |
+    | on_end         | None            | Called when the parser is finished parsing all data.|
 
-       * - Callback Name
-         - Parameters
-         - Description
-       * - on_field_start
-         - None
-         - Called when a new field is encountered.
-       * - on_field_name
-         - data, start, end
-         - Called when a portion of a field's name is encountered.
-       * - on_field_data
-         - data, start, end
-         - Called when a portion of a field's data is encountered.
-       * - on_field_end
-         - None
-         - Called when the end of a field is encountered.
-       * - on_end
-         - None
-         - Called when the parser is finished parsing all data.
-
-    :param callbacks: A dictionary of callbacks.  See the documentation for
-                      :class:`BaseParser`.
-
-    :param strict_parsing: Whether or not to parse the body strictly.  Defaults
-                           to False.  If this is set to True, then the behavior
-                           of the parser changes as the following: if a field
-                           has a value with an equal sign (e.g. "foo=bar", or
-                           "foo="), it is always included.  If a field has no
-                           equals sign (e.g. "...&name&..."), it will be
-                           treated as an error if 'strict_parsing' is True,
-                           otherwise included.  If an error is encountered,
-                           then a
-                           :class:`multipart.exceptions.QuerystringParseError`
-                           will be raised.
-
-    :param max_size: The maximum size of body to parse.  Defaults to infinity -
-                     i.e. unbounded.
-    """
+    Args:
+        callbacks: A dictionary of callbacks.  See the documentation for [`BaseParser`][multipart.BaseParser].
+        strict_parsing: Whether or not to parse the body strictly.  Defaults to False.  If this is set to True, then the
+            behavior of the parser changes as the following: if a field has a value with an equal sign
+            (e.g. "foo=bar", or "foo="), it is always included.  If a field has no equals sign (e.g. "...&name&..."),
+            it will be treated as an error if 'strict_parsing' is True, otherwise included.  If an error is encountered,
+            then a [`QuerystringParseError`][multipart.exceptions.QuerystringParseError] will be raised.
+        max_size: The maximum size of body to parse.  Defaults to infinity - i.e. unbounded.
+    """  # noqa: E501
 
     state: QuerystringState
 
@@ -818,7 +758,11 @@ class QuerystringParser(BaseParser):
         "offset" attribute of the raised exception will be set to the offset in
         the input data chunk (NOT the overall stream) that caused the error.
 
-        :param data: a bytestring
+        Args:
+            data: The data to write to the parser.
+
+        Returns:
+            The number of bytes written.
         """
         # Handle sizing.
         data_len = len(data)
@@ -999,57 +943,23 @@ class QuerystringParser(BaseParser):
 class MultipartParser(BaseParser):
     """This class is a streaming multipart/form-data parser.
 
-    .. list-table::
-       :widths: 15 10 30
-       :header-rows: 1
+    | Callback Name      | Parameters      | Description |
+    |--------------------|-----------------|-------------|
+    | on_part_begin      | None            | Called when a new part of the multipart message is encountered. |
+    | on_part_data       | data, start, end| Called when a portion of a part's data is encountered. |
+    | on_part_end        | None            | Called when the end of a part is reached. |
+    | on_header_begin    | None            | Called when we've found a new header in a part of a multipart message |
+    | on_header_field    | data, start, end| Called each time an additional portion of a header is read (i.e. the part of the header that is before the colon; the "Foo" in "Foo: Bar"). |
+    | on_header_value    | data, start, end| Called when we get data for a header. |
+    | on_header_end      | None            | Called when the current header is finished - i.e. we've reached the newline at the end of the header. |
+    | on_headers_finished| None            | Called when all headers are finished, and before the part data starts. |
+    | on_end             | None            | Called when the parser is finished parsing all data. |
 
-       * - Callback Name
-         - Parameters
-         - Description
-       * - on_part_begin
-         - None
-         - Called when a new part of the multipart message is encountered.
-       * - on_part_data
-         - data, start, end
-         - Called when a portion of a part's data is encountered.
-       * - on_part_end
-         - None
-         - Called when the end of a part is reached.
-       * - on_header_begin
-         - None
-         - Called when we've found a new header in a part of a multipart
-           message
-       * - on_header_field
-         - data, start, end
-         - Called each time an additional portion of a header is read (i.e. the
-           part of the header that is before the colon; the "Foo" in
-           "Foo: Bar").
-       * - on_header_value
-         - data, start, end
-         - Called when we get data for a header.
-       * - on_header_end
-         - None
-         - Called when the current header is finished - i.e. we've reached the
-           newline at the end of the header.
-       * - on_headers_finished
-         - None
-         - Called when all headers are finished, and before the part data
-           starts.
-       * - on_end
-         - None
-         - Called when the parser is finished parsing all data.
-
-
-    :param boundary: The multipart boundary.  This is required, and must match
-                     what is given in the HTTP request - usually in the
-                     Content-Type header.
-
-    :param callbacks: A dictionary of callbacks.  See the documentation for
-                      :class:`BaseParser`.
-
-    :param max_size: The maximum size of body to parse.  Defaults to infinity -
-                     i.e. unbounded.
-    """
+    Args:
+        boundary: The multipart boundary.  This is required, and must match what is given in the HTTP request - usually in the Content-Type header.
+        callbacks: A dictionary of callbacks.  See the documentation for [`BaseParser`][multipart.BaseParser].
+        max_size: The maximum size of body to parse.  Defaults to infinity - i.e. unbounded.
+    """  # noqa: E501
 
     def __init__(
         self, boundary: bytes | str, callbacks: MultipartCallbacks = {}, max_size: float = float("inf")
@@ -1100,7 +1010,11 @@ class MultipartParser(BaseParser):
         attribute on the raised exception will be set to the offset of the byte
         in the input chunk that caused the error.
 
-        :param data: a bytestring
+        Args:
+            data: The data to write to the parser.
+
+        Returns:
+            The number of bytes written.
         """
         # Handle sizing.
         data_len = len(data)
@@ -1542,51 +1456,31 @@ class FormParser:
     is parsed, and call the two given callbacks with each field and file as
     they become available.
 
-    :param content_type: The Content-Type of the incoming request.  This is
-                         used to select the appropriate parser.
-
-    :param on_field: The callback to call when a field has been parsed and is
-                     ready for usage.  See above for parameters.
-
-    :param on_file: The callback to call when a file has been parsed and is
-                    ready for usage.  See above for parameters.
-
-    :param on_end: An optional callback to call when all fields and files in a
-                   request has been parsed.  Can be None.
-
-    :param boundary: If the request is a multipart/form-data request, this
-                     should be the boundary of the request, as given in the
-                     Content-Type header, as a bytestring.
-
-    :param file_name: If the request is of type application/octet-stream, then
-                      the body of the request will not contain any information
-                      about the uploaded file.  In such cases, you can provide
-                      the file name of the uploaded file manually.
-
-    :param FileClass: The class to use for uploaded files.  Defaults to
-                      :class:`File`, but you can provide your own class if you
-                      wish to customize behaviour.  The class will be
-                      instantiated as FileClass(file_name, field_name), and it
-                      must provide the following functions::
-                          file_instance.write(data)
-                          file_instance.finalize()
-                          file_instance.close()
-
-    :param FieldClass: The class to use for uploaded fields.  Defaults to
-                       :class:`Field`, but you can provide your own class if
-                       you wish to customize behaviour.  The class will be
-                       instantiated as FieldClass(field_name), and it must
-                       provide the following functions::
-                           field_instance.write(data)
-                           field_instance.finalize()
-                           field_instance.close()
-                           field_instance.set_none()
-
-    :param config: Configuration to use for this FormParser.  The default
-                   values are taken from the DEFAULT_CONFIG value, and then
-                   any keys present in this dictionary will overwrite the
-                   default values.
-
+    Args:
+        content_type: The Content-Type of the incoming request.  This is used to select the appropriate parser.
+        on_field: The callback to call when a field has been parsed and is ready for usage.  See above for parameters.
+        on_file: The callback to call when a file has been parsed and is ready for usage.  See above for parameters.
+        on_end: An optional callback to call when all fields and files in a request has been parsed.  Can be None.
+        boundary: If the request is a multipart/form-data request, this should be the boundary of the request, as given
+            in the Content-Type header, as a bytestring.
+        file_name: If the request is of type application/octet-stream, then the body of the request will not contain any
+            information about the uploaded file.  In such cases, you can provide the file name of the uploaded file
+            manually.
+        FileClass: The class to use for uploaded files.  Defaults to :class:`File`, but you can provide your own class
+            if you wish to customize behaviour.  The class will be instantiated as FileClass(file_name, field_name), and
+            it must provide the following functions::
+                - file_instance.write(data)
+                - file_instance.finalize()
+                - file_instance.close()
+        FieldClass: The class to use for uploaded fields.  Defaults to :class:`Field`, but you can provide your own
+            class if you wish to customize behaviour.  The class will be instantiated as FieldClass(field_name), and it
+            must provide the following functions::
+                - field_instance.write(data)
+                - field_instance.finalize()
+                - field_instance.close()
+                - field_instance.set_none()
+        config: Configuration to use for this FormParser.  The default values are taken from the DEFAULT_CONFIG value,
+            and then any keys present in this dictionary will overwrite the default values.
     """
 
     #: This is the default configuration for our form parser.
@@ -1826,11 +1720,15 @@ class FormParser:
 
         self.parser = parser
 
-    def write(self, data: bytes):
+    def write(self, data: bytes) -> int:
         """Write some data.  The parser will forward this to the appropriate
         underlying parser.
 
-        :param data: a bytestring
+        Args:
+            data: The data to write.
+
+        Returns:
+            The number of bytes processed.
         """
         self.bytes_received += len(data)
         # TODO: check the parser's return value for errors?
@@ -1863,18 +1761,13 @@ def create_form_parser(
     appropriate values and given callbacks, and then return the corresponding
     parser.
 
-    :param headers: A dictionary-like object of HTTP headers.  The only
-                    required header is Content-Type.
-
-    :param on_field: Callback to call with each parsed field.
-
-    :param on_file: Callback to call with each parsed file.
-
-    :param trust_x_headers: Whether or not to trust information received from
-                            certain X-Headers - for example, the file name from
-                            X-File-Name.
-
-    :param config: Configuration variables to pass to the FormParser.
+    Args:
+        headers: A dictionary-like object of HTTP headers.  The only required header is Content-Type.
+        on_field: Callback to call with each parsed field.
+        on_file: Callback to call with each parsed file.
+        trust_x_headers: Whether or not to trust information received from certain X-Headers - for example, the file
+            name from X-File-Name.
+        config: Configuration variables to pass to the FormParser.
     """
     content_type = headers.get("Content-Type")
     if content_type is None:
@@ -1911,20 +1804,14 @@ def parse_form(
     headers, and a file-like object for the input stream, along with two
     callbacks that will get called whenever a field or file is parsed.
 
-    :param headers: A dictionary-like object of HTTP headers.  The only
-                    required header is Content-Type.
-
-    :param input_stream: A file-like object that represents the request body.
-                         The read() method must return bytestrings.
-
-    :param on_field: Callback to call with each parsed field.
-
-    :param on_file: Callback to call with each parsed file.
-
-    :param chunk_size: The maximum size to read from the input stream and write
-                       to the parser at one time.  Defaults to 1 MiB.
+    Args:
+        headers: A dictionary-like object of HTTP headers.  The only required header is Content-Type.
+        input_stream: A file-like object that represents the request body. The read() method must return bytestrings.
+        on_field: Callback to call with each parsed field.
+        on_file: Callback to call with each parsed file.
+        chunk_size: The maximum size to read from the input stream and write to the parser at one time.
+            Defaults to 1 MiB.
     """
-
     # Create our form parser.
     parser = create_form_parser(headers, on_field, on_file)
 

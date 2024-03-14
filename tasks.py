@@ -23,10 +23,6 @@ def test(ctx, all=False):
         '--timeout=30'                  # Each test should timeout after 30 sec
     ]
 
-    # Default to not running the slow tests.
-    if not all:
-        test_cmd.append('-m "not slow_test"')
-
     # Test in this directory
     test_cmd.append("tests")
 

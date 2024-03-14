@@ -1,4 +1,4 @@
-# Python-Multipart
+# [Python-Multipart](https://kludex.github.io/python-multipart/)
 
 [![Build Status](https://github.com/Kludex/python-multipart/workflows/CI/badge.svg)](https://github.com/Kludex/python-multipart/actions)
 [![Package version](https://badge.fury.io/py/python-multipart.svg)](https://pypi.python.org/pypi/python-multipart)
@@ -6,7 +6,7 @@
 
 ---
 
-`python-multipart` is an Apache2 licensed streaming multipart parser for Python.
+`python-multipart` is an Apache2-licensed streaming multipart parser for Python.
 Test coverage is currently 100%.
 
 ## Why?
