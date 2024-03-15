@@ -8,3 +8,4 @@ py==1.11.0
 pytest==8.0.2
 PyYAML==6.0.1
 ruff==0.3.0
+atheris==2.3.0
