@@ -84,3 +84,21 @@ skip-magic-trailing-comma = true
 [tool.ruff.lint.isort]
 combine-as-imports = true
 split-on-trailing-comma = false
+
+[tool.coverage.run]
+branch = false
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "def __str__",
+    "def __repr__",
+    "if 0:",
+    "if False:",
+    "if __name__ == .__main__.:",
+    "if self\\.config\\['DEBUG'\\]:",
+    "if self\\.debug:",
+    "except ImportError:",
+]
