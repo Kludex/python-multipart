@@ -136,13 +136,14 @@ LOWER_A = b"a"[0]
 LOWER_Z = b"z"[0]
 NULL = b"\x00"[0]
 
-
-# Lower-casing a character is different, because of the difference between
-# str on Py2, and bytes on Py3.  Same with getting the ordinal value of a byte,
-# and joining a list of bytes together.
-# These functions abstract that.
-def lower_char(c: int) -> int:
-    return c | 0x20
+# Mask for ASCII characters that can be http tokens.
+# Per RFC7230 - 3.2.6, this is all alpha-numeric characters 
+# and these: !#$%&'*+-.^_`|~
+TOKEN_CHARS_SET = frozenset(
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    b"abcdefghijklmnopqrstuvwxyz"
+    b"0123456789"
+    b"!#$%&'*+-.^_`|~")
 
 
 def ord_char(c: int) -> int:
@@ -1175,12 +1176,8 @@ class MultipartParser(BaseParser):
                 # Increment our index in the header.
                 index += 1
 
-                # Do nothing if we encounter a hyphen.
-                if c == HYPHEN:
-                    pass
-
                 # If we've reached a colon, we're done with this header.
-                elif c == COLON:
+                if c == COLON:
                     # A 0-length header is an error.
                     if index == 1:
                         msg = "Found 0-length header at %d" % (i,)
@@ -1195,16 +1192,12 @@ class MultipartParser(BaseParser):
                     # Move to parsing the header value.
                     state = MultipartState.HEADER_VALUE_START
 
-                else:
-                    # Lower-case this character, and ensure that it is in fact
-                    # a valid letter.  If not, it's an error.
-                    cl = lower_char(c)
-                    if cl < LOWER_A or cl > LOWER_Z:
-                        msg = "Found non-alphanumeric character %r in " "header at %d" % (c, i)
-                        self.logger.warning(msg)
-                        e = MultipartParseError(msg)
-                        e.offset = i
-                        raise e
+                elif c not in TOKEN_CHARS_SET:
+                    msg = "Found invalid character %r in header at %d" % (c, i)
+                    self.logger.warning(msg)
+                    e = MultipartParseError(msg)
+                    e.offset = i
+                    raise e
 
             elif state == MultipartState.HEADER_VALUE_START:
                 # Skip leading spaces.
