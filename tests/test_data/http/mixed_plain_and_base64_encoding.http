@@ -1,0 +1,23 @@
+----boundary
+Content-Type: text/plain; charset="UTF-8"
+Content-Disposition: form-data; name=field1
+Content-Transfer-Encoding: base64
+
+VGVzdCAxMjM=
+----boundary
+Content-Type: text/plain; charset="UTF-8"
+Content-Disposition: form-data; name=field2
+
+This is a test.
+----boundary
+Content-Type: text/plain; charset="UTF-8"
+Content-Disposition: form-data; name=field3
+Content-Transfer-Encoding: base64
+
+VGVzdCBzdHJpbmcuCg==
+----boundary
+Content-Type: text/plain; charset="UTF-8"
+Content-Disposition: form-data; name=field4
+
+This is also a test.
+----boundary--

@@ -1,0 +1,18 @@
+boundary: --boundary
+expected:
+  - name: field1
+    type: field
+    data: !!binary |
+      VGVzdCAxMjM=
+  - name: field2
+    type: field
+    data: !!binary |
+      VGhpcyBpcyBhIHRlc3Qu
+  - name: field3
+    type: field
+    data: !!binary |
+      VGVzdCBzdHJpbmcuCg==
+  - name: field4
+    type: field
+    data: !!binary |
+      VGhpcyBpcyBhbHNvIGEgdGVzdC4=
