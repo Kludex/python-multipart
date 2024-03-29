@@ -68,12 +68,14 @@ if TYPE_CHECKING:  # pragma: no cover
         def close(self) -> None: ...
 
     class FieldProtocol(_FormProtocol, Protocol):
-        def __init__(self, name: bytes | None) -> None: ...
+        def __init__(self, name: bytes, headers: dict[str,bytes]) -> None:
+            ...
 
         def set_none(self) -> None: ...
 
     class FileProtocol(_FormProtocol, Protocol):
-        def __init__(self, file_name: bytes | None, field_name: bytes | None, config: FileConfig) -> None: ...
+        def __init__(self, file_name: bytes | None, field_name: bytes | None, headers: dict[str,bytes], config: FileConfig) -> None:
+            ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
     OnFileCallback = Callable[[FileProtocol], None]
@@ -223,9 +225,10 @@ class Field:
         name: The name of the form field.
     """
 
-    def __init__(self, name: bytes | None) -> None:
+    def __init__(self, name: bytes, headers: dict[str,bytes]={}) -> None:
         self._name = name
         self._value: list[bytes] = []
+        self._headers: dict[str,bytes] = headers
 
         # We cache the joined version of _value for speed.
         self._cache = _missing
@@ -317,6 +320,11 @@ class Field:
         assert isinstance(self._cache, bytes) or self._cache is None
         return self._cache
 
+    @property
+    def headers(self) -> dict[str,bytes]:
+        """This property returns the headers of the field."""
+        return self._headers
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Field):
             return self.field_name == other.field_name and self.value == other.value
@@ -357,7 +365,7 @@ class File:
         config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
     """  # noqa: E501
 
-    def __init__(self, file_name: bytes | None, field_name: bytes | None = None, config: FileConfig = {}) -> None:
+    def __init__(self, file_name: bytes | None, field_name: bytes | None = None, headers: dict[str,bytes] = {}, config: FileConfig = {}) -> None:
         # Save configuration, set other variables default.
         self.logger = logging.getLogger(__name__)
         self._config = config
@@ -365,9 +373,10 @@ class File:
         self._bytes_written = 0
         self._fileobj: BytesIO | BufferedRandom = BytesIO()
 
-        # Save the provided field/file name.
+        # Save the provided field/file name and content type.
         self._field_name = field_name
         self._file_name = file_name
+        self._headers = headers
 
         # Our actual file name is None by default, since, depending on our
         # config, we may not actually use the provided name.
@@ -420,6 +429,12 @@ class File:
         """
         return self._in_memory
 
+    @property
+    def headers(self) -> dict[str,bytes]:
+        """The headers for this part. 
+        """
+        return self._headers
+    
     def flush_to_disk(self) -> None:
         """If the file is already on-disk, do nothing.  Otherwise, copy from
         the in-memory buffer to a disk file, and then reassign our internal
