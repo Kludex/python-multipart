@@ -980,22 +980,10 @@ class MultipartParser(BaseParser):
         # Setup marks.  These are used to track the state of data received.
         self.marks: dict[str, int] = {}
 
-        # TODO: Actually use this rather than the dumb version we currently use
-        # # Precompute the skip table for the Boyer-Moore-Horspool algorithm.
-        # skip = [len(boundary) for x in range(256)]
-        # for i in range(len(boundary) - 1):
-        #     skip[ord_char(boundary[i])] = len(boundary) - i - 1
-        #
-        # # We use a tuple since it's a constant, and marginally faster.
-        # self.skip = tuple(skip)
-
         # Save our boundary.
         if isinstance(boundary, str):  # pragma: no cover
             boundary = boundary.encode("latin-1")
         self.boundary = b"\r\n--" + boundary
-
-        # Get a set of characters that belong to our boundary.
-        self.boundary_chars = frozenset(self.boundary)
 
     def write(self, data: bytes) -> int:
         """Write some data to the parser, which will perform size verification,
@@ -1276,9 +1264,6 @@ class MultipartParser(BaseParser):
                 # We're processing our part data right now.  During this, we
                 # need to efficiently search for our boundary, since any data
                 # on any number of lines can be a part of the current data.
-                # We use the Boyer-Moore-Horspool algorithm to efficiently
-                # search through the remainder of the buffer looking for our
-                # boundary.
 
                 # Save the current value of our index.  We use this in case we
                 # find part of a boundary, but it doesn't match fully.
@@ -1286,24 +1271,32 @@ class MultipartParser(BaseParser):
 
                 # Set up variables.
                 boundary_length = len(boundary)
-                boundary_end = boundary_length - 1
                 data_length = length
-                boundary_chars = self.boundary_chars
 
                 # If our index is 0, we're starting a new part, so start our
                 # search.
                 if index == 0:
-                    # Search forward until we either hit the end of our buffer,
-                    # or reach a character that's in our boundary.
-                    i += boundary_end
-                    while i < data_length - 1 and data[i] not in boundary_chars:
-                        i += boundary_length
+                    # The most common case is likely to be that the whole 
+                    # boundary is present in the buffer.
+                    # Calling `find` is much faster than iterating here.
+                    i0 = data.find(boundary, i, data_length)
+                    if i0 >= 0:
+                        # We matched the whole boundary string.
+                        index = boundary_length - 1
+                        i = i0 + boundary_length - 1
+                    else:
+                        # No match found for whole string.
+                        # There may be a partial boundary at the end of the 
+                        # data, which the find will not match.
+                        # Since the length should to be searched is limited to
+                        # the boundary length, just perform a naive search.
+                        i = max(i, data_length - boundary_length)
 
-                    # Reset i back the length of our boundary, which is the
-                    # earliest possible location that could be our match (i.e.
-                    # if we've just broken out of our loop since we saw the
-                    # last character in our boundary)
-                    i -= boundary_end
+                        # Search forward until we either hit the end of our buffer,
+                        # or reach a potential start of the boundary.
+                        while i < data_length - 1 and data[i] != boundary[0]:
+                            i += 1
+
                     c = data[i]
 
                 # Now, we have a couple of cases here.  If our index is before
