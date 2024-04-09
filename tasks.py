@@ -33,6 +33,22 @@ def test(ctx, all=False):
 
 
 @task
+def mypy(ctx, all=False):
+    test_cmd = [
+        'mypy',                       # Test command
+        '--strict',
+    ]
+
+    test_cmd.append("multipart")
+    test_cmd.append("tests")
+
+    # Run the command.
+    # TODO: why does this fail with pty=True?
+    res = run(' '.join(test_cmd), pty=False)
+    g.test_success = res.ok
+
+
+@task
 def bump(ctx, type):
     # Read and parse version.
     with open(version_file, 'r') as f:

@@ -30,6 +30,10 @@ jobs:
         if: matrix.python-version == '3.8'
         run: |
           ruff multipart tests
+      - name: Mypy
+        if: matrix.python-version == '3.8'
+        run: |
+          inv mypy
       - name: Test with pytest
         run: |
           inv test
