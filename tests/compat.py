@@ -1,18 +1,23 @@
+from __future__ import annotations
+
 import functools
 import os
 import re
 import sys
 import types
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from typing import Any, Callable
 
-def ensure_in_path(path):
+def ensure_in_path(path: str) -> None:
     """
     Ensure that a given path is in the sys.path array
     """
     if not os.path.isdir(path):
         raise RuntimeError("Tried to add nonexisting path")
 
-    def _samefile(x, y):
+    def _samefile(x: str, y: str) -> bool:
         try:
             return os.path.samefile(x, y)
         except OSError:
@@ -34,7 +39,7 @@ def ensure_in_path(path):
 
 # We don't use the pytest parametrizing function, since it seems to break
 # with unittest.TestCase subclasses.
-def parametrize(field_names, field_values):
+def parametrize(field_names: tuple[str] | list[str] | str, field_values: list[Any] | Any) -> Callable[..., Any]:
     # If we're not given a list of field names, we make it.
     if not isinstance(field_names, (tuple, list)):
         field_names = (field_names,)
@@ -42,7 +47,7 @@ def parametrize(field_names, field_values):
 
     # Create a decorator that saves this list of field names and values on the
     # function for later parametrizing.
-    def decorator(func):
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         func.__dict__["param_names"] = field_names
         func.__dict__["param_values"] = field_values
         return func
@@ -54,7 +59,7 @@ def parametrize(field_names, field_values):
 class ParametrizingMetaclass(type):
     IDENTIFIER_RE = re.compile("[^A-Za-z0-9]")
 
-    def __new__(klass, name, bases, attrs):
+    def __new__(klass, name: str, bases: tuple[type, ...], attrs: types.MappingProxyType[str, Any]) -> type:
         new_attrs = attrs.copy()
         for attr_name, attr in attrs.items():
             # We only care about functions
@@ -67,7 +72,7 @@ class ParametrizingMetaclass(type):
                 continue
 
             # Create multiple copies of the function.
-            for i, values in enumerate(param_values):
+            for _, values in enumerate(param_values):
                 assert len(param_names) == len(values)
 
                 # Get a repr of the values, and fix it to be a valid identifier
@@ -78,12 +83,12 @@ class ParametrizingMetaclass(type):
                 new_name = attr.__name__ + "__" + human
 
                 # Create a replacement function.
-                def create_new_func(func, names, values):
+                def create_new_func(func: types.FunctionType, names: list[str], values: list[Any]) -> Callable[...,Any]:
                     # Create a kwargs dictionary.
                     kwargs = dict(zip(names, values))
 
                     @functools.wraps(func)
-                    def new_func(self):
+                    def new_func(self: types.FunctionType) -> Any:
                         return func(self, **kwargs)
 
                     # Manually set the name and return the new function.
@@ -104,5 +109,5 @@ class ParametrizingMetaclass(type):
 
 
 # This is a class decorator that actually applies the above metaclass.
-def parametrize_class(klass):
+def parametrize_class(klass: type) -> ParametrizingMetaclass:
     return ParametrizingMetaclass(klass.__name__, klass.__bases__, klass.__dict__)
