@@ -1613,7 +1613,9 @@ class FormParser:
             is_file = False
 
             def on_part_begin():
-                pass
+                # Reset headers in case this isn't the first part.
+                nonlocal headers
+                headers = {}
 
             def on_part_data(data: bytes, start: int, end: int) -> None:
                 nonlocal writer
