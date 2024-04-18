@@ -1,0 +1,7 @@
+boundary: b8825ae386be4fdc9644d87e392caad3
+expected:
+  - name: files
+    type: file
+    file_name: secret.txt
+    data: !!binary |
+      YWFhYWFh
