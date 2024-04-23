@@ -130,7 +130,8 @@ class MultipartState(IntEnum):
     PART_DATA_START = 8
     PART_DATA = 9
     PART_DATA_END = 10
-    END = 11
+    END_BOUNDARY = 11
+    END = 12
 
 
 # Flags for the multipart parser.
@@ -1120,7 +1121,10 @@ class MultipartParser(BaseParser):
                 # Check to ensure that the last 2 characters in our boundary
                 # are CRLF.
                 if index == len(boundary) - 2:
-                    if c != CR:
+                    if c == HYPHEN:
+                        # Potential empty message.
+                        state = MultipartState.END_BOUNDARY
+                    elif c != CR:
                         # Error!
                         msg = "Did not find CR at end of boundary (%d)" % (i,)
                         self.logger.warning(msg)
@@ -1396,6 +1400,18 @@ class MultipartParser(BaseParser):
                     # Re-consider the current character, since this could be
                     # the start of the boundary itself.
                     i -= 1
+
+            elif state == MultipartState.END_BOUNDARY:
+                if index == len(boundary) - 2 + 1:
+                    if c != HYPHEN:
+                        msg = "Did not find - at end of boundary (%d)" % (i,)
+                        self.logger.warning(msg)
+                        e = MultipartParseError(msg)
+                        e.offset = i
+                        raise e
+                    index += 1
+                    self.callback("end")
+                    state = MultipartState.END
 
             elif state == MultipartState.END:
                 # Do nothing and just consume a byte in the end state.
@@ -1703,8 +1719,8 @@ class FormParser:
 
             def _on_end() -> None:
                 nonlocal writer
-                assert writer is not None
-                writer.finalize()
+                if writer is not None:
+                    writer.finalize()
                 if self.on_end is not None:
                     self.on_end()
 
