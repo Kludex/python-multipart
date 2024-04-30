@@ -68,14 +68,14 @@ if TYPE_CHECKING:  # pragma: no cover
         def close(self) -> None: ...
 
     class FieldProtocol(_FormProtocol, Protocol):
-        def __init__(self, name: bytes, headers: dict[str,bytes]) -> None:
-            ...
+        def __init__(self, name: bytes, headers: dict[str, bytes]) -> None: ...
 
         def set_none(self) -> None: ...
 
     class FileProtocol(_FormProtocol, Protocol):
-        def __init__(self, file_name: bytes | None, field_name: bytes | None, headers: dict[str,bytes], config: FileConfig) -> None:
-            ...
+        def __init__(
+            self, file_name: bytes | None, field_name: bytes | None, config: FileConfig, headers: dict[str, bytes]
+        ) -> None: ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
     OnFileCallback = Callable[[FileProtocol], None]
@@ -225,10 +225,10 @@ class Field:
         name: The name of the form field.
     """
 
-    def __init__(self, name: bytes, headers: dict[str,bytes]={}) -> None:
+    def __init__(self, name: bytes, headers: dict[str, bytes] = {}) -> None:
         self._name = name
         self._value: list[bytes] = []
-        self._headers: dict[str,bytes] = headers
+        self._headers: dict[str, bytes] = headers
 
         # We cache the joined version of _value for speed.
         self._cache = _missing
@@ -321,7 +321,7 @@ class Field:
         return self._cache
 
     @property
-    def headers(self) -> dict[str,bytes]:
+    def headers(self) -> dict[str, bytes]:
         """This property returns the headers of the field."""
         return self._headers
 
@@ -365,7 +365,13 @@ class File:
         config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
     """  # noqa: E501
 
-    def __init__(self, file_name: bytes | None, field_name: bytes | None = None, headers: dict[str,bytes] = {}, config: FileConfig = {}) -> None:
+    def __init__(
+        self,
+        file_name: bytes | None,
+        field_name: bytes | None = None,
+        headers: dict[str, bytes] = {},
+        config: FileConfig = {},
+    ) -> None:
         # Save configuration, set other variables default.
         self.logger = logging.getLogger(__name__)
         self._config = config
@@ -430,11 +436,15 @@ class File:
         return self._in_memory
 
     @property
-    def headers(self) -> dict[str,bytes]:
-        """The headers for this part. 
-        """
+    def headers(self) -> dict[str, bytes]:
+        """The headers for this part."""
         return self._headers
-    
+
+    @property
+    def content_type(self) -> bytes | None:
+        """The Content-Type value for this part."""
+        return self._headers.get("content-type")
+
     def flush_to_disk(self) -> None:
         """If the file is already on-disk, do nothing.  Otherwise, copy from
         the in-memory buffer to a disk file, and then reassign our internal
@@ -1555,7 +1565,7 @@ class FormParser:
 
             def on_start() -> None:
                 nonlocal file
-                file = FileClass(file_name, None, config=cast("FileConfig", self.config))
+                file = FileClass(file_name, None, headers={}, config=cast("FileConfig", self.config))
 
             def on_data(data: bytes, start: int, end: int) -> None:
                 nonlocal file
@@ -1594,7 +1604,7 @@ class FormParser:
             def on_field_data(data: bytes, start: int, end: int) -> None:
                 nonlocal f
                 if f is None:
-                    f = FieldClass(b"".join(name_buffer))
+                    f = FieldClass(b"".join(name_buffer), headers={})
                     del name_buffer[:]
                 f.write(data[start:end])
 
@@ -1604,7 +1614,7 @@ class FormParser:
                 if f is None:
                     # If we get here, it's because there was no field data.
                     # We create a field, set it to None, and then continue.
-                    f = FieldClass(b"".join(name_buffer))
+                    f = FieldClass(b"".join(name_buffer), headers={})
                     del name_buffer[:]
                     f.set_none()
 
@@ -1636,7 +1646,7 @@ class FormParser:
 
             header_name: list[bytes] = []
             header_value: list[bytes] = []
-            headers: dict[bytes, bytes] = {}
+            headers: dict[str, bytes] = {}
 
             f_multi: FileProtocol | FieldProtocol | None = None
             writer = None
@@ -1671,7 +1681,7 @@ class FormParser:
                 header_value.append(data[start:end])
 
             def on_header_end() -> None:
-                headers[b"".join(header_name)] = b"".join(header_value)
+                headers[b"".join(header_name).decode().lower()] = b"".join(header_value)
                 del header_name[:]
                 del header_value[:]
 
@@ -1681,26 +1691,25 @@ class FormParser:
                 is_file = False
 
                 # Parse the content-disposition header.
-                # TODO: handle mixed case
-                content_disp = headers.get(b"Content-Disposition")
+                content_disp = headers.get("content-disposition")
                 disp, options = parse_options_header(content_disp)
 
                 # Get the field and filename.
-                field_name = options.get(b"name")
+                field_name = options.get(b"name", b"")
                 file_name = options.get(b"filename")
                 # TODO: check for errors
 
                 # Create the proper class.
                 if file_name is None:
-                    f_multi = FieldClass(field_name)
+                    f_multi = FieldClass(field_name, headers=headers)
                 else:
-                    f_multi = FileClass(file_name, field_name, config=cast("FileConfig", self.config))
+                    f_multi = FileClass(file_name, field_name, config=cast("FileConfig", self.config), headers=headers)
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                transfer_encoding = headers.get(b"Content-Transfer-Encoding", b"7bit")
+                transfer_encoding = headers.get("content-transfer-encoding", b"7bit")
 
                 if transfer_encoding in (b"binary", b"8bit", b"7bit"):
                     writer = f_multi
