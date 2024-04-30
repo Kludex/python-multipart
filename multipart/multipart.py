@@ -74,7 +74,8 @@ if TYPE_CHECKING:  # pragma: no cover
             ...
 
     class FileProtocol(_FormProtocol, Protocol):
-        def __init__(self, file_name: bytes | None, field_name: bytes | None, headers: dict[str,bytes], config: FileConfig) -> None:
+        def __init__(self, file_name: bytes | None, field_name: bytes | None, config: FileConfig,
+                     headers: dict[str,bytes]) -> None:
             ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
@@ -353,7 +354,8 @@ class File:
         config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
     """  # noqa: E501
 
-    def __init__(self, file_name: bytes | None, field_name: bytes | None = None, headers: dict[str,bytes] = {}, config: FileConfig = {}) -> None:
+    def __init__(self, file_name: bytes | None, field_name: bytes | None = None,
+                 headers: dict[str,bytes] = {}, config: FileConfig = {}) -> None:
         # Save configuration, set other variables default.
         self.logger = logging.getLogger(__name__)
         self._config = config
@@ -422,6 +424,14 @@ class File:
         """The headers for this part. 
         """
         return self._headers
+    
+    @property
+    def content_type(self) -> bytes:
+        """The Content-Type value for this part. 
+        """
+        if self._headers is None:
+            return None
+        return self._headers.get("content-type", None)
     
     def flush_to_disk(self) -> None:
         """If the file is already on-disk, do nothing.  Otherwise, copy from
@@ -1651,7 +1661,7 @@ class FormParser:
                 header_value.append(data[start:end])
 
             def on_header_end() -> None:
-                headers[b"".join(header_name)] = b"".join(header_value)
+                headers[b"".join(header_name).decode().lower()] = b"".join(header_value)
                 del header_name[:]
                 del header_value[:]
 
@@ -1661,8 +1671,7 @@ class FormParser:
                 is_file = False
 
                 # Parse the content-disposition header.
-                # TODO: handle mixed case
-                content_disp = headers.get(b"Content-Disposition")
+                content_disp = headers.get("content-disposition")
                 disp, options = parse_options_header(content_disp)
 
                 # Get the field and filename.
@@ -1672,15 +1681,15 @@ class FormParser:
 
                 # Create the proper class.
                 if file_name is None:
-                    f = FieldClass(field_name)
+                    f = FieldClass(field_name, headers=headers)
                 else:
-                    f = FileClass(file_name, field_name, config=self.config)
+                    f = FileClass(file_name, field_name, config=self.config, headers=headers)
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                transfer_encoding = headers.get(b"Content-Transfer-Encoding", b"7bit")
+                transfer_encoding = headers.get("content-transfer-encoding", b"7bit")
 
                 if transfer_encoding in (b"binary", b"8bit", b"7bit"):
                     writer = f

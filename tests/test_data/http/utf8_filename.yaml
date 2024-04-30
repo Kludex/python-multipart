@@ -3,6 +3,7 @@ expected:
   - name: file
     type: file
     file_name: ???.txt
+    content_type: 'text/plain'
     data: !!binary |
       44GT44KM44Gv44OG44K544OI44Gn44GZ44CC
 

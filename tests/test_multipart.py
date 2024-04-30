@@ -732,7 +732,7 @@ class TestFormParser(unittest.TestCase):
         file_data = o.read()
         self.assertEqual(file_data, data)
 
-    def assert_file(self, field_name, file_name, data):
+    def assert_file(self, field_name, file_name, content_type: str, data):
         # Find this file.
         found = None
         for f in self.files:
@@ -742,6 +742,8 @@ class TestFormParser(unittest.TestCase):
 
         # Assert that we found it.
         self.assertIsNotNone(found)
+
+        self.assertEqual(found.content_type, content_type.encode())
 
         try:
             # Assert about this file.
@@ -810,7 +812,7 @@ class TestFormParser(unittest.TestCase):
                 self.assert_field(name, e["data"])
 
             elif type == "file":
-                self.assert_file(name, e["file_name"].encode("latin-1"), e["data"])
+                self.assert_file(name, e["file_name"].encode("latin-1"), e["content_type"], e["data"])
 
             else:
                 assert False
@@ -841,7 +843,7 @@ class TestFormParser(unittest.TestCase):
 
             # Assert that our file and field are here.
             self.assert_field(b"field", b"test1")
-            self.assert_file(b"file", b"file.txt", b"test2")
+            self.assert_file(b"file", b"file.txt", "text/plain", b"test2")
 
     def test_feed_single_bytes(self):
         """
@@ -870,7 +872,7 @@ class TestFormParser(unittest.TestCase):
 
         # Assert that our file and field are here.
         self.assert_field(b"field", b"test1")
-        self.assert_file(b"file", b"file.txt", b"test2")
+        self.assert_file(b"file", b"file.txt", "text/plain", b"test2")
 
     def test_feed_blocks(self):
         """
@@ -904,6 +906,64 @@ class TestFormParser(unittest.TestCase):
 
                 # Assert that our field is here.
                 self.assert_field(b"field", b"0123456789ABCDEFGHIJ0123456789ABCDEFGHIJ")
+
+    def test_file_headers(self):
+        """
+        This test checks headers for a file part are read.
+        """
+        # Load test data.
+        test_file = "header_with_number.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
+            test_data = f.read()
+
+        expected_headers = {
+            "content-disposition": b'form-data; filename="secret.txt"; name="files"',
+            "content-type": b"text/plain; charset=utf-8",
+            "x-funky-header-1": b"bar",
+            "abcdefghijklmnopqrstuvwxyz01234": b"foo",
+            "abcdefghijklmnopqrstuvwxyz56789": b"bar",
+            "other!#$%&'*+-.^_`|~": b"baz",
+            "content-length": b"6",
+        }
+        
+        # Create form parser.
+        self.make(boundary="b8825ae386be4fdc9644d87e392caad3")
+        self.f.write(test_data)
+        self.f.finalize()
+
+        # Assert that our field is here.
+        self.assertEqual(1, len(self.files))
+        actual_headers = self.files[0].headers
+        self.assertEqual(len(actual_headers), len(expected_headers))
+        
+        for k,v in expected_headers.items():
+            self.assertEqual(v, actual_headers[k])
+
+    def test_field_headers(self):
+        """
+        This test checks headers for a field part are read.
+        """
+        # Load test data.
+        test_file = "single_field.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
+            test_data = f.read()
+
+        expected_headers = {
+            "content-disposition": b'form-data; name="field"',
+        }
+        
+        # Create form parser.
+        self.make(boundary="----WebKitFormBoundaryTkr3kCBQlBe1nrhc")
+        self.f.write(test_data)
+        self.f.finalize()
+
+        # Assert that our field is here.
+        self.assertEqual(1, len(self.fields))
+        actual_headers = self.fields[0].headers
+        self.assertEqual(len(actual_headers), len(expected_headers))
+        
+        for k,v in expected_headers.items():
+            self.assertEqual(v, actual_headers[k])
 
     def test_request_body_fuzz(self):
         """
