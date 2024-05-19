@@ -29,7 +29,8 @@ jobs:
       - name: Lint
         if: matrix.python-version == '3.8'
         run: |
-          ruff multipart tests
+          ruff format --check --diff multipart tests
+          ruff check multipart tests
       - name: Test with pytest
         run: |
           inv test
