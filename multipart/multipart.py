@@ -136,14 +136,17 @@ LOWER_A = b"a"[0]
 LOWER_Z = b"z"[0]
 NULL = b"\x00"[0]
 
+# fmt: off
 # Mask for ASCII characters that can be http tokens.
-# Per RFC7230 - 3.2.6, this is all alpha-numeric characters 
+# Per RFC7230 - 3.2.6, this is all alpha-numeric characters
 # and these: !#$%&'*+-.^_`|~
 TOKEN_CHARS_SET = frozenset(
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     b"abcdefghijklmnopqrstuvwxyz"
     b"0123456789"
-    b"!#$%&'*+-.^_`|~")
+    b"!#$%&'*+-.^_`|~"
+)
+# fmt: on
 
 
 def ord_char(c: int) -> int:
