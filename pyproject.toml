@@ -34,25 +34,25 @@ dependencies = []
 dev = [
     "atomicwrites==1.4.1",
     "attrs==23.2.0",
-    "coverage==7.4.4",
+    "coverage==7.5.3",
     "more-itertools==10.2.0",
     "pbr==6.0.0",
-    "pluggy==1.4.0",
+    "pluggy==1.5.0",
     "py==1.11.0",
-    "pytest==8.1.1",
+    "pytest==8.2.1",
     "pytest-cov==5.0.0",
     "PyYAML==6.0.1",
     "invoke==2.2.0",
     "pytest-timeout==2.3.1",
-    "ruff==0.3.4",
+    "ruff==0.4.7",
     "hatch",
     "atheris==2.3.0; python_version != '3.12'",
 ]
 docs = [
-    "mkdocs==1.5.3",
-    "mkdocs-material==9.5.16",
-    "mkdocstrings==0.24.1",
-    "mkdocstrings-python==1.9.0",
+    "mkdocs==1.6.0",
+    "mkdocs-material==9.5.25",
+    "mkdocstrings==0.25.1",
+    "mkdocstrings-python==1.10.3",
     "mkdocs-autorefs==1.0.1",
 ]
 
