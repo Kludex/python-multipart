@@ -61,34 +61,39 @@ if TYPE_CHECKING:  # pragma: no cover
         MAX_MEMORY_FILE_SIZE: int
 
     class _FormProtocol(Protocol):
-        def write(self, data: bytes) -> int:
-            ...
+        def write(self, data: bytes) -> int: ...
 
-        def finalize(self) -> None:
-            ...
+        def finalize(self) -> None: ...
 
-        def close(self) -> None:
-            ...
+        def close(self) -> None: ...
 
     class FieldProtocol(_FormProtocol, Protocol):
-        def __init__(self, name: bytes | None) -> None:
-            ...
+        def __init__(self, name: bytes | None) -> None: ...
 
-        def set_none(self) -> None:
-            ...
+        def set_none(self) -> None: ...
 
     class FileProtocol(_FormProtocol, Protocol):
-        def __init__(self, file_name: bytes | None, field_name: bytes | None, config: FileConfig) -> None:
-            ...
+        def __init__(self, file_name: bytes | None, field_name: bytes | None, config: FileConfig) -> None: ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
     OnFileCallback = Callable[[FileProtocol], None]
 
     CALLBACK_NAMES: TypeAlias = Literal[
-        "start", "data", "end",
-        "field_start", "field_name", "field_data", "field_end",
-        "part_begin", "part_data", "part_end", 
-        "header_begin", "header_field", "header_value", "header_end", "headers_finished",
+        "start",
+        "data",
+        "end",
+        "field_start",
+        "field_name",
+        "field_data",
+        "field_end",
+        "part_begin",
+        "part_data",
+        "part_end",
+        "header_begin",
+        "header_field",
+        "header_value",
+        "header_end",
+        "headers_finished",
     ]
 
 # Unique missing object.
@@ -147,13 +152,11 @@ LOWER_Z = b"z"[0]
 NULL = b"\x00"[0]
 
 # Mask for ASCII characters that can be http tokens.
-# Per RFC7230 - 3.2.6, this is all alpha-numeric characters 
+# Per RFC7230 - 3.2.6, this is all alpha-numeric characters
 # and these: !#$%&'*+-.^_`|~
 TOKEN_CHARS_SET = frozenset(
-    b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    b"abcdefghijklmnopqrstuvwxyz"
-    b"0123456789"
-    b"!#$%&'*+-.^_`|~")
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZ" b"abcdefghijklmnopqrstuvwxyz" b"0123456789" b"!#$%&'*+-.^_`|~"
+)
 
 
 def ord_char(c: int) -> int:
@@ -315,7 +318,7 @@ class Field:
         if self._cache is _missing:
             self._cache = b"".join(self._value)
 
-        assert(isinstance(self._cache, bytes) or self._cache is None)
+        assert isinstance(self._cache, bytes) or self._cache is None
         return self._cache
 
     def __eq__(self, other: object) -> bool:
@@ -473,7 +476,7 @@ class File:
             # TODO: what happens if we don't have a filename?
             fname = self._file_base + self._ext if keep_extensions else self._file_base
 
-            path = os.path.join(file_dir, fname) # type: ignore[arg-type]
+            path = os.path.join(file_dir, fname)  # type: ignore[arg-type]
             try:
                 self.logger.info("Opening file: %r", path)
                 tmp_file = open(path, "w+b")
@@ -505,10 +508,10 @@ class File:
                 self.logger.exception("Error creating named temporary file")
                 raise FileError("Error creating named temporary file")
 
-            assert(tmp_file is not None)
+            assert tmp_file is not None
             # Encode filename as bytes.
             if isinstance(tmp_file.name, str):
-                fname =  tmp_file.name.encode(sys.getfilesystemencoding())
+                fname = tmp_file.name.encode(sys.getfilesystemencoding())
             else:
                 fname = cast(bytes, tmp_file.name)
 
@@ -602,9 +605,9 @@ class BaseParser:
         self.logger = logging.getLogger(__name__)
         self.callbacks: QuerystringCallbacks | OctetStreamCallbacks | MultipartCallbacks = {}
 
-    def callback(self, name: CALLBACK_NAMES, data: bytes | None = None,
-                  start: int | None = None,
-                    end: int | None = None) -> None:
+    def callback(
+        self, name: CALLBACK_NAMES, data: bytes | None = None, start: int | None = None, end: int | None = None
+    ) -> None:
         """This function calls a provided callback with some data.  If the
         callback is not set, will do nothing.
 
@@ -619,7 +622,7 @@ class BaseParser:
         func = self.callbacks.get(on_name)
         if func is None:
             return
-        func = cast('Callable[..., Any]', func)
+        func = cast("Callable[..., Any]", func)
         # Depending on whether we're given a buffer...
         if data is not None:
             # Don't do anything if we have start == end.
@@ -643,9 +646,9 @@ class BaseParser:
                          exist).
         """
         if new_func is None:
-            self.callbacks.pop("on_" + name, None) # type: ignore[misc]
+            self.callbacks.pop("on_" + name, None)  # type: ignore[misc]
         else:
-            self.callbacks["on_" + name] = new_func # type: ignore[literal-required]
+            self.callbacks["on_" + name] = new_func  # type: ignore[literal-required]
 
     def close(self) -> None:
         pass  # pragma: no cover
@@ -1535,9 +1538,9 @@ class FormParser:
 
         # Set configuration options.
         self.config: FormParserConfig = self.DEFAULT_CONFIG.copy()
-        self.config.update(config) # type: ignore[typeddict-item]
+        self.config.update(config)  # type: ignore[typeddict-item]
 
-        parser: OctetStreamParser | MultipartParser | QuerystringParser| None = None
+        parser: OctetStreamParser | MultipartParser | QuerystringParser | None = None
 
         # Depending on the Content-Type, we instantiate the correct parser.
         if content_type == "application/octet-stream":
@@ -1545,7 +1548,7 @@ class FormParser:
 
             def on_start() -> None:
                 nonlocal file
-                file = FileClass(file_name, None, config=cast('FileConfig', self.config))
+                file = FileClass(file_name, None, config=cast("FileConfig", self.config))
 
             def on_data(data: bytes, start: int, end: int) -> None:
                 nonlocal file
@@ -1599,7 +1602,7 @@ class FormParser:
                     f.set_none()
 
                 f.finalize()
-                if (on_field):
+                if on_field:
                     on_field(f)
                 f = None
 
@@ -1639,20 +1642,20 @@ class FormParser:
 
             def on_part_data(data: bytes, start: int, end: int) -> None:
                 nonlocal writer
-                assert(writer is not None)
+                assert writer is not None
                 writer.write(data[start:end])
                 # TODO: check for error here.
 
             def on_part_end() -> None:
                 nonlocal f_multi, is_file
-                assert(f_multi is not None)
+                assert f_multi is not None
                 f_multi.finalize()
                 if is_file:
                     if on_file:
                         on_file(f_multi)
                 else:
                     if on_field:
-                        on_field(cast('FieldProtocol', f_multi))
+                        on_field(cast("FieldProtocol", f_multi))
 
             def on_header_field(data: bytes, start: int, end: int) -> None:
                 header_name.append(data[start:end])
@@ -1684,7 +1687,7 @@ class FormParser:
                 if file_name is None:
                     f_multi = FieldClass(field_name)
                 else:
-                    f_multi = FileClass(file_name, field_name, config=cast('FileConfig', self.config))
+                    f_multi = FileClass(file_name, field_name, config=cast("FileConfig", self.config))
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
@@ -1712,7 +1715,7 @@ class FormParser:
 
             def _on_end() -> None:
                 nonlocal writer
-                assert(writer is not None)
+                assert writer is not None
                 writer.finalize()
                 if self.on_end is not None:
                     self.on_end()
@@ -1751,7 +1754,7 @@ class FormParser:
         """
         self.bytes_received += len(data)
         # TODO: check the parser's return value for errors?
-        assert(self.parser is not None)
+        assert self.parser is not None
         return self.parser.write(data)
 
     def finalize(self) -> None:
