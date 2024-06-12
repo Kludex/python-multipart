@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any, Callable
 
+
 def ensure_in_path(path: str) -> None:
     """
     Ensure that a given path is in the sys.path array
@@ -83,7 +84,9 @@ class ParametrizingMetaclass(type):
                 new_name = attr.__name__ + "__" + human
 
                 # Create a replacement function.
-                def create_new_func(func: types.FunctionType, names: list[str], values: list[Any]) -> Callable[...,Any]:
+                def create_new_func(
+                    func: types.FunctionType, names: list[str], values: list[Any]
+                ) -> Callable[..., Any]:
                     # Create a kwargs dictionary.
                     kwargs = dict(zip(names, values))
 

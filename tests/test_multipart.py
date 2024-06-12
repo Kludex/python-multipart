@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 
     from multipart.multipart import FieldProtocol, FileConfig, FileProtocol
 
-
     class TestParams(TypedDict):
         name: str
         test: bytes
@@ -119,7 +118,7 @@ class TestFile(unittest.TestCase):
         f.truncate()
 
     def assert_exists(self) -> None:
-        assert(self.f.actual_file_name is not None)
+        assert self.f.actual_file_name is not None
         full_path = os.path.join(self.d, self.f.actual_file_name)
         self.assertTrue(os.path.exists(full_path))
 
@@ -212,7 +211,7 @@ class TestFile(unittest.TestCase):
         self.assertFalse(self.f.in_memory)
 
         # Assert that the file exists
-        assert(self.f.actual_file_name is not None)
+        assert self.f.actual_file_name is not None
         ext = os.path.splitext(self.f.actual_file_name)[1]
         self.assertEqual(ext, b".txt")
         self.assert_exists()
@@ -310,12 +309,12 @@ class TestBaseParser(unittest.TestCase):
             nonlocal called
             called += 1
 
-        self.b.set_callback("foo", on_foo) # type: ignore[arg-type]
-        self.b.callback("foo") # type: ignore[arg-type]
+        self.b.set_callback("foo", on_foo)  # type: ignore[arg-type]
+        self.b.callback("foo")  # type: ignore[arg-type]
         self.assertEqual(called, 1)
 
-        self.b.set_callback("foo", None) # type: ignore[arg-type]
-        self.b.callback("foo") # type: ignore[arg-type]
+        self.b.set_callback("foo", None)  # type: ignore[arg-type]
+        self.b.callback("foo")  # type: ignore[arg-type]
         self.assertEqual(called, 1)
 
 
@@ -326,7 +325,7 @@ class TestQuerystringParser(unittest.TestCase):
 
         self.assertEqual(self.f, list(args))
         if kwargs.get("reset", True):
-            self.f: list[tuple[bytes, bytes]]  = []
+            self.f: list[tuple[bytes, bytes]] = []
 
     def setUp(self) -> None:
         self.reset()
@@ -491,17 +490,17 @@ class TestOctetStreamParser(unittest.TestCase):
 
         self.p = OctetStreamParser(callbacks={"on_start": on_start, "on_data": on_data, "on_end": on_end})
 
-    def assert_data(self, data: bytes, finalize: bool=True) -> None:
+    def assert_data(self, data: bytes, finalize: bool = True) -> None:
         self.assertEqual(b"".join(self.d), data)
         self.d = []
 
-    def assert_started(self, val: bool=True) -> None:
+    def assert_started(self, val: bool = True) -> None:
         if val:
             self.assertEqual(self.started, 1)
         else:
             self.assertEqual(self.started, 0)
 
-    def assert_finished(self, val: bool=True) -> None:
+    def assert_finished(self, val: bool = True) -> None:
         if val:
             self.assertEqual(self.finished, 1)
         else:
@@ -541,7 +540,7 @@ class TestOctetStreamParser(unittest.TestCase):
 
     def test_invalid_max_size(self) -> None:
         with self.assertRaises(ValueError):
-            q = OctetStreamParser(max_size="foo") # type: ignore[arg-type]
+            q = OctetStreamParser(max_size="foo")  # type: ignore[arg-type]
 
 
 class TestBase64Decoder(unittest.TestCase):
@@ -550,7 +549,7 @@ class TestBase64Decoder(unittest.TestCase):
         self.f = BytesIO()
         self.d = Base64Decoder(self.f)
 
-    def assert_data(self, data: bytes, finalize: bool=True) -> None:
+    def assert_data(self, data: bytes, finalize: bool = True) -> None:
         if finalize:
             self.d.finalize()
 
@@ -614,7 +613,7 @@ class TestQuotedPrintableDecoder(unittest.TestCase):
         self.f = BytesIO()
         self.d = QuotedPrintableDecoder(self.f)
 
-    def assert_data(self, data: bytes, finalize: bool=True) -> None:
+    def assert_data(self, data: bytes, finalize: bool = True) -> None:
         if finalize:
             self.d.finalize()
 
@@ -727,16 +726,16 @@ def split_all(val: bytes) -> Iterator[tuple[bytes, bytes]]:
 
 @parametrize_class
 class TestFormParser(unittest.TestCase):
-    def make(self, boundary: str | bytes, config: dict[str, Any]={}) -> None:
+    def make(self, boundary: str | bytes, config: dict[str, Any] = {}) -> None:
         self.ended = False
         self.files: list[File] = []
         self.fields: list[Field] = []
 
         def on_field(f: FieldProtocol) -> None:
-            self.fields.append(cast(Field,f))
+            self.fields.append(cast(Field, f))
 
         def on_file(f: FileProtocol) -> None:
-            self.files.append(cast(File,f))
+            self.files.append(cast(File, f))
 
         def on_end() -> None:
             self.ended = True
@@ -750,7 +749,7 @@ class TestFormParser(unittest.TestCase):
         file_data = o.read()
         self.assertEqual(file_data, data)
 
-    def assert_file(self, field_name: bytes, file_name:bytes, data: bytes) -> None:
+    def assert_file(self, field_name: bytes, file_name: bytes, data: bytes) -> None:
         # Find this file.
         found = None
         for f in self.files:
@@ -760,7 +759,7 @@ class TestFormParser(unittest.TestCase):
 
         # Assert that we found it.
         self.assertIsNotNone(found)
-        assert(found is not None)
+        assert found is not None
 
         try:
             # Assert about this file.
@@ -783,7 +782,7 @@ class TestFormParser(unittest.TestCase):
 
         # Assert that it exists and matches.
         self.assertIsNotNone(found)
-        assert(found is not None) # typing
+        assert found is not None  # typing
         self.assertEqual(value, found.value)
 
         # Remove it for future iterations.
@@ -814,7 +813,7 @@ class TestFormParser(unittest.TestCase):
         # Do we expect an error?
         if "error" in param["result"]["expected"]:
             self.assertIsNotNone(exc)
-            assert(exc is not None)
+            assert exc is not None
             self.assertEqual(param["result"]["expected"]["error"], exc.offset)
             return
 
@@ -1063,7 +1062,7 @@ class TestFormParser(unittest.TestCase):
         files: list[File] = []
 
         def on_file(f: FileProtocol) -> None:
-            files.append(cast(File,f))
+            files.append(cast(File, f))
 
         on_field = Mock()
         on_end = Mock()
@@ -1084,7 +1083,7 @@ class TestFormParser(unittest.TestCase):
     def test_querystring(self) -> None:
         fields: list[Field] = []
 
-        def on_field(f: FieldProtocol) ->None:
+        def on_field(f: FieldProtocol) -> None:
             fields.append(cast(Field, f))
 
         on_file = Mock()
@@ -1156,7 +1155,7 @@ class TestFormParser(unittest.TestCase):
         files: list[File] = []
 
         def on_file(f: FileProtocol) -> None:
-            files.append(cast(File,f))
+            files.append(cast(File, f))
 
         on_field = Mock()
         on_end = Mock()
@@ -1181,7 +1180,7 @@ class TestFormParser(unittest.TestCase):
         fields: list[Field] = []
 
         def on_field(f: FieldProtocol) -> None:
-            fields.append(cast(Field,f))
+            fields.append(cast(Field, f))
 
         on_file = Mock()
         on_end = Mock()
@@ -1210,7 +1209,7 @@ class TestFormParser(unittest.TestCase):
 
         # Set the maximum length that we can process to be halfway through the
         # given data.
-        assert(self.f.parser is not None)
+        assert self.f.parser is not None
         self.f.parser.max_size = float(len(test_data)) / 2
 
         i = self.f.write(test_data)
@@ -1240,7 +1239,7 @@ class TestFormParser(unittest.TestCase):
         files: list[File] = []
 
         def on_file(f: FileProtocol) -> None:
-            files.append(cast(File,f))
+            files.append(cast(File, f))
 
         on_field = Mock()
         on_end = Mock()
@@ -1261,7 +1260,7 @@ class TestFormParser(unittest.TestCase):
 
     def test_invalid_max_size_multipart(self) -> None:
         with self.assertRaises(ValueError):
-            MultipartParser(b"bound", max_size="foo") # type: ignore[arg-type]
+            MultipartParser(b"bound", max_size="foo")  # type: ignore[arg-type]
 
     def test_header_begin_callback(self) -> None:
         """
@@ -1332,7 +1331,7 @@ class TestHelperFunctions(unittest.TestCase):
         )
 
         self.assertEqual(len(files), 1)
-        self.assertEqual(files[0].size, 10) # type: ignore[attr-defined]
+        self.assertEqual(files[0].size, 10)  # type: ignore[attr-defined]
 
 
 def suite() -> unittest.TestSuite:
