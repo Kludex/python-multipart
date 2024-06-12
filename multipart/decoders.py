@@ -1,8 +1,21 @@
 import base64
 import binascii
-from io import BufferedWriter
+from typing import TYPE_CHECKING
 
 from .exceptions import DecodeError
+
+if TYPE_CHECKING:  # pragma: no cover
+    from typing import Protocol, TypeVar
+
+    _T_contra = TypeVar("_T_contra", contravariant=True)
+
+    class SupportsWrite(Protocol[_T_contra]):
+        def write(self, __b: _T_contra) -> object: ...
+
+        # No way to specify optional methods. See
+        # https://github.com/python/typing/issues/601
+        # close() [Optional]
+        # finalize() [Optional]
 
 
 class Base64Decoder:
@@ -34,7 +47,7 @@ class Base64Decoder:
     :param underlying: the underlying object to pass writes to
     """
 
-    def __init__(self, underlying: BufferedWriter):
+    def __init__(self, underlying: "SupportsWrite[bytes]") -> None:
         self.cache = bytearray()
         self.underlying = underlying
 
@@ -67,9 +80,9 @@ class Base64Decoder:
         # Get the remaining bytes and save in our cache.
         remaining_len = len(data) % 4
         if remaining_len > 0:
-            self.cache = data[-remaining_len:]
+            self.cache[:] = data[-remaining_len:]
         else:
-            self.cache = b""
+            self.cache[:] = b""
 
         # Return the length of the data to indicate no error.
         return len(data)
@@ -112,7 +125,7 @@ class QuotedPrintableDecoder:
     :param underlying: the underlying object to pass writes to
     """
 
-    def __init__(self, underlying: BufferedWriter) -> None:
+    def __init__(self, underlying: "SupportsWrite[bytes]") -> None:
         self.cache = b""
         self.underlying = underlying
 
