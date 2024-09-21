@@ -47,11 +47,10 @@ dev-dependencies = [
     "ruff==0.3.4",
     "atheris==2.3.0; python_version != '3.12'",
     # Documentation
-    "mkdocs==1.5.3",
-    "mkdocs-material==9.5.16",
-    "mkdocstrings==0.24.1",
-    "mkdocstrings-python==1.9.0",
-    "mkdocs-autorefs==1.0.1",
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings-python",
+    "mkdocs-autorefs",
 ]
 
 [project.urls]
