@@ -1,6 +1,5 @@
 # [Python-Multipart](https://kludex.github.io/python-multipart/)
 
-[![Build Status](https://github.com/Kludex/python-multipart/workflows/CI/badge.svg)](https://github.com/Kludex/python-multipart/actions)
 [![Package version](https://badge.fury.io/py/python-multipart.svg)](https://pypi.python.org/pypi/python-multipart)
 [![Supported Python Version](https://img.shields.io/pypi/pyversions/python-multipart.svg?color=%2334D058)](https://pypi.org/project/python-multipart)
 
