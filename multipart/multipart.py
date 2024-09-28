@@ -1163,7 +1163,7 @@ class MultipartParser(BaseParser):
                 # If we've reached a CR at the beginning of a header, it means
                 # that we've reached the second of 2 newlines, and so there are
                 # no more headers to parse.
-                if c == CR:
+                if c == CR and index == 0:
                     delete_mark("header_field")
                     state = MultipartState.HEADERS_ALMOST_DONE
                     i += 1
