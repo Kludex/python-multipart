@@ -695,6 +695,14 @@ for f in os.listdir(http_tests_dir):
 
         http_tests.append({"name": fname, "test": test_data, "result": yaml_data})
 
+# Datasets used for single-byte writing test.
+single_byte_tests = [
+    "almost_match_boundary",
+    "almost_match_boundary_without_CR",
+    "almost_match_boundary_without_LF",
+    "almost_match_boundary_without_final_hyphen",
+    "single_field_single_file",
+]
 
 def split_all(val):
     """
@@ -843,17 +851,19 @@ class TestFormParser(unittest.TestCase):
             self.assert_field(b"field", b"test1")
             self.assert_file(b"file", b"file.txt", b"test2")
 
-    def test_feed_single_bytes(self):
+    @parametrize("param", [ t for t in http_tests if t["name"] in single_byte_tests])
+    def test_feed_single_bytes(self, param):
         """
-        This test parses a simple multipart body 1 byte at a time.
+        This test parses multipart bodies 1 byte at a time.
         """
         # Load test data.
-        test_file = "single_field_single_file.http"
+        test_file = param["name"] + ".http"
+        boundary = param["result"]["boundary"]
         with open(os.path.join(http_tests_dir, test_file), "rb") as f:
             test_data = f.read()
 
         # Create form parser.
-        self.make("boundary")
+        self.make(boundary)
 
         # Write all bytes.
         # NOTE: Can't simply do `for b in test_data`, since that gives
@@ -868,9 +878,20 @@ class TestFormParser(unittest.TestCase):
         # Assert we processed everything.
         self.assertEqual(i, len(test_data))
 
-        # Assert that our file and field are here.
-        self.assert_field(b"field", b"test1")
-        self.assert_file(b"file", b"file.txt", b"test2")
+        # Assert that the parser gave us the appropriate fields/files.
+        for e in param["result"]["expected"]:
+            # Get our type and name.
+            type = e["type"]
+            name = e["name"].encode("latin-1")
+
+            if type == "field":
+                self.assert_field(name, e["data"])
+
+            elif type == "file":
+                self.assert_file(name, e["file_name"].encode("latin-1"), e["data"])
+
+            else:
+                assert False
 
     def test_feed_blocks(self):
         """
