@@ -30,8 +30,8 @@ classifiers = [
 ]
 dependencies = []
 
-[project.optional-dependencies]
-dev = [
+[tool.uv]
+dev-dependencies = [
     "atomicwrites==1.4.1",
     "attrs==23.2.0",
     "coverage==7.4.4",
@@ -45,15 +45,12 @@ dev = [
     "invoke==2.2.0",
     "pytest-timeout==2.3.1",
     "ruff==0.3.4",
-    "hatch",
     "atheris==2.3.0; python_version != '3.12'",
-]
-docs = [
-    "mkdocs==1.5.3",
-    "mkdocs-material==9.5.16",
-    "mkdocstrings==0.24.1",
-    "mkdocstrings-python==1.9.0",
-    "mkdocs-autorefs==1.0.1",
+    # Documentation
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings-python",
+    "mkdocs-autorefs",
 ]
 
 [project.urls]
@@ -69,7 +66,7 @@ path = "multipart/__init__.py"
 packages = ["multipart"]
 
 [tool.hatch.build.targets.sdist]
-include = ["/multipart", "/tests"]
+include = ["/multipart", "/tests", "CHANGELOG.md", "LICENSE.txt"]
 
 [tool.ruff]
 line-length = 120
@@ -90,6 +87,9 @@ branch = false
 omit = ["tests/*"]
 
 [tool.coverage.report]
+# fail_under = 100
+skip_covered = true
+show_missing = true
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",

@@ -57,25 +57,19 @@ if TYPE_CHECKING:  # pragma: no cover
         MAX_MEMORY_FILE_SIZE: int
 
     class _FormProtocol(Protocol):
-        def write(self, data: bytes) -> int:
-            ...
+        def write(self, data: bytes) -> int: ...
 
-        def finalize(self) -> None:
-            ...
+        def finalize(self) -> None: ...
 
-        def close(self) -> None:
-            ...
+        def close(self) -> None: ...
 
     class FieldProtocol(_FormProtocol, Protocol):
-        def __init__(self, name: bytes) -> None:
-            ...
+        def __init__(self, name: bytes) -> None: ...
 
-        def set_none(self) -> None:
-            ...
+        def set_none(self) -> None: ...
 
     class FileProtocol(_FormProtocol, Protocol):
-        def __init__(self, file_name: bytes | None, field_name: bytes | None, config: FileConfig) -> None:
-            ...
+        def __init__(self, file_name: bytes | None, field_name: bytes | None, config: FileConfig) -> None: ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
     OnFileCallback = Callable[[FileProtocol], None]
@@ -136,14 +130,16 @@ LOWER_A = b"a"[0]
 LOWER_Z = b"z"[0]
 NULL = b"\x00"[0]
 
+# fmt: off
 # Mask for ASCII characters that can be http tokens.
-# Per RFC7230 - 3.2.6, this is all alpha-numeric characters 
+# Per RFC7230 - 3.2.6, this is all alpha-numeric characters
 # and these: !#$%&'*+-.^_`|~
 TOKEN_CHARS_SET = frozenset(
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     b"abcdefghijklmnopqrstuvwxyz"
     b"0123456789"
     b"!#$%&'*+-.^_`|~")
+# fmt: on
 
 
 def ord_char(c: int) -> int:
@@ -1171,7 +1167,7 @@ class MultipartParser(BaseParser):
                 # If we've reached a CR at the beginning of a header, it means
                 # that we've reached the second of 2 newlines, and so there are
                 # no more headers to parse.
-                if c == CR:
+                if c == CR and index == 0:
                     delete_mark("header_field")
                     state = MultipartState.HEADERS_ALMOST_DONE
                     i += 1
