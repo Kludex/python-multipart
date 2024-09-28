@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.11 (2024-09-28)
+
+* Improve performance, especially in data with many CR-LF [#137](https://github.com/Kludex/python-multipart/pull/137).
+* Handle invalid CRLF in header name [#141](https://github.com/Kludex/python-multipart/pull/141).
+
 ## 0.0.10 (2024-09-21)
 
 * Support `on_header_begin` [#103](https://github.com/Kludex/python-multipart/pull/103).
