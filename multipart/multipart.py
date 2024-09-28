@@ -146,10 +146,6 @@ def ord_char(c: int) -> int:
     return c
 
 
-def join_bytes(b: bytes) -> bytes:
-    return bytes(list(b))
-
-
 def parse_options_header(value: str | bytes) -> tuple[bytes, dict[bytes, bytes]]:
     """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
     # Uses email.message.Message to parse the header as described in PEP 594.
@@ -1050,10 +1046,10 @@ class MultipartParser(BaseParser):
 
             # Otherwise, we call it from the mark to the current byte we're
             # processing.
-            if (end_i <= marked_index):
+            if end_i <= marked_index:
                 # There is no additional data to send.
                 pass
-            elif (marked_index >= 0):
+            elif marked_index >= 0:
                 # We are emitting data from the local buffer.
                 self.callback(name, data, marked_index, end_i)
             else:
@@ -1062,15 +1058,15 @@ class MultipartParser(BaseParser):
                 # We need to use self.flags (and not flags) because we care about
                 # the state when we entered the loop.
                 lookbehind_len = -marked_index
-                if (lookbehind_len <= len(boundary)):
+                if lookbehind_len <= len(boundary):
                     self.callback(name, boundary, 0, lookbehind_len)
-                elif (self.flags & FLAG_PART_BOUNDARY):
+                elif self.flags & FLAG_PART_BOUNDARY:
                     lookback = boundary + b"\r\n"
                     self.callback(name, lookback, 0, lookbehind_len)
-                elif (self.flags & FLAG_LAST_BOUNDARY):
+                elif self.flags & FLAG_LAST_BOUNDARY:
                     lookback = boundary + b"--\r\n"
                     self.callback(name, lookback, 0, lookbehind_len)
-                else: # pragma: no cover (error case)
+                else:  # pragma: no cover (error case)
                     self.logger.warning("Look-back buffer error")
 
                 if end_i > 0:
@@ -1272,7 +1268,7 @@ class MultipartParser(BaseParser):
                 # If our index is 0, we're starting a new part, so start our
                 # search.
                 if index == 0:
-                    # The most common case is likely to be that the whole 
+                    # The most common case is likely to be that the whole
                     # boundary is present in the buffer.
                     # Calling `find` is much faster than iterating here.
                     i0 = data.find(boundary, i, data_length)
@@ -1282,7 +1278,7 @@ class MultipartParser(BaseParser):
                         i = i0 + boundary_length - 1
                     else:
                         # No match found for whole string.
-                        # There may be a partial boundary at the end of the 
+                        # There may be a partial boundary at the end of the
                         # data, which the find will not match.
                         # Since the length should to be searched is limited to
                         # the boundary length, just perform a naive search.
