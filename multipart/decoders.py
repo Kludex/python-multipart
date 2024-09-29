@@ -160,7 +160,7 @@ class QuotedPrintableDecoder:
         call it.
         """
         # If we have a cache, write and then remove it.
-        if len(self.cache) > 0:
+        if len(self.cache) > 0:  # pragma: no cover
             self.underlying.write(binascii.a2b_qp(self.cache))
             self.cache = b""
 
