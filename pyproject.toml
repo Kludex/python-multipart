@@ -70,6 +70,9 @@ packages = ["multipart"]
 [tool.hatch.build.targets.sdist]
 include = ["/multipart", "/tests", "CHANGELOG.md", "LICENSE.txt"]
 
+[tool.mypy]
+strict = true
+
 [tool.ruff]
 line-length = 120
 
