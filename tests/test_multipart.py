@@ -5,7 +5,7 @@ import random
 import sys
 import tempfile
 import unittest
-from io import BytesIO
+from io import BytesIO, TextIOBase
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
@@ -1289,11 +1289,42 @@ class TestHelperFunctions(unittest.TestCase):
         with self.assertRaises(ValueError):
             create_form_parser(headers, None, None)
 
-    def test_parse_form(self):
+    def test_parse_form_bytes(self):
         on_field = Mock()
         on_file = Mock()
 
         parse_form({"Content-Type": "application/octet-stream"}, BytesIO(b"123456789012345"), on_field, on_file)
+
+        assert on_file.call_count == 1
+
+        # Assert that the first argument of the call (a File object) has size
+        # 15 - i.e. all data is written.
+        self.assertEqual(on_file.call_args[0][0].size, 15)
+
+    def test_parse_form_file(self):
+        on_field = Mock()
+        on_file = Mock()
+
+        with open ('12345678.txt', 'wt+') as f:
+            f .write ('123456789012345')
+            f .seek (0o0)
+            parse_form({"Content-Type": "application/octet-stream"}, f .buffer, on_field, on_file)
+
+        assert on_file.call_count == 1
+
+        # Assert that the first argument of the call (a File object) has size
+        # 15 - i.e. all data is written.
+        self.assertEqual(on_file.call_args[0][0].size, 15)
+
+    def test_parse_form_text(self):
+        on_field = Mock()
+        on_file = Mock()
+
+        with open ('12345678.txt', 'wt+') as f:
+            f .write ('123456789012345')
+            f .seek (0o0)
+            self .assertTrue (isinstance (f, TextIOBase))
+            parse_form({"Content-Type": "application/octet-stream"}, f, on_field, on_file)
 
         assert on_file.call_count == 1
 

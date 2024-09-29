@@ -1799,6 +1799,10 @@ def parse_form(
         content_length = float("inf")
     bytes_read = 0
 
+    # If the input stream is a text stream, use its binary buffer
+    if isinstance (input_stream, io .TextIOBase):
+        input_stream = input_stream .buffer
+
     while True:
         # Read only up to the Content-Length given.
         max_readable = min(content_length - bytes_read, chunk_size)
