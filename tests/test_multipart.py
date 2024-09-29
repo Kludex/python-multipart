@@ -290,8 +290,8 @@ class TestParseOptionsHeader(unittest.TestCase):
 
 class TestBaseParser(unittest.TestCase):
     def setUp(self):
-        self.b = BaseParser()
-        self.b.callbacks = {}
+        callbacks = {}
+        self.b = BaseParser(callbacks)
 
     def test_callbacks(self):
         called = 0

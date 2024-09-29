@@ -18,19 +18,20 @@ from .exceptions import FileError, FormParserError, MultipartParseError, Queryst
 if TYPE_CHECKING:  # pragma: no cover
     from typing import Callable, Protocol, TypedDict
 
-    class QuerystringCallbacks(TypedDict, total=False):
+    class BaseCallbacks(TypedDict, total=False):
+        on_end: Callable[[], None]
+
+    class QuerystringCallbacks(BaseCallbacks, total=False):
         on_field_start: Callable[[], None]
         on_field_name: Callable[[bytes, int, int], None]
         on_field_data: Callable[[bytes, int, int], None]
         on_field_end: Callable[[], None]
-        on_end: Callable[[], None]
 
-    class OctetStreamCallbacks(TypedDict, total=False):
+    class OctetStreamCallbacks(BaseCallbacks, total=False):
         on_start: Callable[[], None]
         on_data: Callable[[bytes, int, int], None]
-        on_end: Callable[[], None]
 
-    class MultipartCallbacks(TypedDict, total=False):
+    class MultipartCallbacks(BaseCallbacks, total=False):
         on_part_begin: Callable[[], None]
         on_part_data: Callable[[bytes, int, int], None]
         on_part_end: Callable[[], None]
@@ -39,7 +40,6 @@ if TYPE_CHECKING:  # pragma: no cover
         on_header_value: Callable[[bytes, int, int], None]
         on_header_end: Callable[[], None]
         on_headers_finished: Callable[[], None]
-        on_end: Callable[[], None]
 
     class FormParserConfig(TypedDict):
         UPLOAD_DIR: str | None
@@ -569,8 +569,9 @@ class BaseParser:
     performance.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, callbacks: BaseCallbacks) -> None:
         self.logger = logging.getLogger(__name__)
+        self.callbacks = callbacks
 
     def callback(self, name: str, data: bytes | None = None, start: int | None = None, end: int | None = None):
         """This function calls a provided callback with some data.  If the
@@ -641,8 +642,7 @@ class OctetStreamParser(BaseParser):
     """
 
     def __init__(self, callbacks: OctetStreamCallbacks = {}, max_size: float = float("inf")):
-        super().__init__()
-        self.callbacks = callbacks
+        super().__init__(callbacks)
         self._started = False
 
         if not isinstance(max_size, Number) or max_size < 1:
@@ -720,11 +720,9 @@ class QuerystringParser(BaseParser):
     def __init__(
         self, callbacks: QuerystringCallbacks = {}, strict_parsing: bool = False, max_size: float = float("inf")
     ) -> None:
-        super().__init__()
+        super().__init__(callbacks)
         self.state = QuerystringState.BEFORE_FIELD
         self._found_sep = False
-
-        self.callbacks = callbacks
 
         # Max-size stuff
         if not isinstance(max_size, Number) or max_size < 1:
@@ -950,11 +948,9 @@ class MultipartParser(BaseParser):
         self, boundary: bytes | str, callbacks: MultipartCallbacks = {}, max_size: float = float("inf")
     ) -> None:
         # Initialize parser state.
-        super().__init__()
+        super().__init__(callbacks)
         self.state = MultipartState.START
         self.index = self.flags = 0
-
-        self.callbacks = callbacks
 
         if not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" % max_size)
