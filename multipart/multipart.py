@@ -142,10 +142,6 @@ TOKEN_CHARS_SET = frozenset(
 # fmt: on
 
 
-def ord_char(c: int) -> int:
-    return c
-
-
 def parse_options_header(value: str | bytes) -> tuple[bytes, dict[bytes, bytes]]:
     """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
     # Uses email.message.Message to parse the header as described in PEP 594.
@@ -473,7 +469,7 @@ class File:
             elif isinstance(file_dir, bytes):
                 dir = file_dir.decode(sys.getfilesystemencoding())
             else:
-                dir = file_dir
+                dir = file_dir  # pragma: no cover
 
             # Create a temporary (named) file with the appropriate settings.
             self.logger.info(
@@ -511,11 +507,7 @@ class File:
         Returns:
             The number of bytes written.
         """
-        pos = self._fileobj.tell()
         bwritten = self._fileobj.write(data)
-        # true file objects write  returns None
-        if bwritten is None:
-            bwritten = self._fileobj.tell() - pos
 
         # If the bytes written isn't the same as the length, just return.
         if bwritten != len(data):
@@ -1381,7 +1373,7 @@ class MultipartParser(BaseParser):
             elif state == MultipartState.END:
                 # Do nothing and just consume a byte in the end state.
                 if c not in (CR, LF):
-                    self.logger.warning("Consuming a byte '0x%x' in the end state", c)
+                    self.logger.warning("Consuming a byte '0x%x' in the end state", c)  # pragma: no cover
 
             else:  # pragma: no cover (error case)
                 # We got into a strange state somehow!  Just stop processing.
