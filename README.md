@@ -11,12 +11,3 @@ Test coverage is currently 100%.
 ## Why?
 
 Because streaming uploads are awesome for large files.
-
-## How to Test
-
-If you want to test:
-
-```bash
-$ pip install '.[dev]'
-$ inv test
-```
