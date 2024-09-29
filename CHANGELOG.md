@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.12 (2024-09-29)
+
+* Improve error message when boundary character does not match [#124](https://github.com/Kludex/python-multipart/pull/124).
+* Add mypy strict typing [#140](https://github.com/Kludex/python-multipart/pull/140).
+* Enforce 100% coverage [#159](https://github.com/Kludex/python-multipart/pull/159).
+
 ## 0.0.11 (2024-09-28)
 
 * Improve performance, especially in data with many CR-LF [#137](https://github.com/Kludex/python-multipart/pull/137).
