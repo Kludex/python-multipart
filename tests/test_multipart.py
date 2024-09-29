@@ -713,6 +713,7 @@ single_byte_tests = [
     "single_field_single_file",
 ]
 
+
 def split_all(val: bytes) -> Iterator[tuple[bytes, bytes]]:
     """
     This function will split an array all possible ways.  For example:
@@ -863,7 +864,7 @@ class TestFormParser(unittest.TestCase):
             self.assert_field(b"field", b"test1")
             self.assert_file(b"file", b"file.txt", b"test2")
 
-    @parametrize("param", [ t for t in http_tests if t["name"] in single_byte_tests])
+    @parametrize("param", [t for t in http_tests if t["name"] in single_byte_tests])
     def test_feed_single_bytes(self, param: TestParams) -> None:
         """
         This test parses multipart bodies 1 byte at a time.

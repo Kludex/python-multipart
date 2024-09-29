@@ -162,6 +162,7 @@ TOKEN_CHARS_SET = frozenset(
     b"!#$%&'*+-.^_`|~")
 # fmt: on
 
+
 def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, bytes]]:
     """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
     # Uses email.message.Message to parse the header as described in PEP 594.
@@ -508,7 +509,7 @@ class File:
             if isinstance(tmp_file.name, str):
                 fname = tmp_file.name.encode(sys.getfilesystemencoding())
             else:
-                fname = cast(bytes, tmp_file.name)
+                fname = cast(bytes, tmp_file.name)  # pragma: no cover
 
         self._actual_file_name = fname
         return tmp_file
@@ -597,7 +598,7 @@ class BaseParser:
         self.callbacks: QuerystringCallbacks | OctetStreamCallbacks | MultipartCallbacks = {}
 
     def callback(
-        self, name: CALLBACK_NAMES, data: bytes | None = None, start: int | None = None, end: int | None = None
+        self, name: CallbackName, data: bytes | None = None, start: int | None = None, end: int | None = None
     ) -> None:
         """This function calls a provided callback with some data.  If the
         callback is not set, will do nothing.
@@ -626,7 +627,7 @@ class BaseParser:
             self.logger.debug("Calling %s with no data", on_name)
             func()
 
-    def set_callback(self, name: CALLBACK_NAMES, new_func: Callable[..., Any] | None) -> None:
+    def set_callback(self, name: CallbackName, new_func: Callable[..., Any] | None) -> None:
         """Update the function for a callback.  Removes from the callbacks dict
         if new_func is None.
 
