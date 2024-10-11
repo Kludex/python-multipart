@@ -4,7 +4,7 @@ import atheris
 from helpers import EnhancedDataProvider
 
 with atheris.instrument_imports():
-    from multipart.multipart import parse_options_header
+    from python_multipart.multipart import parse_options_header
 
 
 def TestOneInput(data: bytes) -> None:

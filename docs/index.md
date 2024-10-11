@@ -9,7 +9,7 @@ Python-Multipart is a streaming multipart parser for Python.
 The following example shows a quick example of parsing an incoming request body in a simple WSGI application:
 
 ```python
-import multipart
+import python_multipart
 
 def simple_app(environ, start_response):
     ret = []
@@ -31,7 +31,7 @@ def simple_app(environ, start_response):
         headers['Content-Length'] = environ['CONTENT_LENGTH']
 
     # Parse the form.
-    multipart.parse_form(headers, environ['wsgi.input'], on_field, on_file)
+    python_multipart.parse_form(headers, environ['wsgi.input'], on_field, on_file)
 
     # Return something.
     start_response('200 OK', [('Content-type', 'text/plain')])
@@ -67,7 +67,7 @@ In this section, we’ll build an application that computes the SHA-256 hash of 
 To start, we need a simple WSGI application. We could do this with a framework like Flask, Django, or Tornado, but for now let’s stick to plain WSGI:
 
 ```python
-import multipart
+import python_multipart
 
 def simple_app(environ, start_response):
     start_response('200 OK', [('Content-type', 'text/plain')])
@@ -100,8 +100,8 @@ The final code should look like this:
 
 ```python
 import hashlib
-import multipart
-from multipart.multipart import parse_options_header
+import python_multipart
+from python_multipart.multipart import parse_options_header
 
 def simple_app(environ, start_response):
     ret = []
@@ -136,7 +136,7 @@ def simple_app(environ, start_response):
     }
 
     # Create the parser.
-    parser = multipart.MultipartParser(boundary, callbacks)
+    parser = python_multipart.MultipartParser(boundary, callbacks)
 
     # The input stream is from the WSGI environ.
     inp = environ['wsgi.input']
@@ -176,3 +176,11 @@ Content-type: text/plain
 Hashes:
 Part hash: 0b64696c0f7ddb9e3435341720988d5455b3b0f0724688f98ec8e6019af3d931
 ```
+
+
+## Historical note
+
+This package used to be accessed via `import multipart`. This still works for
+now (with a warning) as long as the Python package `multipart` is not also
+installed. If both are installed, you need to use the full PyPI name
+`python_multipart` for this package.

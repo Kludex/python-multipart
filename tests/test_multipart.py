@@ -11,9 +11,9 @@ from unittest.mock import Mock
 
 import yaml
 
-from multipart.decoders import Base64Decoder, QuotedPrintableDecoder
-from multipart.exceptions import DecodeError, FileError, FormParserError, MultipartParseError, QuerystringParseError
-from multipart.multipart import (
+from python_multipart.decoders import Base64Decoder, QuotedPrintableDecoder
+from python_multipart.exceptions import DecodeError, FileError, FormParserError, MultipartParseError, QuerystringParseError
+from python_multipart.multipart import (
     BaseParser,
     Field,
     File,
@@ -31,7 +31,7 @@ from .compat import parametrize, parametrize_class
 if TYPE_CHECKING:
     from typing import Any, Iterator, TypedDict
 
-    from multipart.multipart import FieldProtocol, FileConfig, FileProtocol
+    from python_multipart.multipart import FieldProtocol, FileConfig, FileProtocol
 
     class TestParams(TypedDict):
         name: str

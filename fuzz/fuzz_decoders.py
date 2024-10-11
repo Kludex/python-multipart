@@ -5,7 +5,7 @@ import atheris
 from helpers import EnhancedDataProvider
 
 with atheris.instrument_imports():
-    from multipart.decoders import Base64Decoder, DecodeError, QuotedPrintableDecoder
+    from python_multipart.decoders import Base64Decoder, DecodeError, QuotedPrintableDecoder
 
 
 def fuzz_base64_decoder(fdp: EnhancedDataProvider) -> None:

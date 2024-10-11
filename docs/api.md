@@ -1,3 +1,3 @@
-::: multipart
+::: python_multipart
 
-::: multipart.exceptions
+::: python_multipart.exceptions

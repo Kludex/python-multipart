@@ -6,8 +6,8 @@ import atheris
 from helpers import EnhancedDataProvider
 
 with atheris.instrument_imports():
-    from multipart.exceptions import FormParserError
-    from multipart.multipart import parse_form
+    from python_multipart.exceptions import FormParserError
+    from python_multipart.multipart import parse_form
 
 on_field = Mock()
 on_file = Mock()
