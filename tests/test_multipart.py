@@ -12,7 +12,13 @@ from unittest.mock import Mock
 import yaml
 
 from python_multipart.decoders import Base64Decoder, QuotedPrintableDecoder
-from python_multipart.exceptions import DecodeError, FileError, FormParserError, MultipartParseError, QuerystringParseError
+from python_multipart.exceptions import (
+    DecodeError,
+    FileError,
+    FormParserError,
+    MultipartParseError,
+    QuerystringParseError,
+)
 from python_multipart.multipart import (
     BaseParser,
     Field,
