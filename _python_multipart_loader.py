@@ -23,7 +23,7 @@ class PythonMultipartCompatFinder(importlib.abc.MetaPathFinder):
             if multipart := importlib.util.find_spec("multipart"):
                 return multipart
 
-            warnings.warn("Please use `import python_multipart` instead", FutureWarning, stacklevel=2)
+            warnings.warn("Please use `import python_multipart` instead.", FutureWarning, stacklevel=2)
             sys.modules["multipart"] = importlib.import_module("python_multipart")
             return importlib.util.find_spec("python_multipart")
         finally:
