@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.13 (2024-10-20)
+
+* Rename import to `python_multipart` [#166](https://github.com/Kludex/python-multipart/pull/166).
+
 ## 0.0.12 (2024-09-29)
 
 * Improve error message when boundary character does not match [#124](https://github.com/Kludex/python-multipart/pull/124).
