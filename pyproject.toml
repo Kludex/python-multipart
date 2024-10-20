@@ -55,6 +55,9 @@ dev-dependencies = [
     "mkdocs-autorefs",
 ]
 
+[tool.uv.pip]
+reinstall-package = ["python-multipart"]
+
 [project.urls]
 Homepage = "https://github.com/Kludex/python-multipart"
 Documentation = "https://kludex.github.io/python-multipart/"
@@ -62,13 +65,14 @@ Changelog = "https://github.com/Kludex/python-multipart/blob/master/CHANGELOG.md
 Source = "https://github.com/Kludex/python-multipart"
 
 [tool.hatch.version]
-path = "multipart/__init__.py"
-
-[tool.hatch.build.targets.wheel]
-packages = ["multipart"]
+path = "python_multipart/__init__.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["/multipart", "/tests", "CHANGELOG.md", "LICENSE.txt"]
+include = ["/python_multipart", "/tests", "CHANGELOG.md", "LICENSE.txt", "_python_multipart.pth", "_python_multipart_loader.py"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"_python_multipart.pth" = "_python_multipart.pth"
+"_python_multipart_loader.py" = "_python_multipart_loader.py"
 
 [tool.mypy]
 strict = true

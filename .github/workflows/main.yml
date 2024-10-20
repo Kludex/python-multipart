@@ -33,6 +33,9 @@ jobs:
       - name: Run tests
         run: scripts/test
 
+      - name: Run rename test
+        run: uvx nox -s rename -P ${{ matrix.python-version }}
+
   # https://github.com/marketplace/actions/alls-green#why used for branch protection checks
   check:
     if: always()

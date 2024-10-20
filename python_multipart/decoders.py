@@ -25,7 +25,7 @@ class Base64Decoder:
     call write() on the underlying object.  This is primarily used for decoding
     form data encoded as Base64, but can be used for other purposes::
 
-        from multipart.decoders import Base64Decoder
+        from python_multipart.decoders import Base64Decoder
         fd = open("notb64.txt", "wb")
         decoder = Base64Decoder(fd)
         try:
@@ -55,7 +55,7 @@ class Base64Decoder:
         """Takes any input data provided, decodes it as base64, and passes it
         on to the underlying object.  If the data provided is invalid base64
         data, then this method will raise
-        a :class:`multipart.exceptions.DecodeError`
+        a :class:`python_multipart.exceptions.DecodeError`
 
         :param data: base64 data to decode
         """
@@ -97,7 +97,7 @@ class Base64Decoder:
     def finalize(self) -> None:
         """Finalize this object.  This should be called when no more data
         should be written to the stream.  This function can raise a
-        :class:`multipart.exceptions.DecodeError` if there is some remaining
+        :class:`python_multipart.exceptions.DecodeError` if there is some remaining
         data in the cache.
 
         If the underlying object has a `finalize()` method, this function will
@@ -118,7 +118,7 @@ class Base64Decoder:
 class QuotedPrintableDecoder:
     """This object provides an interface to decode a stream of quoted-printable
     data.  It is instantiated with an "underlying object", in the same manner
-    as the :class:`multipart.decoders.Base64Decoder` class.  This class behaves
+    as the :class:`python_multipart.decoders.Base64Decoder` class.  This class behaves
     in exactly the same way, including maintaining a cache of quoted-printable
     chunks.
 

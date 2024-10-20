@@ -241,7 +241,7 @@ class Field:
             value: the value of the form field - either a bytestring or None.
 
         Returns:
-            A new instance of a [`Field`][multipart.Field].
+            A new instance of a [`Field`][python_multipart.Field].
         """
 
         f = cls(name)
@@ -351,7 +351,7 @@ class File:
     | MAX_MEMORY_FILE_SIZE  | `int` | 1 MiB   | The maximum number of bytes of a File to keep in memory. By default, the contents of a File are kept into memory until a certain limit is reached, after which the contents of the File are written to a temporary file. This behavior can be disabled by setting this value to an appropriately large value (or, for example, infinity, such as `float('inf')`. |
 
     Args:
-        file_name: The name of the file that this [`File`][multipart.File] represents.
+        file_name: The name of the file that this [`File`][python_multipart.File] represents.
         field_name: The name of the form field that this file was uploaded with.  This can be None, if, for example,
             the file was uploaded with Content-Type application/octet-stream.
         config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
@@ -663,7 +663,7 @@ class OctetStreamParser(BaseParser):
     | on_end         | None            | Called when the parser is finished parsing all data.|
 
     Args:
-        callbacks: A dictionary of callbacks.  See the documentation for [`BaseParser`][multipart.BaseParser].
+        callbacks: A dictionary of callbacks.  See the documentation for [`BaseParser`][python_multipart.BaseParser].
         max_size: The maximum size of body to parse.  Defaults to infinity - i.e. unbounded.
     """
 
@@ -733,12 +733,12 @@ class QuerystringParser(BaseParser):
     | on_end         | None            | Called when the parser is finished parsing all data.|
 
     Args:
-        callbacks: A dictionary of callbacks.  See the documentation for [`BaseParser`][multipart.BaseParser].
+        callbacks: A dictionary of callbacks.  See the documentation for [`BaseParser`][python_multipart.BaseParser].
         strict_parsing: Whether or not to parse the body strictly.  Defaults to False.  If this is set to True, then the
             behavior of the parser changes as the following: if a field has a value with an equal sign
             (e.g. "foo=bar", or "foo="), it is always included.  If a field has no equals sign (e.g. "...&name&..."),
             it will be treated as an error if 'strict_parsing' is True, otherwise included.  If an error is encountered,
-            then a [`QuerystringParseError`][multipart.exceptions.QuerystringParseError] will be raised.
+            then a [`QuerystringParseError`][python_multipart.exceptions.QuerystringParseError] will be raised.
         max_size: The maximum size of body to parse.  Defaults to infinity - i.e. unbounded.
     """  # noqa: E501
 
@@ -969,7 +969,7 @@ class MultipartParser(BaseParser):
 
     Args:
         boundary: The multipart boundary.  This is required, and must match what is given in the HTTP request - usually in the Content-Type header.
-        callbacks: A dictionary of callbacks.  See the documentation for [`BaseParser`][multipart.BaseParser].
+        callbacks: A dictionary of callbacks.  See the documentation for [`BaseParser`][python_multipart.BaseParser].
         max_size: The maximum size of body to parse.  Defaults to infinity - i.e. unbounded.
     """  # noqa: E501
 
