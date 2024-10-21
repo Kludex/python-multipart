@@ -70,9 +70,8 @@ path = "python_multipart/__init__.py"
 [tool.hatch.build.targets.sdist]
 include = ["/python_multipart", "/tests", "CHANGELOG.md", "LICENSE.txt", "_python_multipart.pth", "_python_multipart_loader.py"]
 
-[tool.hatch.build.targets.wheel.force-include]
-"_python_multipart.pth" = "_python_multipart.pth"
-"_python_multipart_loader.py" = "_python_multipart_loader.py"
+[tool.hatch.build.targets.wheel]
+packages = ["python_multipart", "multipart"]
 
 [tool.mypy]
 strict = true
@@ -90,6 +89,9 @@ skip-magic-trailing-comma = true
 [tool.ruff.lint.isort]
 combine-as-imports = true
 split-on-trailing-comma = false
+
+[tool.ruff.lint.per-file-ignores]
+"multipart/*.py" = ["F403"]
 
 [tool.coverage.run]
 branch = false
