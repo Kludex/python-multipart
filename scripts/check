@@ -2,7 +2,7 @@
 
 set -x
 
-SOURCE_FILES="python_multipart tests"
+SOURCE_FILES="python_multipart multipart tests"
 
 uvx ruff format --check --diff $SOURCE_FILES
 uvx ruff check $SOURCE_FILES
