@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.14 (2024-10-24)
+
+* Fix import scheme for `multipart` module ([#168](https://github.com/user/repo/issues/168)).
+
 ## 0.0.13 (2024-10-20)
 
 * Rename import to `python_multipart` [#166](https://github.com/Kludex/python-multipart/pull/166).
