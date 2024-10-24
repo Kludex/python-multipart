@@ -35,6 +35,7 @@ jobs:
 
       - name: Run rename test
         run: scripts/rename
+
   # https://github.com/marketplace/actions/alls-green#why used for branch protection checks
   check:
     if: always()
