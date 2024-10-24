@@ -68,7 +68,7 @@ Source = "https://github.com/Kludex/python-multipart"
 path = "python_multipart/__init__.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["/python_multipart", "/tests", "CHANGELOG.md", "LICENSE.txt", "_python_multipart.pth", "_python_multipart_loader.py"]
+include = ["/python_multipart", "/multipart", "/tests", "CHANGELOG.md", "LICENSE.txt"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["python_multipart", "multipart"]
