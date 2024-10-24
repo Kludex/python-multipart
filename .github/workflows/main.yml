@@ -35,6 +35,10 @@ jobs:
 
       - name: Run rename test
         run: scripts/rename
+
+      - name: Verify SDist is complete
+        run: uvx check-dist
+
   # https://github.com/marketplace/actions/alls-green#why used for branch protection checks
   check:
     if: always()
