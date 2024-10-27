@@ -16,5 +16,5 @@ for p in sys.path:
         spec.loader.exec_module(module)
         break
 else:
-    warnings.warn("Please use `import python_multipart` instead.", FutureWarning, stacklevel=2)
+    warnings.warn("Please use `import python_multipart` instead.", PendingDeprecationWarning, stacklevel=2)
     from python_multipart import *
