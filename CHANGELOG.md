@@ -1,8 +1,13 @@
 # Changelog
 
+## 0.0.15 (2024-10-27)
+
+* Replace `FutureWarning` to `PendingDeprecationWarning` [#174](https://github.com/Kludex/python-multipart/pull/174).
+* Add missing files to SDist [#171](https://github.com/Kludex/python-multipart/pull/171).
+
 ## 0.0.14 (2024-10-24)
 
-* Fix import scheme for `multipart` module ([#168](https://github.com/user/repo/issues/168)).
+* Fix import scheme for `multipart` module ([#168](https://github.com/Kludex/python-multipart/pull/168)).
 
 ## 0.0.13 (2024-10-20)
 
