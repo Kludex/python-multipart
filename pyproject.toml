@@ -68,7 +68,13 @@ Source = "https://github.com/Kludex/python-multipart"
 path = "python_multipart/__init__.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["/python_multipart", "/multipart", "/tests", "CHANGELOG.md", "LICENSE.txt"]
+include = [
+    "/python_multipart",
+    "/multipart",
+    "/tests",
+    "CHANGELOG.md",
+    "LICENSE.txt",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["python_multipart", "multipart"]
@@ -92,6 +98,7 @@ split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
 "multipart/*.py" = ["F403"]
+"__init__.py" = ["F401"]
 
 [tool.coverage.run]
 branch = false
@@ -115,10 +122,4 @@ exclude_lines = [
 ]
 
 [tool.check-sdist]
-git-only = [
-  "docs",
-  "fuzz",
-  "scripts",
-  "mkdocs.yml",
-  "uv.lock"
-]
+git-only = ["docs", "fuzz", "scripts", "mkdocs.yml", "uv.lock"]
