@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.16 (2024-10-27)
+
+* Add dunder attributes to `multipart` package [#177](https://github.com/Kludex/python-multipart/pull/177).
+
 ## 0.0.15 (2024-10-27)
 
 * Replace `FutureWarning` to `PendingDeprecationWarning` [#174](https://github.com/Kludex/python-multipart/pull/174).
