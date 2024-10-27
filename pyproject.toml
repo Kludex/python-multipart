@@ -113,3 +113,12 @@ exclude_lines = [
     "if self\\.debug:",
     "except ImportError:",
 ]
+
+[tool.check-sdist]
+git-only = [
+  "docs",
+  "fuzz",
+  "scripts",
+  "mkdocs.yml",
+  "uv.lock"
+]
