@@ -1102,6 +1102,14 @@ class MultipartParser(BaseParser):
             c = data[i]
 
             if state == MultipartState.START:
+                # Stop parsing if there is no boundary within the first chunk
+                if i == 16:
+                    msg = "Too much junk in front of first boundary (%d)" % (i,)
+                    self.logger.warning(msg)
+                    e = MultipartParseError(msg)
+                    e.offset = i
+                    raise e
+
                 # Skip leading newlines
                 if c == CR or c == LF:
                     i += 1
