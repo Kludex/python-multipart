@@ -7,14 +7,17 @@ from pathlib import Path
 
 for p in sys.path:
     file_path = Path(p, "multipart.py")
-    if file_path.is_file():
-        spec = importlib.util.spec_from_file_location("multipart", file_path)
-        assert spec is not None, f"{file_path} found but not loadable!"
-        module = importlib.util.module_from_spec(spec)
-        sys.modules["multipart"] = module
-        assert spec.loader is not None, f"{file_path} must be loadable!"
-        spec.loader.exec_module(module)
-        break
+    try:
+        if file_path.is_file():
+            spec = importlib.util.spec_from_file_location("multipart", file_path)
+            assert spec is not None, f"{file_path} found but not loadable!"
+            module = importlib.util.module_from_spec(spec)
+            sys.modules["multipart"] = module
+            assert spec.loader is not None, f"{file_path} must be loadable!"
+            spec.loader.exec_module(module)
+            break
+    except PermissionError:
+        pass
 else:
     warnings.warn("Please use `import python_multipart` instead.", PendingDeprecationWarning, stacklevel=2)
     from python_multipart import *
