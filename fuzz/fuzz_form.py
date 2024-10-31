@@ -29,22 +29,20 @@ def parse_form_urlencoded(fdp: EnhancedDataProvider) -> None:
 
 
 def parse_multipart_form_data(fdp: EnhancedDataProvider) -> None:
-    boundary = 'boundary'
+    boundary = "boundary"
     header = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
-    body = (f"--{boundary}\r\n"
-            f"Content-Type: multipart/form-data; boundary={boundary}\r\n\r\n"
-            f"{fdp.ConsumeRandomString()}\r\n"
-            f"--{boundary}--\r\n")
-    parse_form(header, io.BytesIO(body.encode('latin1', errors='ignore')),
-               on_field, on_file)
+    body = (
+        f"--{boundary}\r\n"
+        f"Content-Type: multipart/form-data; boundary={boundary}\r\n\r\n"
+        f"{fdp.ConsumeRandomString()}\r\n"
+        f"--{boundary}--\r\n"
+    )
+    parse_form(header, io.BytesIO(body.encode("latin1", errors="ignore")), on_field, on_file)
 
 
 def TestOneInput(data: bytes) -> None:
     fdp = EnhancedDataProvider(data)
-    targets = [
-        parse_octet_stream, parse_url_encoded, parse_form_urlencoded,
-        parse_multipart_form_data
-    ]
+    targets = [parse_octet_stream, parse_url_encoded, parse_form_urlencoded, parse_multipart_form_data]
     target = fdp.PickValueInList(targets)
 
     try:
