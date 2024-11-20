@@ -1241,7 +1241,7 @@ class MultipartParser(BaseParser):
             elif state == MultipartState.HEADER_VALUE_ALMOST_DONE:
                 # The last character should be a LF.  If not, it's an error.
                 if c != LF:
-                    msg = "Did not find LF character at end of header " "(found %r)" % (c,)
+                    msg = "Did not find LF character at end of header (found %r)" % (c,)
                     self.logger.warning(msg)
                     e = MultipartParseError(msg)
                     e.offset = i
