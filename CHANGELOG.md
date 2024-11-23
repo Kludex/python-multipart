@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.17 (2024-10-31)
+
+* Handle PermissionError in fallback code for old import name [#182](https://github.com/Kludex/python-multipart/pull/182).
+
 ## 0.0.16 (2024-10-27)
 
 * Add dunder attributes to `multipart` package [#177](https://github.com/Kludex/python-multipart/pull/177).
