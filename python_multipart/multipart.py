@@ -1398,9 +1398,10 @@ class MultipartParser(BaseParser):
                     i -= 1
 
             elif state == MultipartState.END:
-                # Do nothing and just consume a byte in the end state.
-                if c not in (CR, LF):
-                    self.logger.warning("Consuming a byte '0x%x' in the end state", c)  # pragma: no cover
+                # Skip data after the last boundary.
+                self.logger.warning("Skipping data after last boundary")
+                i = length
+                break
 
             else:  # pragma: no cover (error case)
                 # We got into a strange state somehow!  Just stop processing.
