@@ -1105,7 +1105,6 @@ class MultipartParser(BaseParser):
                 # Skip leading newlines
                 if c == CR or c == LF:
                     i += 1
-                    self.logger.debug("Skipping leading CR/LF at %d", i)
                     continue
 
                 # index is used as in index into our boundary.  Set to 0.
