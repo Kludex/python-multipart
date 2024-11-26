@@ -15,12 +15,16 @@ from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Any, Callable, Literal, Protocol, TypedDict
+    from typing import Any, Callable, Literal, Optional, Protocol, TypedDict
 
     from typing_extensions import TypeAlias
 
     class SupportsRead(Protocol):
         def read(self, __n: int) -> bytes: ...
+
+    # Protocol for dict-like (dict, or CaseInsensitiveDict)
+    class SupportsGetStrBytes(Protocol):
+        def get(self, _key: str) -> Optional[bytes]: ...
 
     class QuerystringCallbacks(TypedDict, total=False):
         on_field_start: Callable[[], None]
@@ -1617,7 +1621,8 @@ class FormParser:
 
             header_name: list[bytes] = []
             header_value: list[bytes] = []
-            headers: dict[bytes, bytes] = {}
+            # Header keys are always inserted in Title-Case
+            headers: dict[str, bytes] = {}
 
             f_multi: FileProtocol | FieldProtocol | None = None
             writer = None
@@ -1652,7 +1657,9 @@ class FormParser:
                 header_value.append(data[start:end])
 
             def on_header_end() -> None:
-                headers[b"".join(header_name)] = b"".join(header_value)
+                # Convert header name to title case.
+                header_name_tc = b"".join(header_name).decode().title()
+                headers[header_name_tc] = b"".join(header_value)
                 del header_name[:]
                 del header_value[:]
 
@@ -1662,8 +1669,7 @@ class FormParser:
                 is_file = False
 
                 # Parse the content-disposition header.
-                # TODO: handle mixed case
-                content_disp = headers.get(b"Content-Disposition")
+                content_disp = headers.get("Content-Disposition")
                 disp, options = parse_options_header(content_disp)
 
                 # Get the field and filename.
@@ -1681,7 +1687,7 @@ class FormParser:
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                transfer_encoding = headers.get(b"Content-Transfer-Encoding", b"7bit")
+                transfer_encoding = headers.get("Content-Transfer-Encoding", b"7bit")
 
                 if transfer_encoding in (b"binary", b"8bit", b"7bit"):
                     writer = f_multi
@@ -1760,7 +1766,7 @@ class FormParser:
 
 
 def create_form_parser(
-    headers: dict[str, bytes],
+    headers: SupportsGetStrBytes,
     on_field: OnFieldCallback | None,
     on_file: OnFileCallback | None,
     trust_x_headers: bool = False,
@@ -1804,7 +1810,7 @@ def create_form_parser(
 
 
 def parse_form(
-    headers: dict[str, bytes],
+    headers: SupportsGetStrBytes,
     input_stream: SupportsRead,
     on_field: OnFieldCallback | None,
     on_file: OnFileCallback | None,
@@ -1816,7 +1822,8 @@ def parse_form(
     callbacks that will get called whenever a field or file is parsed.
 
     Args:
-        headers: A dictionary-like object of HTTP headers.  The only required header is Content-Type.
+        headers: A dictionary-like object of HTTP headers.  The only required header is Content-Type,
+            in exactly this form if the input dict is case sensitive.
         input_stream: A file-like object that represents the request body. The read() method must return bytestrings.
         on_field: Callback to call with each parsed field.
         on_file: Callback to call with each parsed file.
