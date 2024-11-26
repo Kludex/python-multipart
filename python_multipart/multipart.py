@@ -15,16 +15,12 @@ from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Any, Callable, Literal, Optional, Protocol, TypedDict
+    from typing import Any, Callable, Literal, Mapping, Protocol, TypedDict
 
     from typing_extensions import TypeAlias
 
     class SupportsRead(Protocol):
         def read(self, __n: int) -> bytes: ...
-
-    # Protocol for dict-like (dict, or CaseInsensitiveDict)
-    class SupportsGetStrBytes(Protocol):
-        def get(self, _key: str) -> Optional[bytes]: ...
 
     class QuerystringCallbacks(TypedDict, total=False):
         on_field_start: Callable[[], None]
@@ -1766,7 +1762,7 @@ class FormParser:
 
 
 def create_form_parser(
-    headers: SupportsGetStrBytes,
+    headers: Mapping[str, bytes],
     on_field: OnFieldCallback | None,
     on_file: OnFileCallback | None,
     trust_x_headers: bool = False,
@@ -1810,7 +1806,7 @@ def create_form_parser(
 
 
 def parse_form(
-    headers: SupportsGetStrBytes,
+    headers: Mapping[str, bytes],
     input_stream: SupportsRead,
     on_field: OnFieldCallback | None,
     on_file: OnFileCallback | None,
