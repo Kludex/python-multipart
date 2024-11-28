@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.18 (2024-11-28)
+
+* Hard break if found data after last boundary on `MultipartParser` [#189](https://github.com/Kludex/python-multipart/pull/189).
+
 ## 0.0.17 (2024-10-31)
 
 * Handle PermissionError in fallback code for old import name [#182](https://github.com/Kludex/python-multipart/pull/182).
