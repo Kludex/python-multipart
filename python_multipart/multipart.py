@@ -1397,6 +1397,10 @@ class MultipartParser(BaseParser):
                     i -= 1
 
             elif state == MultipartState.END:
+                # Don't do anything if chunk ends with CRLF.
+                if c == CR and i + 1 < length and data[i + 1] == LF:
+                    i += 2
+                    continue
                 # Skip data after the last boundary.
                 self.logger.warning("Skipping data after last boundary")
                 i = length
