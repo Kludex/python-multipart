@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.19 (2024-11-30)
+
+* Don't warn when CRLF is found after last boundary on `MultipartParser` [#193](https://github.com/Kludex/python-multipart/pull/193).
+
 ## 0.0.18 (2024-11-28)
 
 * Hard break if found data after last boundary on `MultipartParser` [#189](https://github.com/Kludex/python-multipart/pull/189).
