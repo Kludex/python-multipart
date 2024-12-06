@@ -718,12 +718,12 @@ wheels = [
 
 [[package]]
 name = "python-multipart"
-version = "0.0.17"
+version = "0.0.19"
 source = { editable = "." }
 
 [package.dev-dependencies]
 dev = [
-    { name = "atheris", marker = "python_full_version != '3.12.*'" },
+    { name = "atheris", marker = "python_full_version < '3.12'" },
     { name = "atomicwrites" },
     { name = "attrs" },
     { name = "coverage" },
@@ -749,7 +749,7 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "atheris", marker = "python_full_version != '3.12.*'", specifier = "==2.3.0" },
+    { name = "atheris", marker = "python_full_version < '3.12'", specifier = "==2.3.0" },
     { name = "atomicwrites", specifier = "==1.4.1" },
     { name = "attrs", specifier = "==23.2.0" },
     { name = "coverage", specifier = "==7.4.4" },
