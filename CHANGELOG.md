@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.0.19 (2024-11-30)
+
+* Don't warn when CRLF is found after last boundary on `MultipartParser` [#193](https://github.com/Kludex/python-multipart/pull/193).
+
+## 0.0.18 (2024-11-28)
+
+* Hard break if found data after last boundary on `MultipartParser` [#189](https://github.com/Kludex/python-multipart/pull/189).
+
+## 0.0.17 (2024-10-31)
+
+* Handle PermissionError in fallback code for old import name [#182](https://github.com/Kludex/python-multipart/pull/182).
+
+## 0.0.16 (2024-10-27)
+
+* Add dunder attributes to `multipart` package [#177](https://github.com/Kludex/python-multipart/pull/177).
+
+## 0.0.15 (2024-10-27)
+
+* Replace `FutureWarning` to `PendingDeprecationWarning` [#174](https://github.com/Kludex/python-multipart/pull/174).
+* Add missing files to SDist [#171](https://github.com/Kludex/python-multipart/pull/171).
+
+## 0.0.14 (2024-10-24)
+
+* Fix import scheme for `multipart` module ([#168](https://github.com/Kludex/python-multipart/pull/168)).
+
+## 0.0.13 (2024-10-20)
+
+* Rename import to `python_multipart` [#166](https://github.com/Kludex/python-multipart/pull/166).
+
+## 0.0.12 (2024-09-29)
+
+* Improve error message when boundary character does not match [#124](https://github.com/Kludex/python-multipart/pull/124).
+* Add mypy strict typing [#140](https://github.com/Kludex/python-multipart/pull/140).
+* Enforce 100% coverage [#159](https://github.com/Kludex/python-multipart/pull/159).
+
+## 0.0.11 (2024-09-28)
+
+* Improve performance, especially in data with many CR-LF [#137](https://github.com/Kludex/python-multipart/pull/137).
+* Handle invalid CRLF in header name [#141](https://github.com/Kludex/python-multipart/pull/141).
+
+## 0.0.10 (2024-09-21)
+
+* Support `on_header_begin` [#103](https://github.com/Kludex/python-multipart/pull/103).
+* Improve type hints on `FormParser` [#104](https://github.com/Kludex/python-multipart/pull/104).
+* Fix `OnFileCallback` type [#106](https://github.com/Kludex/python-multipart/pull/106).
+* Improve type hints [#110](https://github.com/Kludex/python-multipart/pull/110).
+* Improve type hints on `File` [#111](https://github.com/Kludex/python-multipart/pull/111).
+* Add type hint to helper functions [#112](https://github.com/Kludex/python-multipart/pull/112).
+* Minor fix for Field.__repr__ [#114](https://github.com/Kludex/python-multipart/pull/114).
+* Fix use of chunk_size parameter [#136](https://github.com/Kludex/python-multipart/pull/136).
+* Allow digits and valid token chars in headers [#134](https://github.com/Kludex/python-multipart/pull/134).
+* Fix headers being carried between parts [#135](https://github.com/Kludex/python-multipart/pull/135).
+
 ## 0.0.9 (2024-02-10)
 
 * Add support for Python 3.12 [#85](https://github.com/Kludex/python-multipart/pull/85).

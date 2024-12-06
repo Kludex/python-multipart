@@ -1,0 +1,10 @@
+#!/bin/sh -e
+
+set -x
+
+SOURCE_FILES="python_multipart multipart tests"
+
+uvx ruff format --check --diff $SOURCE_FILES
+uvx ruff check $SOURCE_FILES
+uv run mypy $SOURCE_FILES
+uvx check-sdist
