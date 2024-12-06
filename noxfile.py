@@ -14,8 +14,12 @@ def rename(session: nox.Session, editable: bool) -> None:
     assert "import python_multipart" not in session.run("python", "-c", "import multipart", silent=True)
 
     assert "import python_multipart" in session.run("python", "-Wdefault", "-c", "import multipart", silent=True)
-    assert "import python_multipart" in session.run("python", "-Wdefault", "-c", "import multipart.exceptions", silent=True)
-    assert "import python_multipart" in session.run("python", "-Wdefault", "-c", "from multipart import exceptions", silent=True)
+    assert "import python_multipart" in session.run(
+        "python", "-Wdefault", "-c", "import multipart.exceptions", silent=True
+    )
+    assert "import python_multipart" in session.run(
+        "python", "-Wdefault", "-c", "from multipart import exceptions", silent=True
+    )
     assert "import python_multipart" in session.run(
         "python", "-Wdefault", "-c", "from multipart.exceptions import FormParserError", silent=True
     )

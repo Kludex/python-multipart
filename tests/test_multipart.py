@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import random
 import sys
@@ -9,6 +10,7 @@ from io import BytesIO
 from typing import TYPE_CHECKING, cast
 from unittest.mock import Mock
 
+import pytest
 import yaml
 
 from python_multipart.decoders import Base64Decoder, QuotedPrintableDecoder
@@ -825,7 +827,7 @@ class TestFormParser(unittest.TestCase):
             return
 
         # No error!
-        self.assertEqual(processed, len(param["test"]))
+        self.assertEqual(processed, len(param["test"]), param["name"])
 
         # Assert that the parser gave us the appropriate fields/files.
         for e in param["result"]["expected"]:
@@ -1209,6 +1211,68 @@ class TestFormParser(unittest.TestCase):
 
         self.assertEqual(fields[2].field_name, b"baz")
         self.assertEqual(fields[2].value, b"asdf")
+
+    def test_multipart_parser_newlines_before_first_boundary(self) -> None:
+        """This test makes sure that the parser does not handle when there is junk data after the last boundary."""
+        num = 5_000_000
+        data = (
+            "\r\n" * num + "--boundary\r\n"
+            'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+            "Content-Type: text/plain\r\n\r\n"
+            "hello\r\n"
+            "--boundary--"
+        )
+
+        files: list[File] = []
+
+        def on_file(f: FileProtocol) -> None:
+            files.append(cast(File, f))
+
+        f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
+        f.write(data.encode("latin-1"))
+
+    def test_multipart_parser_data_after_last_boundary(self) -> None:
+        """This test makes sure that the parser does not handle when there is junk data after the last boundary."""
+        num = 50_000_000
+        data = (
+            "--boundary\r\n"
+            'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+            "Content-Type: text/plain\r\n\r\n"
+            "hello\r\n"
+            "--boundary--" + "-" * num + "\r\n"
+        )
+
+        files: list[File] = []
+
+        def on_file(f: FileProtocol) -> None:
+            files.append(cast(File, f))
+
+        f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
+        f.write(data.encode("latin-1"))
+
+    @pytest.fixture(autouse=True)
+    def inject_fixtures(self, caplog: pytest.LogCaptureFixture) -> None:
+        self._caplog = caplog
+
+    def test_multipart_parser_data_end_with_crlf_without_warnings(self) -> None:
+        """This test makes sure that the parser does not handle when the data ends with a CRLF."""
+        data = (
+            "--boundary\r\n"
+            'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+            "Content-Type: text/plain\r\n\r\n"
+            "hello\r\n"
+            "--boundary--\r\n"
+        )
+
+        files: list[File] = []
+
+        def on_file(f: FileProtocol) -> None:
+            files.append(cast(File, f))
+
+        f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
+        with self._caplog.at_level(logging.WARNING):
+            f.write(data.encode("latin-1"))
+            assert len(self._caplog.records) == 0
 
     def test_max_size_multipart(self) -> None:
         # Load test data.
