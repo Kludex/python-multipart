@@ -19,13 +19,10 @@ jobs:
         uses: astral-sh/setup-uv@v4
         with:
           version: "0.4.12"
-          enable-cache: true
-
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --python ${{ matrix.python-version }} --frozen
+        run: uv sync --frozen
 
       - name: Run linters
         run: scripts/check
