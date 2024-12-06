@@ -16,10 +16,10 @@ def simple_app(environ, start_response):
 
     # The following two callbacks just append the name to the return value.
     def on_field(field):
-        ret.append(b"Parsed field named: %s" % (field.field_name,))
+        ret.append(b"Parsed value parameter named: %s" % (field.field_name,))
 
     def on_file(file):
-        ret.append(b"Parsed file named: %s" % (file.field_name,))
+        ret.append(b"Parsed file parameter named: %s" % (file.field_name,))
 
     # Create headers object.  We need to convert from WSGI to the actual
     # name of the header, since this library does not assume that you are
@@ -55,7 +55,7 @@ Date: Sun, 07 Apr 2013 01:40:52 GMT
 Server: WSGIServer/0.1 Python/2.7.3
 Content-type: text/plain
 
-Parsed field named: foo
+Parsed value parameter named: foo
 ```
 
 For a more in-depth example showing how the various parts fit together, check out the next section.
