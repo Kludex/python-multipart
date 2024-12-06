@@ -1106,7 +1106,6 @@ class MultipartParser(BaseParser):
                 # Skip leading newlines
                 if c == CR or c == LF:
                     i += 1
-                    self.logger.debug("Skipping leading CR/LF at %d", i)
                     continue
 
                 # index is used as in index into our boundary.  Set to 0.
@@ -1414,9 +1413,14 @@ class MultipartParser(BaseParser):
                     state = MultipartState.END
 
             elif state == MultipartState.END:
-                # Do nothing and just consume a byte in the end state.
-                if c not in (CR, LF):
-                    self.logger.warning("Consuming a byte '0x%x' in the end state", c)  # pragma: no cover
+                # Don't do anything if chunk ends with CRLF.
+                if c == CR and i + 1 < length and data[i + 1] == LF:
+                    i += 2
+                    continue
+                # Skip data after the last boundary.
+                self.logger.warning("Skipping data after last boundary")
+                i = length
+                break
 
             else:  # pragma: no cover (error case)
                 # We got into a strange state somehow!  Just stop processing.
