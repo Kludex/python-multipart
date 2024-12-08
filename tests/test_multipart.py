@@ -758,7 +758,7 @@ class TestFormParser(unittest.TestCase):
         file_data = o.read()
         self.assertEqual(file_data, data)
 
-    def assert_file(self, field_name: bytes, file_name: bytes, content_type: str, data: bytes) -> None:
+    def assert_file(self, field_name: bytes, file_name: bytes, content_type: str | None, data: bytes) -> None:
         # Find this file.
         found = None
         for f in self.files:
@@ -770,7 +770,7 @@ class TestFormParser(unittest.TestCase):
         self.assertIsNotNone(found)
         assert found is not None
 
-        self.assertEqual(found.content_type, content_type.encode())
+        self.assertEqual(found.content_type, content_type)
 
         try:
             # Assert about this file.
@@ -911,7 +911,8 @@ class TestFormParser(unittest.TestCase):
                 self.assert_field(name, e["data"])
 
             elif type == "file":
-                self.assert_file(name, e["file_name"].encode("latin-1"), "text/plain", e["data"])
+                content_type = "text/plain"
+                self.assert_file(name, e["file_name"].encode("latin-1"), content_type, e["data"])
 
             else:
                 assert False
@@ -949,24 +950,16 @@ class TestFormParser(unittest.TestCase):
                 # Assert that our field is here.
                 self.assert_field(b"field", b"0123456789ABCDEFGHIJ0123456789ABCDEFGHIJ")
 
-    def test_file_headers(self) -> None:
+    def test_file_content_type_header(self) -> None:
         """
-        This test checks headers for a file part are read.
+        This test checks the content-type for a file part is passed on.
         """
         # Load test data.
         test_file = "header_with_number.http"
         with open(os.path.join(http_tests_dir, test_file), "rb") as f:
             test_data = f.read()
 
-        expected_headers = {
-            "content-disposition": b'form-data; filename="secret.txt"; name="files"',
-            "content-type": b"text/plain; charset=utf-8",
-            "x-funky-header-1": b"bar",
-            "abcdefghijklmnopqrstuvwxyz01234": b"foo",
-            "abcdefghijklmnopqrstuvwxyz56789": b"bar",
-            "other!#$%&'*+-.^_`|~": b"baz",
-            "content-length": b"6",
-        }
+        expected_content_type = "text/plain; charset=utf-8"
 
         # Create form parser.
         self.make(boundary="b8825ae386be4fdc9644d87e392caad3")
@@ -975,22 +968,19 @@ class TestFormParser(unittest.TestCase):
 
         # Assert that our field is here.
         self.assertEqual(1, len(self.files))
-        actual_headers = self.files[0].headers
-        self.assertEqual(len(actual_headers), len(expected_headers))
+        actual_content_type = self.files[0].content_type
+        self.assertEqual(actual_content_type, expected_content_type)
 
-        for k, v in expected_headers.items():
-            self.assertEqual(v, actual_headers[k])
-
-    def test_field_headers(self) -> None:
+    def test_field_content_type_header(self) -> None:
         """
-        This test checks headers for a field part are read.
+        This test checks content-tpye for a field part are read and passed.
         """
         # Load test data.
         test_file = "single_field.http"
         with open(os.path.join(http_tests_dir, test_file), "rb") as f:
             test_data = f.read()
 
-        expected_headers = {"content-disposition": b'form-data; name="field"'}
+        expected_content_type = None
 
         # Create form parser.
         self.make(boundary="----WebKitFormBoundaryTkr3kCBQlBe1nrhc")
@@ -999,11 +989,8 @@ class TestFormParser(unittest.TestCase):
 
         # Assert that our field is here.
         self.assertEqual(1, len(self.fields))
-        actual_headers = self.fields[0].headers
-        self.assertEqual(len(actual_headers), len(expected_headers))
-
-        for k, v in expected_headers.items():
-            self.assertEqual(v, actual_headers[k])
+        actual_content_type = self.fields[0].content_type
+        self.assertEqual(actual_content_type, expected_content_type)
 
     def test_request_body_fuzz(self) -> None:
         """

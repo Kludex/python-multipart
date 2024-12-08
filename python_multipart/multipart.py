@@ -68,13 +68,13 @@ if TYPE_CHECKING:  # pragma: no cover
         def close(self) -> None: ...
 
     class FieldProtocol(_FormProtocol, Protocol):
-        def __init__(self, name: bytes, headers: dict[str, bytes]) -> None: ...
+        def __init__(self, name: bytes, content_type: str | None = None) -> None: ...
 
         def set_none(self) -> None: ...
 
     class FileProtocol(_FormProtocol, Protocol):
         def __init__(
-            self, file_name: bytes | None, field_name: bytes | None, config: FileConfig, headers: dict[str, bytes]
+            self, file_name: bytes | None, field_name: bytes | None, config: FileConfig, content_type: str | None = None
         ) -> None: ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
@@ -223,12 +223,13 @@ class Field:
 
     Args:
         name: The name of the form field.
+        content_type: The value of the Content-Type header for this field.
     """
 
-    def __init__(self, name: bytes, headers: dict[str, bytes] = {}) -> None:
+    def __init__(self, name: bytes, content_type: str | None = None) -> None:
         self._name = name
         self._value: list[bytes] = []
-        self._headers: dict[str, bytes] = headers
+        self._content_type = content_type
 
         # We cache the joined version of _value for speed.
         self._cache = _missing
@@ -321,9 +322,9 @@ class Field:
         return self._cache
 
     @property
-    def headers(self) -> dict[str, bytes]:
-        """This property returns the headers of the field."""
-        return self._headers
+    def content_type(self) -> str | None:
+        """This property returns the content_type value of the field."""
+        return self._content_type
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Field):
@@ -362,6 +363,7 @@ class File:
         file_name: The name of the file that this [`File`][python_multipart.File] represents.
         field_name: The name of the form field that this file was uploaded with.  This can be None, if, for example,
             the file was uploaded with Content-Type application/octet-stream.
+        content_type: The value of the Content-Type header.
         config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
     """  # noqa: E501
 
@@ -369,7 +371,7 @@ class File:
         self,
         file_name: bytes | None,
         field_name: bytes | None = None,
-        headers: dict[str, bytes] = {},
+        content_type: str | None = None,
         config: FileConfig = {},
     ) -> None:
         # Save configuration, set other variables default.
@@ -382,7 +384,7 @@ class File:
         # Save the provided field/file name and content type.
         self._field_name = field_name
         self._file_name = file_name
-        self._headers = headers
+        self._content_type = content_type
 
         # Our actual file name is None by default, since, depending on our
         # config, we may not actually use the provided name.
@@ -436,14 +438,9 @@ class File:
         return self._in_memory
 
     @property
-    def headers(self) -> dict[str, bytes]:
-        """The headers for this part."""
-        return self._headers
-
-    @property
-    def content_type(self) -> bytes | None:
-        """The Content-Type value for this part."""
-        return self._headers.get("content-type")
+    def content_type(self) -> str | None:
+        """The Content-Type value for this part, if it was set."""
+        return self._content_type
 
     def flush_to_disk(self) -> None:
         """If the file is already on-disk, do nothing.  Otherwise, copy from
@@ -1565,7 +1562,7 @@ class FormParser:
 
             def on_start() -> None:
                 nonlocal file
-                file = FileClass(file_name, None, headers={}, config=cast("FileConfig", self.config))
+                file = FileClass(file_name, None, content_type=None, config=cast("FileConfig", self.config))
 
             def on_data(data: bytes, start: int, end: int) -> None:
                 nonlocal file
@@ -1604,7 +1601,7 @@ class FormParser:
             def on_field_data(data: bytes, start: int, end: int) -> None:
                 nonlocal f
                 if f is None:
-                    f = FieldClass(b"".join(name_buffer), headers={})
+                    f = FieldClass(b"".join(name_buffer), content_type=None)
                     del name_buffer[:]
                 f.write(data[start:end])
 
@@ -1614,7 +1611,7 @@ class FormParser:
                 if f is None:
                     # If we get here, it's because there was no field data.
                     # We create a field, set it to None, and then continue.
-                    f = FieldClass(b"".join(name_buffer), headers={})
+                    f = FieldClass(b"".join(name_buffer), content_type=None)
                     del name_buffer[:]
                     f.set_none()
 
@@ -1700,10 +1697,14 @@ class FormParser:
                 # TODO: check for errors
 
                 # Create the proper class.
+                content_type_b = headers.get("content-type")
+                content_type = content_type_b.decode("latin-1") if content_type_b is not None else None
                 if file_name is None:
-                    f_multi = FieldClass(field_name, headers=headers)
+                    f_multi = FieldClass(field_name, content_type=content_type)
                 else:
-                    f_multi = FileClass(file_name, field_name, config=cast("FileConfig", self.config), headers=headers)
+                    f_multi = FileClass(
+                        file_name, field_name, config=cast("FileConfig", self.config), content_type=content_type
+                    )
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
