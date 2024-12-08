@@ -1814,7 +1814,10 @@ def create_form_parser(
     content_type = content_type.decode("latin-1")
 
     # File names are optional.
-    file_name = headers.get("X-File-Name")
+    if trust_x_headers:
+        file_name = headers.get("X-File-Name")
+    else:
+        file_name = None
 
     # Instantiate a form parser.
     form_parser = FormParser(content_type, on_field, on_file, boundary=boundary, file_name=file_name, config=config)
