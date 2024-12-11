@@ -11,21 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
-          version: "0.4.12"
+          python-version: ${{ matrix.python-version }}
           enable-cache: true
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
-
       - name: Install dependencies
-        run: uv sync --python ${{ matrix.python-version }} --frozen
+        run: uv sync --frozen
 
       - name: Run linters
         run: scripts/check
