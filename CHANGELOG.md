@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.20 (2024-12-16)
+
+* Handle messages containing only end boundary [#142](https://github.com/Kludex/python-multipart/pull/142).
+
 ## 0.0.19 (2024-11-30)
 
 * Don't warn when CRLF is found after last boundary on `MultipartParser` [#193](https://github.com/Kludex/python-multipart/pull/193).
