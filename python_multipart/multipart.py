@@ -1601,7 +1601,7 @@ class FormParser:
             def on_field_data(data: bytes, start: int, end: int) -> None:
                 nonlocal f
                 if f is None:
-                    f = FieldClass(b"".join(name_buffer), content_type=None)
+                    f = FieldClass(b"".join(name_buffer))
                     del name_buffer[:]
                 f.write(data[start:end])
 
