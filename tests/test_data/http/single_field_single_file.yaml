@@ -2,11 +2,13 @@ boundary: boundary
 expected:
   - name: field
     type: field
+    content_type: 'text/plain'
     data: !!binary |
       dGVzdDE=
   - name: file
     type: file
     file_name: file.txt
+    content_type: 'text/plain'
     data: !!binary |
       dGVzdDI=
 
