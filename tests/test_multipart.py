@@ -1368,6 +1368,7 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(calls, 3)
 
 
+@parametrize_class
 class TestHelperFunctions(unittest.TestCase):
     def test_create_form_parser(self) -> None:
         r = create_form_parser({"Content-Type": b"application/octet-stream"}, None, None)
@@ -1389,6 +1390,24 @@ class TestHelperFunctions(unittest.TestCase):
         # Assert that the first argument of the call (a File object) has size
         # 15 - i.e. all data is written.
         self.assertEqual(on_file.call_args[0][0].size, 15)
+
+    @parametrize("trust_x_headers", [True, False])
+    def test_parse_form_trust_x_false(self, trust_x_headers: bool) -> None:
+        on_field = Mock()
+        on_file = Mock()
+
+        headers = {"Content-Type": b"application/octet-stream", "X-File-Name": b"foo.txt"}
+        parser = create_form_parser(headers, on_field, on_file, trust_x_headers=trust_x_headers)
+        parser.write(b"123456789012345")
+        parser.finalize()
+
+        assert on_file.call_count == 1
+
+        # The first argument (a File Object) name should come from the X header only if allowed.
+        if trust_x_headers:
+            self.assertEqual(on_file.call_args[0][0].file_name, b"foo.txt")
+        else:
+            self.assertEqual(on_file.call_args[0][0].file_name, None)
 
     def test_parse_form_content_length(self) -> None:
         files: list[FileProtocol] = []
