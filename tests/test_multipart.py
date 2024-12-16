@@ -1235,6 +1235,23 @@ class TestFormParser(unittest.TestCase):
         f.finalize()
         self.assert_file_data(files[0], b"Test")
 
+    def test_bad_content_disposition(self) -> None:
+        # Field name is required.
+        data = (
+            b"----boundary\r\nContent-Disposition: form-data;\r\n"
+            b"Content-Type: text/plain\r\n"
+            b"Test\r\n----boundary--\r\n"
+        )
+
+        on_field = Mock()
+        on_file = Mock()
+
+        f = FormParser("multipart/form-data", on_field, on_file, boundary="--boundary")
+
+        with self.assertRaises(FormParserError):
+            f.write(data)
+            f.finalize()
+
     def test_handles_None_fields(self) -> None:
         fields: list[Field] = []
 

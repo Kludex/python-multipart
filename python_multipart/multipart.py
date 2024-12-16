@@ -1562,7 +1562,7 @@ class FormParser:
 
             def on_start() -> None:
                 nonlocal file
-                file = FileClass(file_name, config=cast("FileConfig", self.config))
+                file = FileClass(file_name, b"", config=cast("FileConfig", self.config))
 
             def on_data(data: bytes, start: int, end: int) -> None:
                 nonlocal file
@@ -1692,9 +1692,11 @@ class FormParser:
                 disp, options = parse_options_header(content_disp)
 
                 # Get the field and filename.
-                field_name = options.get(b"name", b"")
+                field_name = options.get(b"name")
                 file_name = options.get(b"filename")
-                # TODO: check for errors
+                if field_name is None:
+                    raise FormParserError('Field name not found in Content-Disposition: "{!r}"'.format(content_disp))
+                # TODO: check for other errors
 
                 # Create the proper class.
                 content_type_b = headers.get("content-type")
