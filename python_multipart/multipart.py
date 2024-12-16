@@ -1562,7 +1562,7 @@ class FormParser:
 
             def on_start() -> None:
                 nonlocal file
-                file = FileClass(file_name, None, content_type=None, config=cast("FileConfig", self.config))
+                file = FileClass(file_name, config=cast("FileConfig", self.config))
 
             def on_data(data: bytes, start: int, end: int) -> None:
                 nonlocal file
