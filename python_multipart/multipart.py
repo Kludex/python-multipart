@@ -1611,7 +1611,7 @@ class FormParser:
                 if f is None:
                     # If we get here, it's because there was no field data.
                     # We create a field, set it to None, and then continue.
-                    f = FieldClass(b"".join(name_buffer), content_type=None)
+                    f = FieldClass(b"".join(name_buffer))
                     del name_buffer[:]
                     f.set_none()
 
