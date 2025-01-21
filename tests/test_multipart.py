@@ -1238,9 +1238,7 @@ class TestFormParser(unittest.TestCase):
     def test_bad_content_disposition(self) -> None:
         # Field name is required.
         data = (
-            b"----boundary\r\nContent-Disposition: form-data;\r\n"
-            b"Content-Type: text/plain\r\n"
-            b"Test\r\n----boundary--\r\n"
+            b"----boundary\r\nContent-Disposition: form-data;\r\nContent-Type: text/plain\r\nTest\r\n----boundary--\r\n"
         )
 
         on_field = Mock()
