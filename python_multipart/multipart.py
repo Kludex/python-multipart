@@ -68,12 +68,14 @@ if TYPE_CHECKING:  # pragma: no cover
         def close(self) -> None: ...
 
     class FieldProtocol(_FormProtocol, Protocol):
-        def __init__(self, name: bytes | None) -> None: ...
+        def __init__(self, name: bytes | None, content_type: str | None = None) -> None: ...
 
         def set_none(self) -> None: ...
 
     class FileProtocol(_FormProtocol, Protocol):
-        def __init__(self, file_name: bytes | None, field_name: bytes | None, config: FileConfig) -> None: ...
+        def __init__(
+            self, file_name: bytes | None, field_name: bytes | None, config: FileConfig, content_type: str | None = None
+        ) -> None: ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
     OnFileCallback = Callable[[FileProtocol], None]
@@ -222,11 +224,13 @@ class Field:
 
     Args:
         name: The name of the form field.
+        content_type: The value of the Content-Type header for this field.
     """
 
-    def __init__(self, name: bytes | None) -> None:
+    def __init__(self, name: bytes | None, content_type: str | None = None) -> None:
         self._name = name
         self._value: list[bytes] = []
+        self._content_type = content_type
 
         # We cache the joined version of _value for speed.
         self._cache = _missing
@@ -318,6 +322,11 @@ class Field:
         assert isinstance(self._cache, bytes) or self._cache is None
         return self._cache
 
+    @property
+    def content_type(self) -> str | None:
+        """This property returns the content_type value of the field."""
+        return self._content_type
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Field):
             return self.field_name == other.field_name and self.value == other.value
@@ -355,10 +364,17 @@ class File:
         file_name: The name of the file that this [`File`][python_multipart.File] represents.
         field_name: The name of the form field that this file was uploaded with.  This can be None, if, for example,
             the file was uploaded with Content-Type application/octet-stream.
+        content_type: The value of the Content-Type header.
         config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
     """  # noqa: E501
 
-    def __init__(self, file_name: bytes | None, field_name: bytes | None = None, config: FileConfig = {}) -> None:
+    def __init__(
+        self,
+        file_name: bytes | None,
+        field_name: bytes | None = None,
+        content_type: str | None = None,
+        config: FileConfig = {},
+    ) -> None:
         # Save configuration, set other variables default.
         self.logger = logging.getLogger(__name__)
         self._config = config
@@ -366,9 +382,10 @@ class File:
         self._bytes_written = 0
         self._fileobj: BytesIO | BufferedRandom = BytesIO()
 
-        # Save the provided field/file name.
+        # Save the provided field/file name and content type.
         self._field_name = field_name
         self._file_name = file_name
+        self._content_type = content_type
 
         # Our actual file name is None by default, since, depending on our
         # config, we may not actually use the provided name.
@@ -420,6 +437,11 @@ class File:
         stored in-memory or on-disk.
         """
         return self._in_memory
+
+    @property
+    def content_type(self) -> str | None:
+        """The Content-Type value for this part, if it was set."""
+        return self._content_type
 
     def flush_to_disk(self) -> None:
         """If the file is already on-disk, do nothing.  Otherwise, copy from
@@ -1672,7 +1694,7 @@ class FormParser:
                 header_value.append(data[start:end])
 
             def on_header_end() -> None:
-                headers[b"".join(header_name)] = b"".join(header_value)
+                headers[b"".join(header_name).lower()] = b"".join(header_value)
                 del header_name[:]
                 del header_value[:]
 
@@ -1682,26 +1704,31 @@ class FormParser:
                 is_file = False
 
                 # Parse the content-disposition header.
-                # TODO: handle mixed case
-                content_disp = headers.get(b"Content-Disposition")
+                content_disp = headers.get(b"content-disposition")
                 disp, options = parse_options_header(content_disp)
 
                 # Get the field and filename.
                 field_name = options.get(b"name")
                 file_name = options.get(b"filename")
-                # TODO: check for errors
+                if field_name is None:
+                    raise FormParserError('Field name not found in Content-Disposition: "{!r}"'.format(content_disp))
+                # TODO: check for other errors
 
                 # Create the proper class.
+                content_type_b = headers.get(b"content-type")
+                content_type = content_type_b.decode("latin-1") if content_type_b is not None else None
                 if file_name is None:
-                    f_multi = FieldClass(field_name)
+                    f_multi = FieldClass(field_name, content_type=content_type)
                 else:
-                    f_multi = FileClass(file_name, field_name, config=cast("FileConfig", self.config))
+                    f_multi = FileClass(
+                        file_name, field_name, config=cast("FileConfig", self.config), content_type=content_type
+                    )
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                transfer_encoding = headers.get(b"Content-Transfer-Encoding", b"7bit")
+                transfer_encoding = headers.get(b"content-transfer-encoding", b"7bit")
 
                 if transfer_encoding in (b"binary", b"8bit", b"7bit"):
                     writer = f_multi
