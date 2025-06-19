@@ -1108,6 +1108,11 @@ class MultipartParser(BaseParser):
                     i += 1
                     continue
 
+                # Skip leading non-boundary characters
+                if c != boundary[2]:
+                    i += 1
+                    continue
+
                 # index is used as in index into our boundary.  Set to 0.
                 index = 0
 

@@ -1250,6 +1250,24 @@ class TestFormParser(unittest.TestCase):
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
         f.write(data.encode("latin-1"))
 
+    def test_multipart_parser_data_before_first_boundary(self) -> None:
+        """This test makes sure that the parser does not handle when there is junk data before the first boundary."""
+        data = (
+            "EXtra" + "\r\n" * 2 + "--boundary\r\n"
+            'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+            "Content-Type: text/plain\r\n\r\n"
+            "hello\r\n"
+            "--boundary--"
+        )
+
+        files: list[File] = []
+
+        def on_file(f: FileProtocol) -> None:
+            files.append(cast(File, f))
+
+        f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
+        f.write(data.encode("latin-1"))
+
     @pytest.fixture(autouse=True)
     def inject_fixtures(self, caplog: pytest.LogCaptureFixture) -> None:
         self._caplog = caplog
