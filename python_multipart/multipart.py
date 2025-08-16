@@ -358,13 +358,20 @@ class File:
         config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
     """  # noqa: E501
 
-    def __init__(self, file_name: bytes | None, field_name: bytes | None = None, config: FileConfig = {}) -> None:
+    def __init__(
+        self,
+        file_name: bytes | None,
+        field_name: bytes | None = None,
+        config: FileConfig = {},
+        content_type: bytes | None = None,
+    ) -> None:
         # Save configuration, set other variables default.
         self.logger = logging.getLogger(__name__)
         self._config = config
         self._in_memory = True
         self._bytes_written = 0
         self._fileobj: BytesIO | BufferedRandom = BytesIO()
+        self._content_type = content_type
 
         # Save the provided field/file name.
         self._field_name = field_name
@@ -391,6 +398,11 @@ class File:
     def file_name(self) -> bytes | None:
         """The file name given in the upload request."""
         return self._file_name
+
+    @property
+    def content_type(self) -> bytes | None:
+        """The Content-Type given in the upload request."""
+        return self._content_type
 
     @property
     def actual_file_name(self) -> bytes | None:
@@ -570,7 +582,9 @@ class File:
         self._fileobj.close()
 
     def __repr__(self) -> str:
-        return "{}(file_name={!r}, field_name={!r})".format(self.__class__.__name__, self.file_name, self.field_name)
+        return "{}(file_name={!r}, field_name={!r}, content_type={!r})".format(
+            self.__class__.__name__, self.file_name, self.field_name, self.content_type
+        )
 
 
 class BaseParser:
@@ -1695,7 +1709,12 @@ class FormParser:
                 if file_name is None:
                     f_multi = FieldClass(field_name)
                 else:
-                    f_multi = FileClass(file_name, field_name, config=cast("FileConfig", self.config))
+                    f_multi = FileClass(
+                        file_name,
+                        field_name,
+                        config=cast("FileConfig", self.config),
+                        content_type=headers.get(b"Content-Type", None),
+                    )
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
