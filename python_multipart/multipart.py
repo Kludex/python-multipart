@@ -73,7 +73,13 @@ if TYPE_CHECKING:  # pragma: no cover
         def set_none(self) -> None: ...
 
     class FileProtocol(_FormProtocol, Protocol):
-        def __init__(self, file_name: bytes | None, field_name: bytes | None, config: FileConfig) -> None: ...
+        def __init__(
+            self,
+            file_name: bytes | None,
+            field_name: bytes | None,
+            config: FileConfig,
+            content_type: bytes | None = None,
+        ) -> None: ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
     OnFileCallback = Callable[[FileProtocol], None]

@@ -1373,7 +1373,7 @@ class TestFormParser(unittest.TestCase):
         https://github.com/Kludex/python-multipart/issues/207
         """
 
-        file: FileProtocol | None = None
+        file = None
 
         with open(os.path.join(http_tests_dir, "single_file.http"), "rb") as f:
             test_data = f.read()
@@ -1390,7 +1390,7 @@ class TestFormParser(unittest.TestCase):
 
         self.assertEqual(i, len(test_data))
         self.assertIsNotNone(file)
-        self.assertEqual(file.content_type, b"text/plain")
+        self.assertEqual(cast(File, file).content_type, b"text/plain")
 
 
 class TestHelperFunctions(unittest.TestCase):
