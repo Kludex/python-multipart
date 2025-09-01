@@ -11,10 +11,10 @@ jobs:
     outputs:
       version: ${{ steps.inspect_package.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           version: "0.4.12"
           enable-cache: true
@@ -50,7 +50,7 @@ jobs:
 
     steps:
     - name: Download package
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: package-distributions
         path: dist/
