@@ -1367,6 +1367,31 @@ class TestFormParser(unittest.TestCase):
         # for each header in the multipart message.
         self.assertEqual(calls, 3)
 
+    def test_file_content_type_is_set(self) -> None:
+        """
+        This test verifies that the content_type is set on File
+        https://github.com/Kludex/python-multipart/issues/207
+        """
+
+        file = None
+
+        with open(os.path.join(http_tests_dir, "single_file.http"), "rb") as f:
+            test_data = f.read()
+
+        def on_file(f: FileProtocol) -> None:
+            nonlocal file
+            file = f
+
+        parser = FormParser("multipart/form-data", None, on_file, boundary=b"----WebKitFormBoundary5BZGOJCWtXGYC9HW")
+
+        # Create multipart parser and feed it
+        i = parser.write(test_data)
+        parser.finalize()
+
+        self.assertEqual(i, len(test_data))
+        self.assertIsNotNone(file)
+        self.assertEqual(cast(File, file).content_type, b"text/plain")
+
 
 class TestHelperFunctions(unittest.TestCase):
     def test_create_form_parser(self) -> None:
