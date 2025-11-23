@@ -31,8 +31,8 @@ classifiers = [
 ]
 dependencies = []
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "atomicwrites==1.4.1",
     "attrs==23.2.0",
     "coverage==7.4.4",
