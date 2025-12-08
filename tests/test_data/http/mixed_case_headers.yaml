@@ -1,0 +1,14 @@
+boundary: --boundary
+expected:
+  - name: field1
+    type: field
+    data: !!binary |
+      VGVzdCAxMjM=
+  - name: field2
+    type: field
+    data: !!binary |
+      VGVzdCAxMjM=
+  - name: Field3
+    type: field
+    data: !!binary |
+      VGVzdCAxMjM=
