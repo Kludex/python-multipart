@@ -1,0 +1,26 @@
+boundary: ----WebKitFormBoundarygbACTUR58IyeurVf
+expected:
+  - name: file1
+    type: file
+    file_name: test1.txt
+    content_type: text/plain
+    data: !!binary |
+      VGVzdCBmaWxlICMx
+  - name: file2
+    type: file
+    file_name: test2.txt
+    content_type: text/plain
+    data: !!binary |
+      VGVzdCBmaWxlICMy
+  - name: file3
+    type: file
+    file_name: test3.txt
+    content_type: text/plain
+    data: !!binary |
+      VGVzdCBmaWxlICMz
+  - name: file4
+    type: file
+    file_name: test4.txt
+    content_type: text/plain
+    data: !!binary |
+      VGVzdCBmaWxlICM0
