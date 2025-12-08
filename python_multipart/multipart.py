@@ -1783,7 +1783,6 @@ def create_form_parser(
     headers: dict[str, bytes],
     on_field: OnFieldCallback | None,
     on_file: OnFileCallback | None,
-    trust_x_headers: bool = False,
     config: dict[Any, Any] = {},
 ) -> FormParser:
     """This function is a helper function to aid in creating a FormParser
@@ -1796,8 +1795,6 @@ def create_form_parser(
         headers: A dictionary-like object of HTTP headers.  The only required header is Content-Type.
         on_field: Callback to call with each parsed field.
         on_file: Callback to call with each parsed file.
-        trust_x_headers: Whether or not to trust information received from certain X-Headers - for example, the file
-            name from X-File-Name.
         config: Configuration variables to pass to the FormParser.
     """
     content_type: str | bytes | None = headers.get("Content-Type")
@@ -1813,11 +1810,8 @@ def create_form_parser(
     # We need content_type to be a string, not a bytes object.
     content_type = content_type.decode("latin-1")
 
-    # File names are optional.
-    file_name = headers.get("X-File-Name")
-
     # Instantiate a form parser.
-    form_parser = FormParser(content_type, on_field, on_file, boundary=boundary, file_name=file_name, config=config)
+    form_parser = FormParser(content_type, on_field, on_file, boundary=boundary, config=config)
 
     # Return our parser.
     return form_parser

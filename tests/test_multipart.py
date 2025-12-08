@@ -1368,6 +1368,7 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(calls, 3)
 
 
+@parametrize_class
 class TestHelperFunctions(unittest.TestCase):
     def test_create_form_parser(self) -> None:
         r = create_form_parser({"Content-Type": b"application/octet-stream"}, None, None)
