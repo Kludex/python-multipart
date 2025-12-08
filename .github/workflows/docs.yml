@@ -31,4 +31,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen
 
-      - run: uv run mkdocs gh-deploy --force
+      - name: Make docs LLM Ready
+        uses: demodrive-ai/llms-txt-action@v1
+      
+      - run: uv run mkdocs gh-deploy --dirty --force
