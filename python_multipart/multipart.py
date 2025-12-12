@@ -15,9 +15,8 @@ from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Any, Callable, Literal, Protocol, TypedDict
-
-    from typing_extensions import TypeAlias
+    from collections.abc import Callable
+    from typing import Any, Literal, Protocol, TypeAlias, TypedDict
 
     class SupportsRead(Protocol):
         def read(self, __n: int) -> bytes: ...
@@ -332,7 +331,7 @@ class Field:
         else:
             v = repr(self.value)
 
-        return "{}(field_name={!r}, value={})".format(self.__class__.__name__, self.field_name, v)
+        return f"{self.__class__.__name__}(field_name={self.field_name!r}, value={v})"
 
 
 class File:
@@ -570,7 +569,7 @@ class File:
         self._fileobj.close()
 
     def __repr__(self) -> str:
-        return "{}(file_name={!r}, field_name={!r})".format(self.__class__.__name__, self.file_name, self.field_name)
+        return f"{self.__class__.__name__}(file_name={self.file_name!r}, field_name={self.field_name!r})"
 
 
 class BaseParser:
@@ -1241,7 +1240,7 @@ class MultipartParser(BaseParser):
             elif state == MultipartState.HEADER_VALUE_ALMOST_DONE:
                 # The last character should be a LF.  If not, it's an error.
                 if c != LF:
-                    msg = "Did not find LF character at end of header (found %r)" % (c,)
+                    msg = f"Did not find LF character at end of header (found {c!r})"
                     self.logger.warning(msg)
                     e = MultipartParseError(msg)
                     e.offset = i
@@ -1715,7 +1714,7 @@ class FormParser:
                 else:
                     self.logger.warning("Unknown Content-Transfer-Encoding: %r", transfer_encoding)
                     if self.config["UPLOAD_ERROR_ON_BAD_CTE"]:
-                        raise FormParserError('Unknown Content-Transfer-Encoding "{!r}"'.format(transfer_encoding))
+                        raise FormParserError(f'Unknown Content-Transfer-Encoding "{transfer_encoding!r}"')
                     else:
                         # If we aren't erroring, then we just treat this as an
                         # unencoded Content-Transfer-Encoding.
@@ -1746,7 +1745,7 @@ class FormParser:
 
         else:
             self.logger.warning("Unknown Content-Type: %r", content_type)
-            raise FormParserError("Unknown Content-Type: {}".format(content_type))
+            raise FormParserError(f"Unknown Content-Type: {content_type}")
 
         self.parser = parser
 
@@ -1776,7 +1775,7 @@ class FormParser:
             self.parser.close()
 
     def __repr__(self) -> str:
-        return "{}(content_type={!r}, parser={!r})".format(self.__class__.__name__, self.content_type, self.parser)
+        return f"{self.__class__.__name__}(content_type={self.content_type!r}, parser={self.parser!r})"
 
 
 def create_form_parser(

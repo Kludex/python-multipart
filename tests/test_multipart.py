@@ -37,7 +37,8 @@ from python_multipart.multipart import (
 from .compat import parametrize, parametrize_class
 
 if TYPE_CHECKING:
-    from typing import Any, Iterator, TypedDict
+    from collections.abc import Iterator
+    from typing import Any, TypedDict
 
     from python_multipart.multipart import FieldProtocol, FileConfig, FileProtocol
 
@@ -1069,7 +1070,9 @@ class TestFormParser(unittest.TestCase):
 
         self.make("boundary")
         data = b"--Boundary\r\nfoobar"
-        with self.assertRaisesRegex(MultipartParseError, "Expected boundary character %r, got %r" % (b"b"[0], b"B"[0])):
+        with self.assertRaisesRegex(
+            MultipartParseError, "Expected boundary character {!r}, got {!r}".format(b"b"[0], b"B"[0])
+        ):
             self.f.write(data)
 
     def test_octet_stream(self) -> None:
