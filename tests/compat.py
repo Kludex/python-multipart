@@ -8,7 +8,8 @@ import types
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Any, Callable
+    from collections.abc import Callable
+    from typing import Any
 
 
 def ensure_in_path(path: str) -> None:
