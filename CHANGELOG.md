@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.21 (2025-12-17)
+
+* Add support for Python 3.14 and drop EOL 3.8 and 3.9 [#216](https://github.com/Kludex/python-multipart/pull/216).
+
 ## 0.0.20 (2024-12-16)
 
 * Handle messages containing only end boundary [#142](https://github.com/Kludex/python-multipart/pull/142).
