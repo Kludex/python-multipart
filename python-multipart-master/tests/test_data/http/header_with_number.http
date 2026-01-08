@@ -1,0 +1,11 @@
+--b8825ae386be4fdc9644d87e392caad3
+Content-Disposition: form-data; filename="secret.txt"; name="files"
+Content-Type: text/plain; charset=utf-8
+X-Funky-Header-1: bar
+abcdefghijklmnopqrstuvwxyz01234: foo
+ABCDEFGHIJKLMNOPQRSTUVWXYZ56789: bar
+other!#$%&'*+-.^_`|~: baz
+Content-Length: 6
+
+aaaaaa
+--b8825ae386be4fdc9644d87e392caad3--

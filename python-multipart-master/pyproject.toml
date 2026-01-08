@@ -1,0 +1,125 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "python-multipart"
+dynamic = ["version"]
+description = "A streaming multipart parser for Python"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+authors = [
+    { name = "Andrew Dunham", email = "andrew@du.nham.ca" },
+    { name = "Marcelo Trylesinski", email = "marcelotryle@gmail.com" },
+]
+classifiers = [
+    'Development Status :: 5 - Production/Stable',
+    'Environment :: Web Environment',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: Apache Software License',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+]
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "atomicwrites==1.4.1",
+    "attrs==23.2.0",
+    "coverage==7.4.4",
+    "more-itertools==10.2.0",
+    "pbr==6.0.0",
+    "pluggy==1.4.0",
+    "py==1.11.0",
+    "pytest==8.1.1",
+    "pytest-cov==5.0.0",
+    "PyYAML==6.0.1",
+    "invoke==2.2.0",
+    "pytest-timeout==2.3.1",
+    "ruff==0.11.7",
+    "mypy",
+    "types-PyYAML",
+    "atheris==2.3.0; python_version <= '3.11'",
+    # Documentation
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings-python",
+    "mkdocs-autorefs",
+]
+
+[tool.uv.pip]
+reinstall-package = ["python-multipart"]
+
+[project.urls]
+Homepage = "https://github.com/Kludex/python-multipart"
+Documentation = "https://kludex.github.io/python-multipart/"
+Changelog = "https://github.com/Kludex/python-multipart/blob/master/CHANGELOG.md"
+Source = "https://github.com/Kludex/python-multipart"
+
+[tool.hatch.version]
+path = "python_multipart/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/python_multipart",
+    "/multipart",
+    "/tests",
+    "CHANGELOG.md",
+    "LICENSE.txt",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["python_multipart", "multipart"]
+
+[tool.mypy]
+strict = true
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "FA"]
+ignore = ["B904", "B028", "F841", "E741"]
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+split-on-trailing-comma = false
+
+[tool.ruff.lint.per-file-ignores]
+"multipart/*.py" = ["F403"]
+"__init__.py" = ["F401"]
+
+[tool.coverage.run]
+branch = false
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 100
+skip_covered = true
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "def __str__",
+    "def __repr__",
+    "if 0:",
+    "if False:",
+    "if __name__ == .__main__.:",
+    "if self\\.config\\['DEBUG'\\]:",
+    "if self\\.debug:",
+    "except ImportError:",
+]
+
+[tool.check-sdist]
+git-only = ["docs", "fuzz", "scripts", "mkdocs.yml", "uv.lock", "SECURITY.md"]

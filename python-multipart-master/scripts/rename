@@ -1,0 +1,7 @@
+#!/bin/sh -e
+
+set -x
+
+uvx nox -s rename
+
+uvx nox -s rename_inline
