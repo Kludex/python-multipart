@@ -375,7 +375,9 @@ class File:
 
         # Split the extension from the filename.
         if file_name is not None:
-            base, ext = os.path.splitext(file_name)
+            # Extract just the basename to avoid directory traversal
+            basename = os.path.basename(file_name)
+            base, ext = os.path.splitext(basename)
             self._file_base = base
             self._ext = ext
 
