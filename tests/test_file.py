@@ -3,7 +3,7 @@ from pathlib import Path
 from python_multipart.multipart import File
 
 
-def test_upload_dir_with_leading_slash_in_filename(tmp_path: Path):
+def test_upload_dir_with_leading_slash_in_filename(tmp_path: Path) -> None:
     upload_dir = tmp_path / "upload"
     upload_dir.mkdir()
 
