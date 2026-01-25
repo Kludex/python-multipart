@@ -2,7 +2,7 @@
 __author__ = "Andrew Dunham"
 __license__ = "Apache"
 __copyright__ = "Copyright (c) 2012-2013, Andrew Dunham"
-__version__ = "0.0.21"
+__version__ = "0.0.22"
 
 from .multipart import (
     BaseParser,
