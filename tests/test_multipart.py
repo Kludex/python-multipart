@@ -1193,6 +1193,57 @@ class TestFormParser(unittest.TestCase):
         f.finalize()
         self.assert_file_data(files[0], b"Test")
 
+    def test_file_content_type_from_multipart(self) -> None:
+        """Test that Content-Type header from multipart is passed to File."""
+        data = (
+            b'----boundary\r\nContent-Disposition: form-data; name="file"; filename="test.png"\r\n'
+            b"Content-Type: image/png\r\n\r\n"
+            b"Test\r\n----boundary--\r\n"
+        )
+
+        files: list[File] = []
+
+        def on_file(f: FileProtocol) -> None:
+            files.append(cast(File, f))
+
+        on_field = Mock()
+        on_end = Mock()
+
+        f = FormParser("multipart/form-data", on_field, on_file, on_end=on_end, boundary="--boundary")
+
+        f.write(data)
+        f.finalize()
+
+        self.assertEqual(len(files), 1)
+        self.assertEqual(files[0].content_type, b"image/png")
+        self.assertEqual(files[0].file_name, b"test.png")
+        self.assertEqual(files[0].field_name, b"file")
+        self.assert_file_data(files[0], b"Test")
+
+    def test_file_content_type_none_when_not_provided(self) -> None:
+        """Test that content_type is None when no Content-Type header in multipart."""
+        data = (
+            b'----boundary\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\n\r\n'
+            b"Test\r\n----boundary--\r\n"
+        )
+
+        files: list[File] = []
+
+        def on_file(f: FileProtocol) -> None:
+            files.append(cast(File, f))
+
+        on_field = Mock()
+        on_end = Mock()
+
+        f = FormParser("multipart/form-data", on_field, on_file, on_end=on_end, boundary="--boundary")
+
+        f.write(data)
+        f.finalize()
+
+        self.assertEqual(len(files), 1)
+        self.assertIsNone(files[0].content_type)
+        self.assertEqual(files[0].file_name, b"test.txt")
+
     def test_handles_None_fields(self) -> None:
         fields: list[Field] = []
 

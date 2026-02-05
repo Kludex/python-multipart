@@ -72,7 +72,13 @@ if TYPE_CHECKING:  # pragma: no cover
         def set_none(self) -> None: ...
 
     class FileProtocol(_FormProtocol, Protocol):
-        def __init__(self, file_name: bytes | None, field_name: bytes | None, config: FileConfig) -> None: ...
+        def __init__(
+            self,
+            file_name: bytes | None,
+            field_name: bytes | None,
+            config: FileConfig,
+            content_type: bytes | None = None,
+        ) -> None: ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
     OnFileCallback = Callable[[FileProtocol], None]
@@ -355,9 +361,17 @@ class File:
         field_name: The name of the form field that this file was uploaded with.  This can be None, if, for example,
             the file was uploaded with Content-Type application/octet-stream.
         config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
+        content_type: The Content-Type of the uploaded file as specified in the multipart headers.  This can be None
+            if no Content-Type header was provided in the multipart data.
     """  # noqa: E501
 
-    def __init__(self, file_name: bytes | None, field_name: bytes | None = None, config: FileConfig = {}) -> None:
+    def __init__(
+        self,
+        file_name: bytes | None,
+        field_name: bytes | None = None,
+        config: FileConfig = {},
+        content_type: bytes | None = None,
+    ) -> None:
         # Save configuration, set other variables default.
         self.logger = logging.getLogger(__name__)
         self._config = config
@@ -368,6 +382,9 @@ class File:
         # Save the provided field/file name.
         self._field_name = field_name
         self._file_name = file_name
+
+        # Save the content type.
+        self._content_type = content_type
 
         # Our actual file name is None by default, since, depending on our
         # config, we may not actually use the provided name.
@@ -392,6 +409,13 @@ class File:
     def file_name(self) -> bytes | None:
         """The file name given in the upload request."""
         return self._file_name
+
+    @property
+    def content_type(self) -> bytes | None:
+        """The Content-Type of the uploaded file as declared in the multipart headers.
+        Returns None if no Content-Type header was provided.
+        """
+        return self._content_type
 
     @property
     def actual_file_name(self) -> bytes | None:
@@ -571,7 +595,10 @@ class File:
         self._fileobj.close()
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(file_name={self.file_name!r}, field_name={self.field_name!r})"
+        return (
+            f"{self.__class__.__name__}(file_name={self.file_name!r}, "
+            f"field_name={self.field_name!r}, content_type={self.content_type!r})"
+        )
 
 
 class BaseParser:
@@ -1692,11 +1719,16 @@ class FormParser:
                 file_name = options.get(b"filename")
                 # TODO: check for errors
 
+                # Get the Content-Type of the file, if provided.
+                file_content_type = headers.get(b"Content-Type")
+
                 # Create the proper class.
                 if file_name is None:
                     f_multi = FieldClass(field_name)
                 else:
-                    f_multi = FileClass(file_name, field_name, config=cast("FileConfig", self.config))
+                    f_multi = FileClass(
+                        file_name, field_name, config=cast("FileConfig", self.config), content_type=file_content_type
+                    )
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
