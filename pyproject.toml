@@ -14,7 +14,7 @@ authors = [
     { name = "Marcelo Trylesinski", email = "marcelotryle@gmail.com" },
 ]
 classifiers = [
-    'Development Status :: 5 - Production/Stable',
+    'Development Status :: 3 - Alpha',
     'Environment :: Web Environment',
     'Intended Audience :: Developers',
     'License :: OSI Approved :: Apache Software License',
