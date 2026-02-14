@@ -1,0 +1,84 @@
+site_name: Python Multipart
+site_url: https://kludex.github.io/python-multipart/
+site_author: Marcelo Trylesinski,Andrew Dunham
+site_description: A streaming multipart parser for Python.
+repo_name: kludex/python-multipart
+repo_url: https://github.com//kludex/python-multipart
+edit_uri: https://github.com/kludex/python-multipart/tree/master/docs
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/kludex/python-multipart
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/python-multipart
+
+theme:
+  name: "material"
+  features:
+    - navigation.tracking
+    - content.code.copy
+    - content.tooltips
+    - content.code.annotate
+    - navigation.sections
+
+  palette:
+    # Palette for light mode
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+    features:
+      - content.code.copy
+      - content.code.annotate
+
+nav:
+  - Introduction: index.md
+  - API Reference: api.md
+  - Changelog: changelog.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            parameter_headings: true
+            paths: [python-multipart]
+            load_external_modules: true
+            allow_inspection: true
+            show_bases: true
+            group_by_category: true
+            docstring_style: sphinx
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            show_category_heading: true
+            domains: [std, py]
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.highlight:
+      anchor_linenums: true
