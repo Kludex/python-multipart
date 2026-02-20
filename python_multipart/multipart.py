@@ -944,7 +944,7 @@ class QuerystringParser(BaseParser):
         then the on_end callback.
         """
         # If we're currently in the middle of a field, we finish it.
-        if self.state == QuerystringState.FIELD_DATA:
+        if self.state in (QuerystringState.FIELD_DATA, QuerystringState.FIELD_NAME):
             self.callback("field_end")
         self.callback("end")
 
