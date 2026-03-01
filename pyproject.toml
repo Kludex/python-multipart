@@ -34,7 +34,7 @@ dependencies = []
 dev = [
     "atomicwrites==1.4.1",
     "attrs==25.4.0",
-    "coverage==7.13.2",
+    "coverage==7.13.4",
     "more-itertools==10.8.0",
     "pbr==7.0.3",
     "pluggy==1.6.0",
@@ -44,7 +44,7 @@ dev = [
     "PyYAML==6.0.3",
     "invoke==2.2.1",
     "pytest-timeout==2.4.0",
-    "ruff==0.14.14",
+    "ruff==0.15.4",
     "mypy",
     "types-PyYAML",
     "atheris==2.3.0; python_version <= '3.11'",
