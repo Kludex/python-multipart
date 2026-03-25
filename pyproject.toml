@@ -11,6 +11,8 @@ license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [
     { name = "Andrew Dunham", email = "andrew@du.nham.ca" },
+]
+maintainers = [
     { name = "Marcelo Trylesinski", email = "marcelotryle@gmail.com" },
 ]
 classifiers = [
