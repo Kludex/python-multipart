@@ -52,6 +52,8 @@ plugins:
       default_handler: python
       handlers:
         python:
+          paths: [.]
+          load_external_modules: true
           options:
             parameter_headings: true
             allow_inspection: true
@@ -61,10 +63,6 @@ plugins:
             show_symbol_type_heading: true
             show_symbol_type_toc: true
             show_category_heading: true
-            extra:
-              paths: [python-multipart]
-              load_external_modules: true
-              domains: [std, py]
 
 markdown_extensions:
   - admonition
