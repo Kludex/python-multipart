@@ -25,8 +25,6 @@ def simple_app(environ, start_response):
     # name of the header, since this library does not assume that you are
     # using WSGI.
     headers = {'Content-Type': environ['CONTENT_TYPE']}
-    if 'HTTP_X_FILE_NAME' in environ:
-        headers['X-File-Name'] = environ['HTTP_X_FILE_NAME']
     if 'CONTENT_LENGTH' in environ:
         headers['Content-Length'] = environ['CONTENT_LENGTH']
 
