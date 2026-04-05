@@ -11,6 +11,8 @@ license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [
     { name = "Andrew Dunham", email = "andrew@du.nham.ca" },
+]
+maintainers = [
     { name = "Marcelo Trylesinski", email = "marcelotryle@gmail.com" },
 ]
 classifiers = [
@@ -33,18 +35,18 @@ dependencies = []
 [dependency-groups]
 dev = [
     "atomicwrites==1.4.1",
-    "attrs==25.4.0",
-    "coverage==7.13.2",
+    "attrs==26.1.0",
+    "coverage==7.13.5",
     "more-itertools==10.8.0",
     "pbr==7.0.3",
     "pluggy==1.6.0",
     "py==1.11.0",
     "pytest==9.0.2",
-    "pytest-cov==7.0.0",
+    "pytest-cov==7.1.0",
     "PyYAML==6.0.3",
     "invoke==2.2.1",
     "pytest-timeout==2.4.0",
-    "ruff==0.14.14",
+    "ruff==0.15.8",
     "mypy",
     "types-PyYAML",
     "atheris==2.3.0; python_version <= '3.11'",
