@@ -1838,6 +1838,9 @@ def parse_form(
         chunk_size: The maximum size to read from the input stream and write to the parser at one time.
             Defaults to 1 MiB.
     """
+    if chunk_size < 1:
+        raise ValueError(f"chunk_size must be a positive number, not {chunk_size!r}")
+
     # Create our form parser.
     parser = create_form_parser(headers, on_field, on_file)
 
