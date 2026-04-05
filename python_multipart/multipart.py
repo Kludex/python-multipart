@@ -936,7 +936,7 @@ class QuerystringParser(BaseParser):
 
         self.state = state
         self._found_sep = found_sep
-        return len(data)
+        return length
 
     def finalize(self) -> None:
         """Finalize this parser, which signals to that we are finished parsing,
