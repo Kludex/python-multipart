@@ -55,6 +55,7 @@ dev = [
     "mkdocs-material",
     "mkdocstrings-python",
     "mkdocs-autorefs",
+    "pymdown-extensions>=10.21.2",
 ]
 
 [tool.uv.pip]
