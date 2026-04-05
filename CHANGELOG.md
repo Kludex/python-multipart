@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.24 (2026-04-05)
+
+* Validate `chunk_size` in `parse_form()` [#244](https://github.com/Kludex/python-multipart/pull/244).
+
 ## 0.0.23 (2026-04-05)
 
 * Remove unused `trust_x_headers` parameter and `X-File-Name` fallback [#196](https://github.com/Kludex/python-multipart/pull/196).
