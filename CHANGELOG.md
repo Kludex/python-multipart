@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.23 (2026-04-05)
+
+* Remove unused `trust_x_headers` parameter and `X-File-Name` fallback [#196](https://github.com/Kludex/python-multipart/pull/196).
+* Return processed length from `QuerystringParser._internal_write` [#229](https://github.com/Kludex/python-multipart/pull/229).
+
 ## 0.0.22 (2026-01-25)
 
 * Drop directory path from filename in `File` [9433f4b](https://github.com/Kludex/python-multipart/commit/9433f4bbc9652bdde82bbe380984e32f8cfc89c4).
