@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.22 (2026-01-25)
+
+* Drop directory path from filename in `File` [9433f4b](https://github.com/Kludex/python-multipart/commit/9433f4bbc9652bdde82bbe380984e32f8cfc89c4).
+
+## 0.0.21 (2025-12-17)
+
+* Add support for Python 3.14 and drop EOL 3.8 and 3.9 [#216](https://github.com/Kludex/python-multipart/pull/216).
+
 ## 0.0.20 (2024-12-16)
 
 * Handle messages containing only end boundary [#142](https://github.com/Kludex/python-multipart/pull/142).

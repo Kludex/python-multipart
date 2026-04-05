@@ -62,7 +62,7 @@ class Base64Decoder:
 
         # Prepend any cache info to our data.
         if len(self.cache) > 0:
-            data = self.cache + data
+            data = bytes(self.cache) + data
 
         # Slice off a string that's a multiple of 4.
         decode_len = (len(data) // 4) * 4
