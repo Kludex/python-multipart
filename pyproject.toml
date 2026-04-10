@@ -111,17 +111,9 @@ omit = ["tests/*"]
 fail_under = 100
 skip_covered = true
 show_missing = true
-exclude_lines = [
-    "pragma: no cover",
-    "raise NotImplementedError",
-    "def __str__",
+exclude_also = [
     "def __repr__",
-    "if 0:",
-    "if False:",
     "if __name__ == .__main__.:",
-    "if self\\.config\\['DEBUG'\\]:",
-    "if self\\.debug:",
-    "except ImportError:",
 ]
 
 [tool.check-sdist]
