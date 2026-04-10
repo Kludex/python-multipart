@@ -199,11 +199,13 @@ class Field:
 
     Args:
         name: The name of the form field.
+        content_type: The value of the Content-Type header for this field.
     """
 
-    def __init__(self, name: bytes | None) -> None:
+    def __init__(self, name: bytes | None, *, content_type: str | None = None) -> None:
         self._name = name
         self._value: list[bytes] = []
+        self._content_type = content_type
 
         # We cache the joined version of _value for speed.
         self._cache = _missing
@@ -295,6 +297,11 @@ class Field:
         assert isinstance(self._cache, bytes) or self._cache is None
         return self._cache
 
+    @property
+    def content_type(self) -> str | None:
+        """This property returns the content_type value of the field."""
+        return self._content_type
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Field):
             return self.field_name == other.field_name and self.value == other.value
@@ -333,9 +340,17 @@ class File:
         field_name: The name of the form field that this file was uploaded with.  This can be None, if, for example,
             the file was uploaded with Content-Type application/octet-stream.
         config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
+        content_type: The value of the Content-Type header.
     """  # noqa: E501
 
-    def __init__(self, file_name: bytes | None, field_name: bytes | None = None, config: FileConfig = {}) -> None:
+    def __init__(
+        self,
+        file_name: bytes | None,
+        field_name: bytes | None = None,
+        config: FileConfig = {},
+        *,
+        content_type: str | None = None,
+    ) -> None:
         # Save configuration, set other variables default.
         self.logger = logging.getLogger(__name__)
         self._config = config
@@ -343,9 +358,10 @@ class File:
         self._bytes_written = 0
         self._fileobj: BytesIO | BufferedRandom = BytesIO()
 
-        # Save the provided field/file name.
+        # Save the provided field/file name and content type.
         self._field_name = field_name
         self._file_name = file_name
+        self._content_type = content_type
 
         # Our actual file name is None by default, since, depending on our
         # config, we may not actually use the provided name.
@@ -399,6 +415,11 @@ class File:
         stored in-memory or on-disk.
         """
         return self._in_memory
+
+    @property
+    def content_type(self) -> str | None:
+        """The Content-Type value for this part, if it was set."""
+        return self._content_type
 
     def flush_to_disk(self) -> None:
         """If the file is already on-disk, do nothing.  Otherwise, copy from
@@ -1653,13 +1674,17 @@ class FormParser:
                 # Get the field and filename.
                 field_name = options.get(b"name")
                 file_name = options.get(b"filename")
-                # TODO: check for errors
+                # RFC 7578 §4.2: each part MUST have a Content-Disposition header with a "name" parameter.
+                if field_name is None:
+                    raise FormParserError(f'Field name not found in Content-Disposition: "{content_disp!r}"')
 
                 # Create the proper class.
+                content_type_b = headers.get(b"content-type")
+                content_type = content_type_b.decode("latin-1") if content_type_b is not None else None
                 if file_name is None:
-                    f_multi = Field(field_name)
+                    f_multi = Field(field_name, content_type=content_type)
                 else:
-                    f_multi = File(file_name, field_name, config=self.config)
+                    f_multi = File(file_name, field_name, config=self.config, content_type=content_type)
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what

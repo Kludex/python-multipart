@@ -790,7 +790,7 @@ class TestFormParser(unittest.TestCase):
         file_data = o.read()
         self.assertEqual(file_data, data)
 
-    def assert_file(self, field_name: bytes, file_name: bytes, data: bytes) -> None:
+    def assert_file(self, field_name: bytes, file_name: bytes, content_type: str | None, data: bytes) -> None:
         # Find this file.
         found = None
         for f in self.files:
@@ -801,6 +801,8 @@ class TestFormParser(unittest.TestCase):
         # Assert that we found it.
         self.assertIsNotNone(found)
         assert found is not None
+
+        self.assertEqual(found.content_type, content_type)
 
         try:
             # Assert about this file.
@@ -871,7 +873,7 @@ class TestFormParser(unittest.TestCase):
                 self.assert_field(name, e["data"])
 
             elif type == "file":
-                self.assert_file(name, e["file_name"].encode("latin-1"), e["data"])
+                self.assert_file(name, e["file_name"].encode("latin-1"), e["content_type"], e["data"])
 
             else:
                 assert False
@@ -902,7 +904,7 @@ class TestFormParser(unittest.TestCase):
 
             # Assert that our file and field are here.
             self.assert_field(b"field", b"test1")
-            self.assert_file(b"file", b"file.txt", b"test2")
+            self.assert_file(b"file", b"file.txt", "text/plain", b"test2")
 
     def test_upload_delete_tmp_config(self) -> None:
         with tempfile.TemporaryDirectory() as upload_dir:
@@ -966,7 +968,7 @@ class TestFormParser(unittest.TestCase):
                 self.assert_field(name, e["data"])
 
             elif type == "file":
-                self.assert_file(name, e["file_name"].encode("latin-1"), e["data"])
+                self.assert_file(name, e["file_name"].encode("latin-1"), e["content_type"], e["data"])
 
             else:
                 assert False
@@ -1003,6 +1005,48 @@ class TestFormParser(unittest.TestCase):
 
                 # Assert that our field is here.
                 self.assert_field(b"field", b"0123456789ABCDEFGHIJ0123456789ABCDEFGHIJ")
+
+    def test_file_content_type_header(self) -> None:
+        """
+        This test checks the content-type for a file part is passed on.
+        """
+        # Load test data.
+        test_file = "header_with_number.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
+            test_data = f.read()
+
+        expected_content_type = "text/plain; charset=utf-8"
+
+        # Create form parser.
+        self.make(boundary="b8825ae386be4fdc9644d87e392caad3")
+        self.f.write(test_data)
+        self.f.finalize()
+
+        # Assert that our field is here.
+        self.assertEqual(1, len(self.files))
+        actual_content_type = self.files[0].content_type
+        self.assertEqual(actual_content_type, expected_content_type)
+
+    def test_field_content_type_header(self) -> None:
+        """
+        This test checks content-tpye for a field part are read and passed.
+        """
+        # Load test data.
+        test_file = "single_field.http"
+        with open(os.path.join(http_tests_dir, test_file), "rb") as f:
+            test_data = f.read()
+
+        expected_content_type = None
+
+        # Create form parser.
+        self.make(boundary="----WebKitFormBoundaryTkr3kCBQlBe1nrhc")
+        self.f.write(test_data)
+        self.f.finalize()
+
+        # Assert that our field is here.
+        self.assertEqual(1, len(self.fields))
+        actual_content_type = self.fields[0].content_type
+        self.assertEqual(actual_content_type, expected_content_type)
 
     def test_request_body_fuzz(self) -> None:
         """
@@ -1248,6 +1292,26 @@ class TestFormParser(unittest.TestCase):
         f.write(data)
         f.finalize()
         self.assert_file_data(files[0], b"Test")
+
+    def test_bad_content_disposition(self) -> None:
+        # Field name is required per RFC 7578 §4.2.
+        data = (
+            b"----boundary\r\n"
+            b"Content-Disposition: form-data;\r\n"
+            b"Content-Type: text/plain\r\n"
+            b"\r\n"
+            b"Test\r\n"
+            b"----boundary--\r\n"
+        )
+
+        on_field = Mock()
+        on_file = Mock()
+
+        f = FormParser("multipart/form-data", on_field, on_file, boundary="--boundary")
+
+        with self.assertRaisesRegex(FormParserError, "Field name not found in Content-Disposition"):
+            f.write(data)
+            f.finalize()
 
     def test_handles_None_fields(self) -> None:
         fields: list[Field] = []
