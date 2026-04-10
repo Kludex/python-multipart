@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.26 (2026-04-10)
+
+* Skip preamble before the first multipart boundary more efficiently [#262](https://github.com/Kludex/python-multipart/pull/262).
+* Silently discard epilogue data after the closing multipart boundary [#259](https://github.com/Kludex/python-multipart/pull/259).
+
 ## 0.0.25 (2026-04-10)
 
 * Add MIME content type info to `File` [#143](https://github.com/Kludex/python-multipart/pull/143).
