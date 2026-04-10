@@ -1432,12 +1432,12 @@ class TestHelperFunctions(unittest.TestCase):
         self.assertEqual(on_file.call_args[0][0].size, 15)
 
     def test_parse_form_content_length(self) -> None:
-        files: list[FileProtocol] = []
+        files: list[File] = []
 
-        def on_field(field: FieldProtocol) -> None:
+        def on_field(field: Field) -> None:
             pass
 
-        def on_file(file: FileProtocol) -> None:
+        def on_file(file: File) -> None:
             files.append(file)
 
         parse_form(
@@ -1448,7 +1448,7 @@ class TestHelperFunctions(unittest.TestCase):
         )
 
         self.assertEqual(len(files), 1)
-        self.assertEqual(files[0].size, 10)  # type: ignore[attr-defined]
+        self.assertEqual(files[0].size, 10)
 
     def test_parse_form_invalid_chunk_size(self) -> None:
         with self.assertRaisesRegex(ValueError, "chunk_size must be a positive number, not 0"):

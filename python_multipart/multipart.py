@@ -9,14 +9,14 @@ from email.message import Message
 from enum import IntEnum
 from io import BufferedRandom, BytesIO
 from numbers import Number
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, overload
 
 from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Any, Literal, Protocol, TypeAlias, TypedDict
+    from typing import Any, Literal, Protocol, TypeAlias, TypedDict, TypeVar
 
     class SupportsRead(Protocol):
         def read(self, __n: int) -> bytes: ...
@@ -70,8 +70,8 @@ if TYPE_CHECKING:  # pragma: no cover
     class FileProtocol(_FormProtocol, Protocol):
         def __init__(self, file_name: bytes | None, field_name: bytes | None, config: FileConfig) -> None: ...
 
-    OnFieldCallback = Callable[[FieldProtocol], None]
-    OnFileCallback = Callable[[FileProtocol], None]
+    FieldT = TypeVar("FieldT", bound=FieldProtocol)
+    FileT = TypeVar("FileT", bound=FileProtocol)
 
     CallbackName: TypeAlias = Literal[
         "start",
@@ -1513,11 +1513,40 @@ class FormParser:
         "UPLOAD_ERROR_ON_BAD_CTE": False,
     }
 
+    @overload
     def __init__(
         self,
         content_type: str,
-        on_field: OnFieldCallback | None,
-        on_file: OnFileCallback | None,
+        on_field: Callable[[Field], None] | None,
+        on_file: Callable[[File], None] | None,
+        on_end: Callable[[], None] | None = None,
+        boundary: bytes | str | None = None,
+        file_name: bytes | None = None,
+        FileClass: type[File] = File,
+        FieldClass: type[Field] = Field,
+        config: dict[Any, Any] = {},
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self,
+        content_type: str,
+        on_field: Callable[[FieldT], None] | None,
+        on_file: Callable[[FileT], None] | None,
+        on_end: Callable[[], None] | None = None,
+        boundary: bytes | str | None = None,
+        file_name: bytes | None = None,
+        *,
+        FileClass: type[FileT],
+        FieldClass: type[FieldT],
+        config: dict[Any, Any] = {},
+    ) -> None: ...
+
+    def __init__(
+        self,
+        content_type: str,
+        on_field: Callable[..., None] | None,
+        on_file: Callable[..., None] | None,
         on_end: Callable[[], None] | None = None,
         boundary: bytes | str | None = None,
         file_name: bytes | None = None,
@@ -1778,8 +1807,8 @@ class FormParser:
 
 def create_form_parser(
     headers: dict[str, bytes],
-    on_field: OnFieldCallback | None,
-    on_file: OnFileCallback | None,
+    on_field: Callable[[Field], None] | None,
+    on_file: Callable[[File], None] | None,
     config: dict[Any, Any] = {},
 ) -> FormParser:
     """This function is a helper function to aid in creating a FormParser
@@ -1817,8 +1846,8 @@ def create_form_parser(
 def parse_form(
     headers: dict[str, bytes],
     input_stream: SupportsRead,
-    on_field: OnFieldCallback | None,
-    on_file: OnFileCallback | None,
+    on_field: Callable[[Field], None] | None,
+    on_file: Callable[[File], None] | None,
     chunk_size: int = 1048576,
 ) -> None:
     """This function is useful if you just want to parse a request body,
