@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import os
 import random
 import sys
@@ -734,6 +733,14 @@ single_byte_tests = [
     "single_field_single_file",
 ]
 
+EPILOGUE_TEST_HEAD = (
+    "--boundary\r\n"
+    'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+    "Content-Type: text/plain\r\n\r\n"
+    "hello\r\n"
+    "--boundary--"
+).encode("latin-1")
+
 
 def split_all(val: bytes) -> Iterator[tuple[bytes, bytes]]:
     """
@@ -1373,32 +1380,32 @@ class TestFormParser(unittest.TestCase):
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
         f.write(data.encode("latin-1"))
 
-    @pytest.fixture(autouse=True)
-    def inject_fixtures(self, caplog: pytest.LogCaptureFixture) -> None:
-        self._caplog = caplog
+    @parametrize(
+        "chunks",
+        [
+            [EPILOGUE_TEST_HEAD + b"\r\n"],
+            [EPILOGUE_TEST_HEAD + b"\r", b"\n"],
+            [EPILOGUE_TEST_HEAD, b"\r\n"],
+            [EPILOGUE_TEST_HEAD + b"\r\n--boundary\r\nthis is not a valid header\r\n\r\nnot a real part"],
+        ],
+    )
+    def test_multipart_parser_ignores_epilogue(self, chunks: list[bytes]) -> None:
+        """Epilogue data after the closing boundary must be ignored.
 
-    def test_multipart_parser_epilogue_emits_no_warnings(self) -> None:
-        """Epilogue data after the closing boundary must not produce a warning.
-
-        Covers both the single-chunk case and the case where the trailing
-        CRLF is split across `write()` calls (e.g. when `\r` and `\n` land in
-        separate TCP chunks behind a proxy).
+        Covers both the single-chunk case and the case where trailing CRLF is split across `write()` calls.
+        The final case asserts that epilogue bytes are not parsed or validated.
         """
-        head = (
-            "--boundary\r\n"
-            'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
-            "Content-Type: text/plain\r\n\r\n"
-            "hello\r\n"
-            "--boundary--"
-        ).encode("latin-1")
+        files: list[File] = []
 
-        for chunks in ([head + b"\r\n"], [head + b"\r", b"\n"], [head, b"\r\n"], [head + b"\r\nignored epilogue"]):
-            f = FormParser("multipart/form-data", on_field=Mock(), on_file=Mock(), boundary="boundary")
-            with self._caplog.at_level(logging.WARNING):
-                self._caplog.clear()
-                for chunk in chunks:
-                    f.write(chunk)
-                assert self._caplog.records == []
+        def on_file(f: File) -> None:
+            files.append(f)
+
+        f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
+        for chunk in chunks:
+            f.write(chunk)
+
+        assert len(files) == 1
+        self.assert_file_data(files[0], b"hello")
 
     def test_max_size_multipart(self) -> None:
         # Load test data.

@@ -1413,9 +1413,8 @@ class MultipartParser(BaseParser):
                     state = MultipartState.END
 
             elif state == MultipartState.END:
-                # Silently discard any epilogue data (RFC 2046 section 5.1.1
-                # allows a CRLF and optional epilogue after the closing
-                # boundary). Django and Werkzeug do the same.
+                # Silently discard any epilogue data (RFC 2046 section 5.1.1 allows a CRLF and optional
+                # epilogue after the closing boundary). Django and Werkzeug do the same.
                 i = length
                 break
 
