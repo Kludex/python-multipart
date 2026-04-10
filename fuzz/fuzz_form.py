@@ -29,7 +29,7 @@ def parse_form_urlencoded(fdp: EnhancedDataProvider) -> None:
 
 
 def parse_multipart_form_data(fdp: EnhancedDataProvider) -> None:
-    boundary = "boundary"
+    boundary = fdp.ConsumeRandomStringOfSize(16) or "boundary"
     header = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
     body = (
         f"--{boundary}\r\n"
