@@ -376,6 +376,18 @@ class TestQuerystringParser(unittest.TestCase):
 
         self.assert_fields((b"foo", b"bar"))
 
+    def test_querystring_trailing_bare_field_name(self) -> None:
+        # A trailing bare field name (no '=') must still emit field_end on
+        # finalize - otherwise the field is silently dropped.
+        self.p.write(b"foo=bar&baz")
+
+        self.assert_fields((b"foo", b"bar"), (b"baz", b""))
+
+    def test_querystring_only_bare_field_name(self) -> None:
+        self.p.write(b"foo")
+
+        self.assert_fields((b"foo", b""))
+
     def test_multiple_querystring(self) -> None:
         self.p.write(b"foo=bar&asdf=baz")
 
