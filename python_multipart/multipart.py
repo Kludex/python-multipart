@@ -1673,7 +1673,7 @@ class FormParser:
                 header_value.append(data[start:end])
 
             def on_header_end() -> None:
-                headers[b"".join(header_name)] = b"".join(header_value)
+                headers[b"".join(header_name).lower()] = b"".join(header_value)
                 del header_name[:]
                 del header_value[:]
 
@@ -1683,8 +1683,7 @@ class FormParser:
                 is_file = False
 
                 # Parse the content-disposition header.
-                # TODO: handle mixed case
-                content_disp = headers.get(b"Content-Disposition")
+                content_disp = headers.get(b"content-disposition")
                 disp, options = parse_options_header(content_disp)
 
                 # Get the field and filename.
@@ -1702,7 +1701,7 @@ class FormParser:
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                transfer_encoding = headers.get(b"Content-Transfer-Encoding", b"7bit")
+                transfer_encoding = headers.get(b"content-transfer-encoding", b"7bit")
 
                 if transfer_encoding in (b"binary", b"8bit", b"7bit"):
                     writer = f_multi
