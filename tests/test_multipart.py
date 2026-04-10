@@ -37,7 +37,8 @@ from python_multipart.multipart import (
 from .compat import parametrize, parametrize_class
 
 if TYPE_CHECKING:
-    from typing import Any, Iterator, TypedDict
+    from collections.abc import Iterator
+    from typing import Any, TypedDict
 
     from python_multipart.multipart import FieldProtocol, FileConfig, FileProtocol
 
@@ -1069,7 +1070,9 @@ class TestFormParser(unittest.TestCase):
 
         self.make("boundary")
         data = b"--Boundary\r\nfoobar"
-        with self.assertRaisesRegex(MultipartParseError, "Expected boundary character %r, got %r" % (b"b"[0], b"B"[0])):
+        with self.assertRaisesRegex(
+            MultipartParseError, "Expected boundary character {!r}, got {!r}".format(b"b"[0], b"B"[0])
+        ):
             self.f.write(data)
 
     def test_octet_stream(self) -> None:
@@ -1368,6 +1371,7 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(calls, 3)
 
 
+@parametrize_class
 class TestHelperFunctions(unittest.TestCase):
     def test_create_form_parser(self) -> None:
         r = create_form_parser({"Content-Type": b"application/octet-stream"}, None, None)
@@ -1408,6 +1412,16 @@ class TestHelperFunctions(unittest.TestCase):
 
         self.assertEqual(len(files), 1)
         self.assertEqual(files[0].size, 10)  # type: ignore[attr-defined]
+
+    def test_parse_form_invalid_chunk_size(self) -> None:
+        with self.assertRaisesRegex(ValueError, "chunk_size must be a positive number, not 0"):
+            parse_form(
+                {"Content-Type": b"application/octet-stream"},
+                BytesIO(b"123456789012345"),
+                lambda _: None,
+                lambda _: None,
+                chunk_size=0,
+            )
 
 
 def suite() -> unittest.TestSuite:

@@ -15,9 +15,8 @@ from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Any, Callable, Literal, Protocol, TypedDict
-
-    from typing_extensions import TypeAlias
+    from collections.abc import Callable
+    from typing import Any, Literal, Protocol, TypeAlias, TypedDict
 
     class SupportsRead(Protocol):
         def read(self, __n: int) -> bytes: ...
@@ -332,7 +331,7 @@ class Field:
         else:
             v = repr(self.value)
 
-        return "{}(field_name={!r}, value={})".format(self.__class__.__name__, self.field_name, v)
+        return f"{self.__class__.__name__}(field_name={self.field_name!r}, value={v})"
 
 
 class File:
@@ -376,7 +375,9 @@ class File:
 
         # Split the extension from the filename.
         if file_name is not None:
-            base, ext = os.path.splitext(file_name)
+            # Extract just the basename to avoid directory traversal
+            basename = os.path.basename(file_name)
+            base, ext = os.path.splitext(basename)
             self._file_base = base
             self._ext = ext
 
@@ -570,7 +571,7 @@ class File:
         self._fileobj.close()
 
     def __repr__(self) -> str:
-        return "{}(file_name={!r}, field_name={!r})".format(self.__class__.__name__, self.file_name, self.field_name)
+        return f"{self.__class__.__name__}(file_name={self.file_name!r}, field_name={self.field_name!r})"
 
 
 class BaseParser:
@@ -935,7 +936,7 @@ class QuerystringParser(BaseParser):
 
         self.state = state
         self._found_sep = found_sep
-        return len(data)
+        return length
 
     def finalize(self) -> None:
         """Finalize this parser, which signals to that we are finished parsing,
@@ -1241,7 +1242,7 @@ class MultipartParser(BaseParser):
             elif state == MultipartState.HEADER_VALUE_ALMOST_DONE:
                 # The last character should be a LF.  If not, it's an error.
                 if c != LF:
-                    msg = "Did not find LF character at end of header (found %r)" % (c,)
+                    msg = f"Did not find LF character at end of header (found {c!r})"
                     self.logger.warning(msg)
                     e = MultipartParseError(msg)
                     e.offset = i
@@ -1672,7 +1673,7 @@ class FormParser:
                 header_value.append(data[start:end])
 
             def on_header_end() -> None:
-                headers[b"".join(header_name)] = b"".join(header_value)
+                headers[b"".join(header_name).lower()] = b"".join(header_value)
                 del header_name[:]
                 del header_value[:]
 
@@ -1682,8 +1683,7 @@ class FormParser:
                 is_file = False
 
                 # Parse the content-disposition header.
-                # TODO: handle mixed case
-                content_disp = headers.get(b"Content-Disposition")
+                content_disp = headers.get(b"content-disposition")
                 disp, options = parse_options_header(content_disp)
 
                 # Get the field and filename.
@@ -1701,7 +1701,7 @@ class FormParser:
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                transfer_encoding = headers.get(b"Content-Transfer-Encoding", b"7bit")
+                transfer_encoding = headers.get(b"content-transfer-encoding", b"7bit")
 
                 if transfer_encoding in (b"binary", b"8bit", b"7bit"):
                     writer = f_multi
@@ -1715,7 +1715,7 @@ class FormParser:
                 else:
                     self.logger.warning("Unknown Content-Transfer-Encoding: %r", transfer_encoding)
                     if self.config["UPLOAD_ERROR_ON_BAD_CTE"]:
-                        raise FormParserError('Unknown Content-Transfer-Encoding "{!r}"'.format(transfer_encoding))
+                        raise FormParserError(f'Unknown Content-Transfer-Encoding "{transfer_encoding!r}"')
                     else:
                         # If we aren't erroring, then we just treat this as an
                         # unencoded Content-Transfer-Encoding.
@@ -1746,7 +1746,7 @@ class FormParser:
 
         else:
             self.logger.warning("Unknown Content-Type: %r", content_type)
-            raise FormParserError("Unknown Content-Type: {}".format(content_type))
+            raise FormParserError(f"Unknown Content-Type: {content_type}")
 
         self.parser = parser
 
@@ -1776,14 +1776,13 @@ class FormParser:
             self.parser.close()
 
     def __repr__(self) -> str:
-        return "{}(content_type={!r}, parser={!r})".format(self.__class__.__name__, self.content_type, self.parser)
+        return f"{self.__class__.__name__}(content_type={self.content_type!r}, parser={self.parser!r})"
 
 
 def create_form_parser(
     headers: dict[str, bytes],
     on_field: OnFieldCallback | None,
     on_file: OnFileCallback | None,
-    trust_x_headers: bool = False,
     config: dict[Any, Any] = {},
 ) -> FormParser:
     """This function is a helper function to aid in creating a FormParser
@@ -1796,8 +1795,6 @@ def create_form_parser(
         headers: A dictionary-like object of HTTP headers.  The only required header is Content-Type.
         on_field: Callback to call with each parsed field.
         on_file: Callback to call with each parsed file.
-        trust_x_headers: Whether or not to trust information received from certain X-Headers - for example, the file
-            name from X-File-Name.
         config: Configuration variables to pass to the FormParser.
     """
     content_type: str | bytes | None = headers.get("Content-Type")
@@ -1813,11 +1810,8 @@ def create_form_parser(
     # We need content_type to be a string, not a bytes object.
     content_type = content_type.decode("latin-1")
 
-    # File names are optional.
-    file_name = headers.get("X-File-Name")
-
     # Instantiate a form parser.
-    form_parser = FormParser(content_type, on_field, on_file, boundary=boundary, file_name=file_name, config=config)
+    form_parser = FormParser(content_type, on_field, on_file, boundary=boundary, config=config)
 
     # Return our parser.
     return form_parser
@@ -1843,6 +1837,9 @@ def parse_form(
         chunk_size: The maximum size to read from the input stream and write to the parser at one time.
             Defaults to 1 MiB.
     """
+    if chunk_size < 1:
+        raise ValueError(f"chunk_size must be a positive number, not {chunk_size!r}")
+
     # Create our form parser.
     parser = create_form_parser(headers, on_field, on_file)
 
