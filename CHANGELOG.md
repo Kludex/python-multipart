@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.25 (2026-04-10)
+
+* Add MIME content type info to `File` [#143](https://github.com/Kludex/python-multipart/pull/143).
+* Handle CTE values case-insensitively [#258](https://github.com/Kludex/python-multipart/pull/258).
+* Remove custom `FormParser` classes [#257](https://github.com/Kludex/python-multipart/pull/257).
+* Add `UPLOAD_DELETE_TMP` to `FormParser` config [#254](https://github.com/Kludex/python-multipart/pull/254).
+* Emit `field_end` for trailing bare field names on finalize [#230](https://github.com/Kludex/python-multipart/pull/230).
+* Handle multipart headers case-insensitively [#252](https://github.com/Kludex/python-multipart/pull/252).
+* Apply Apache-2.0 properly [#247](https://github.com/Kludex/python-multipart/pull/247).
+
 ## 0.0.24 (2026-04-05)
 
 * Validate `chunk_size` in `parse_form()` [#244](https://github.com/Kludex/python-multipart/pull/244).
