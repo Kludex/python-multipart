@@ -1172,23 +1172,28 @@ class MultipartParser(BaseParser):
 
             elif state == MultipartState.PREAMBLE:
                 # Preamble: bytes before the first boundary delimiter.  Per
-                # RFC 2046 section 5.1.1, these must be ignored.  We scan
-                # forward for the boundary, taking care to handle the case
-                # where a partial match spans chunk boundaries.
+                # RFC 2046 section 5.1.1, these must be ignored.  A candidate
+                # match is only a real delimiter when followed by CRLF (new
+                # part) or "--" (close boundary); anything else is preamble
+                # text that happens to contain the boundary value and must
+                # be skipped without erroring.
+                #
+                # `index` encodes the match sub-phase:
+                #   0 .. boundary_length - 1  -> matching boundary bytes
+                #   boundary_length           -> verifying trailer byte
+                #   boundary_length + 1       -> expecting LF after CR
+                #   boundary_length + 2       -> expecting HYPHEN after HYPHEN
                 boundary_length = len(boundary)
 
-                # Fast path: try to locate the full boundary in the current
-                # buffer.  `index` carries over a partial match from a
-                # previous chunk, so only use find when we don't have one.
+                # Fast path: when we don't have a partial match carried over
+                # from a previous chunk, search the whole buffer at once.
                 if index == 0:
                     i0 = data.find(boundary, i, length)
                     if i0 >= 0:
-                        # Found the full boundary.  Hand off to START_BOUNDARY
-                        # positioned to validate the trailing bytes (either
-                        # CRLF for a new part, or "--" for an empty message).
+                        # Jump past the match and enter trailer verification
+                        # on the byte immediately after the boundary.
                         i = i0 + boundary_length
-                        index = boundary_length - 2
-                        state = MultipartState.START_BOUNDARY
+                        index = boundary_length
                         continue
 
                     # No full match; there may be a partial match at the end
@@ -1201,21 +1206,45 @@ class MultipartParser(BaseParser):
                         break
                     c = data[i]
 
-                # Byte-by-byte matching for a partial boundary that may span
-                # chunks.  `index` tracks how many boundary bytes have matched.
-                if boundary[index] == c:
-                    index += 1
-                    if index == boundary_length:
-                        # Completed the boundary match across chunks.  Hand
-                        # off to START_BOUNDARY to validate trailing bytes.
-                        index = boundary_length - 2
-                        state = MultipartState.START_BOUNDARY
+                if index < boundary_length:
+                    # Byte-by-byte matching of boundary bytes that may span
+                    # chunks.
+                    if boundary[index] == c:
+                        index += 1
+                    else:
+                        # Mismatch on a partial match carried over from a
+                        # prior chunk.  Discard it and reconsider the current
+                        # byte as a potential new start.
+                        index = 0
+                        i -= 1
+                elif index == boundary_length:
+                    # Trailer verification: a real boundary delimiter is
+                    # followed by CR (regular) or HYPHEN (close).
+                    if c == CR:
+                        index = boundary_length + 1
+                    elif c == HYPHEN:
+                        index = boundary_length + 2
+                    else:
+                        # False positive inside the preamble - just part of
+                        # the preamble text.  Reset and keep scanning.
+                        index = 0
+                elif index == boundary_length + 1:
+                    # Regular delimiter: expect LF after CR.
+                    if c == LF:
+                        self.callback("part_begin")
+                        index = 0
+                        state = MultipartState.HEADER_FIELD_START
+                    else:
+                        # False positive: CR not followed by LF.  Reset.
+                        index = 0
                 else:
-                    # Mismatch on a partial match carried over from a prior
-                    # chunk.  Discard it and reconsider the current byte as a
-                    # potential new start.
-                    index = 0
-                    i -= 1
+                    # Close delimiter: expect HYPHEN after HYPHEN.
+                    if c == HYPHEN:
+                        self.callback("end")
+                        state = MultipartState.END
+                    else:
+                        # False positive: HYPHEN not followed by HYPHEN.
+                        index = 0
 
             elif state == MultipartState.HEADER_FIELD_START:
                 # Mark the start of a header field here, reset the index, and

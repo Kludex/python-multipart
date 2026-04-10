@@ -1221,6 +1221,66 @@ class TestFormParser(unittest.TestCase):
         with self.assertRaises(MultipartParseError):
             self.f.finalize()
 
+    def test_preamble_skips_boundary_false_positive(self) -> None:
+        # A preamble line that starts with `--boundary` but is not followed
+        # by a valid delimiter trailer must be treated as preamble text,
+        # not as a delimiter that causes the parser to raise.
+        self.make("boundary")
+        data = (
+            b"preamble line one\r\n"
+            b"--boundaryX is not a real delimiter\r\n"
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="field"\r\n'
+            b"\r\n"
+            b"value\r\n"
+            b"--boundary--\r\n"
+        )
+        self.f.write(data)
+        self.f.finalize()
+        self.assert_field(b"field", b"value")
+
+    def test_preamble_skips_cr_without_lf_false_positive(self) -> None:
+        # `\r\n--boundary\r` followed by a non-LF byte is not a delimiter.
+        self.make("boundary")
+        data = (
+            b"preamble\r\n"
+            b"--boundary\rfoo\r\n"
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="field"\r\n'
+            b"\r\n"
+            b"value\r\n"
+            b"--boundary--\r\n"
+        )
+        self.f.write(data)
+        self.f.finalize()
+        self.assert_field(b"field", b"value")
+
+    def test_preamble_skips_hyphen_without_hyphen_false_positive(self) -> None:
+        # `\r\n--boundary-` followed by a non-HYPHEN byte is not a delimiter.
+        self.make("boundary")
+        data = (
+            b"preamble\r\n"
+            b"--boundary-X\r\n"
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="field"\r\n'
+            b"\r\n"
+            b"value\r\n"
+            b"--boundary--\r\n"
+        )
+        self.f.write(data)
+        self.f.finalize()
+        self.assert_field(b"field", b"value")
+
+    def test_preamble_followed_by_close_boundary(self) -> None:
+        # A preamble followed directly by the close boundary (empty body)
+        # should parse without error and produce no fields.
+        self.make("boundary")
+        data = b"preamble text\r\n--boundary--\r\n"
+        self.f.write(data)
+        self.f.finalize()
+        self.assertEqual(self.fields, [])
+        self.assertEqual(self.files, [])
+
     def test_octet_stream(self) -> None:
         files: list[File] = []
 
