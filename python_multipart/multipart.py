@@ -1674,9 +1674,9 @@ class FormParser:
                 # Get the field and filename.
                 field_name = options.get(b"name")
                 file_name = options.get(b"filename")
+                # RFC 7578 §4.2: each part MUST have a Content-Disposition header with a "name" parameter.
                 if field_name is None:
                     raise FormParserError(f'Field name not found in Content-Disposition: "{content_disp!r}"')
-                # TODO: check for other errors
 
                 # Create the proper class.
                 content_type_b = headers.get(b"content-type")
