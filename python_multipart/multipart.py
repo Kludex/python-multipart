@@ -63,13 +63,18 @@ if TYPE_CHECKING:  # pragma: no cover
         def close(self) -> None: ...
 
     class FieldProtocol(_FormProtocol, Protocol):
-        def __init__(self, name: bytes | None, content_type: str | None = None) -> None: ...
+        def __init__(self, name: bytes | None, *, content_type: str | None = None) -> None: ...
 
         def set_none(self) -> None: ...
 
     class FileProtocol(_FormProtocol, Protocol):
         def __init__(
-            self, file_name: bytes | None, field_name: bytes | None, config: FileConfig, content_type: str | None = None
+            self,
+            file_name: bytes | None,
+            field_name: bytes | None,
+            config: FileConfig,
+            *,
+            content_type: str | None = None,
         ) -> None: ...
 
     OnFieldCallback = Callable[[FieldProtocol], None]
@@ -222,7 +227,7 @@ class Field:
         content_type: The value of the Content-Type header for this field.
     """
 
-    def __init__(self, name: bytes | None, content_type: str | None = None) -> None:
+    def __init__(self, name: bytes | None, *, content_type: str | None = None) -> None:
         self._name = name
         self._value: list[bytes] = []
         self._content_type = content_type
@@ -368,6 +373,7 @@ class File:
         file_name: bytes | None,
         field_name: bytes | None = None,
         config: FileConfig = {},
+        *,
         content_type: str | None = None,
     ) -> None:
         # Save configuration, set other variables default.
