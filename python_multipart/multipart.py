@@ -1413,12 +1413,9 @@ class MultipartParser(BaseParser):
                     state = MultipartState.END
 
             elif state == MultipartState.END:
-                # Don't do anything if chunk ends with CRLF.
-                if c == CR and i + 1 < length and data[i + 1] == LF:
-                    i += 2
-                    continue
-                # Skip data after the last boundary.
-                self.logger.warning("Skipping data after last boundary")
+                # Silently discard any epilogue data (RFC 2046 section 5.1.1
+                # allows a CRLF and optional epilogue after the closing
+                # boundary). Django and Werkzeug do the same.
                 i = length
                 break
 

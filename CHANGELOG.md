@@ -1,5 +1,9 @@
 # Changelog
 
+## UNRELEASED
+
+* Silently discard epilogue data after the closing boundary instead of logging a warning, matching Django and Werkzeug. Also fixes a spurious warning when the trailing CRLF is split across chunks [#246](https://github.com/Kludex/python-multipart/issues/246).
+
 ## 0.0.24 (2026-04-05)
 
 * Validate `chunk_size` in `parse_form()` [#244](https://github.com/Kludex/python-multipart/pull/244).

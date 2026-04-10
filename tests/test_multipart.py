@@ -1336,7 +1336,7 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(fields[2].value, b"asdf")
 
     def test_multipart_parser_newlines_before_first_boundary(self) -> None:
-        """This test makes sure that the parser does not handle when there is junk data after the last boundary."""
+        """Parser must not hang or blow up on a large preamble of blank lines before the first boundary."""
         num = 5_000_000
         data = (
             "\r\n" * num + "--boundary\r\n"
@@ -1355,7 +1355,7 @@ class TestFormParser(unittest.TestCase):
         f.write(data.encode("latin-1"))
 
     def test_multipart_parser_data_after_last_boundary(self) -> None:
-        """This test makes sure that the parser does not handle when there is junk data after the last boundary."""
+        """Parser must short-circuit on arbitrary epilogue data after the closing boundary (no O(N) scan)."""
         num = 50_000_000
         data = (
             "--boundary\r\n"
@@ -1377,25 +1377,28 @@ class TestFormParser(unittest.TestCase):
     def inject_fixtures(self, caplog: pytest.LogCaptureFixture) -> None:
         self._caplog = caplog
 
-    def test_multipart_parser_data_end_with_crlf_without_warnings(self) -> None:
-        """This test makes sure that the parser does not handle when the data ends with a CRLF."""
-        data = (
+    def test_multipart_parser_epilogue_emits_no_warnings(self) -> None:
+        """Epilogue data after the closing boundary must not produce a warning.
+
+        Covers both the single-chunk case and the case where the trailing
+        CRLF is split across `write()` calls (e.g. when `\r` and `\n` land in
+        separate TCP chunks behind a proxy).
+        """
+        head = (
             "--boundary\r\n"
             'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
             "Content-Type: text/plain\r\n\r\n"
             "hello\r\n"
-            "--boundary--\r\n"
-        )
+            "--boundary--"
+        ).encode("latin-1")
 
-        files: list[File] = []
-
-        def on_file(f: File) -> None:
-            files.append(f)
-
-        f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
-        with self._caplog.at_level(logging.WARNING):
-            f.write(data.encode("latin-1"))
-            assert len(self._caplog.records) == 0
+        for chunks in ([head + b"\r\n"], [head + b"\r", b"\n"], [head, b"\r\n"], [head + b"\r\nignored epilogue"]):
+            f = FormParser("multipart/form-data", on_field=Mock(), on_file=Mock(), boundary="boundary")
+            with self._caplog.at_level(logging.WARNING):
+                self._caplog.clear()
+                for chunk in chunks:
+                    f.write(chunk)
+                assert self._caplog.records == []
 
     def test_max_size_multipart(self) -> None:
         # Load test data.
