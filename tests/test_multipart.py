@@ -746,6 +746,25 @@ def split_all(val: bytes) -> Iterator[tuple[bytes, bytes]]:
         yield (val[:i], val[i:])
 
 
+@pytest.mark.parametrize("content_transfer_encoding", [b"base64", b"BASE64", b"Base64"])
+def test_content_transfer_encoding_is_case_insensitive(content_transfer_encoding: bytes) -> None:
+    data = (
+        b'----boundary\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\n'
+        b"Content-Type: text/plain\r\n"
+        b"Content-Transfer-Encoding: " + content_transfer_encoding + b"\r\n\r\nVGVzdA==\r\n----boundary--\r\n"
+    )
+    files: list[File] = []
+
+    f = FormParser("multipart/form-data", None, files.append, boundary="--boundary")
+
+    f.write(data)
+    f.finalize()
+
+    file = files[0]
+    file.file_object.seek(0)
+    assert file.file_object.read() == b"Test"
+
+
 @parametrize_class
 class TestFormParser(unittest.TestCase):
     def make(self, boundary: str | bytes, config: dict[str, Any] = {}) -> None:
