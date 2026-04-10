@@ -885,6 +885,31 @@ class TestFormParser(unittest.TestCase):
             self.assert_field(b"field", b"test1")
             self.assert_file(b"file", b"file.txt", b"test2")
 
+    def test_upload_delete_tmp_config(self) -> None:
+        with tempfile.TemporaryDirectory() as upload_dir:
+            self.make(
+                "----WebKitFormBoundary5BZGOJCWtXGYC9HW",
+                config={"UPLOAD_DIR": upload_dir, "UPLOAD_DELETE_TMP": False, "MAX_MEMORY_FILE_SIZE": 1},
+            )
+
+            test_file = "single_file.http"
+            with open(os.path.join(http_tests_dir, test_file), "rb") as f:
+                test_data = f.read()
+
+            self.f.write(test_data)
+            self.f.finalize()
+
+            self.assertEqual(len(self.files), 1)
+            uploaded_file = self.files[0]
+            assert uploaded_file.actual_file_name is not None
+            actual_file_name = uploaded_file.actual_file_name.decode(sys.getfilesystemencoding())
+            uploaded_file.close()
+
+            try:
+                self.assertTrue(os.path.exists(actual_file_name))
+            finally:
+                os.unlink(actual_file_name)
+
     @parametrize("param", [t for t in http_tests if t["name"] in single_byte_tests])
     def test_feed_single_bytes(self, param: TestParams) -> None:
         """
