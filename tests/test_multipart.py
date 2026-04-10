@@ -1339,6 +1339,16 @@ class TestFormParser(unittest.TestCase):
         "chunks",
         [
             [
+                b"\r\nignored preamble\r\n"
+                + (
+                    b"--boundary\r\n"
+                    b'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+                    b"Content-Type: text/plain\r\n\r\n"
+                    b"hello\r\n"
+                    b"--boundary--"
+                )
+            ],
+            [
                 b"\r\n" * 5_000_000
                 + (
                     b"--boundary\r\n"
@@ -1360,8 +1370,8 @@ class TestFormParser(unittest.TestCase):
             ],
         ],
     )
-    def test_multipart_parser_newlines_before_first_boundary(self, chunks: list[bytes]) -> None:
-        """Parser must not hang or blow up on a large preamble of blank lines before the first boundary."""
+    def test_multipart_parser_preamble_before_first_boundary(self, chunks: list[bytes]) -> None:
+        """Parser must not hang or blow up on a preamble before the first boundary."""
 
         files: list[File] = []
 

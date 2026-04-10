@@ -1107,6 +1107,7 @@ class MultipartParser(BaseParser):
                 if c == CR or c == LF:
                     i = data.find(b"-", i)
                     if i == -1:
+                        # No boundary candidate in this chunk, so ignore the content after the leading CR/LF.
                         i = length
                         break
                     continue
