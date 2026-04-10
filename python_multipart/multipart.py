@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, cast
 from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any, Literal, Protocol, TypeAlias, TypedDict
 
@@ -54,31 +54,6 @@ if TYPE_CHECKING:  # pragma: no cover
     class FormParserConfig(FileConfig):
         UPLOAD_ERROR_ON_BAD_CTE: bool
         MAX_BODY_SIZE: float
-
-    class _FormProtocol(Protocol):
-        def write(self, data: bytes) -> int: ...
-
-        def finalize(self) -> None: ...
-
-        def close(self) -> None: ...
-
-    class FieldProtocol(_FormProtocol, Protocol):
-        def __init__(self, name: bytes | None, *, content_type: str | None = None) -> None: ...
-
-        def set_none(self) -> None: ...
-
-    class FileProtocol(_FormProtocol, Protocol):
-        def __init__(
-            self,
-            file_name: bytes | None,
-            field_name: bytes | None,
-            config: FileConfig,
-            *,
-            content_type: str | None = None,
-        ) -> None: ...
-
-    OnFieldCallback = Callable[[FieldProtocol], None]
-    OnFileCallback = Callable[[FileProtocol], None]
 
     CallbackName: TypeAlias = Literal[
         "start",
@@ -1511,19 +1486,6 @@ class FormParser:
         file_name: If the request is of type application/octet-stream, then the body of the request will not contain any
             information about the uploaded file.  In such cases, you can provide the file name of the uploaded file
             manually.
-        FileClass: The class to use for uploaded files.  Defaults to :class:`File`, but you can provide your own class
-            if you wish to customize behaviour.  The class will be instantiated as
-            FileClass(file_name, field_name, config=config), and it must provide the following functions::
-                - file_instance.write(data)
-                - file_instance.finalize()
-                - file_instance.close()
-        FieldClass: The class to use for uploaded fields.  Defaults to :class:`Field`, but you can provide your own
-            class if you wish to customize behaviour.  The class will be instantiated as FieldClass(field_name), and it
-            must provide the following functions::
-                - field_instance.write(data)
-                - field_instance.finalize()
-                - field_instance.close()
-                - field_instance.set_none()
         config: Configuration to use for this FormParser.  The default values are taken from the DEFAULT_CONFIG value,
             and then any keys present in this dictionary will overwrite the default values.
     """
@@ -1544,13 +1506,11 @@ class FormParser:
     def __init__(
         self,
         content_type: str,
-        on_field: OnFieldCallback | None,
-        on_file: OnFileCallback | None,
+        on_field: Callable[[Field], None] | None,
+        on_file: Callable[[File], None] | None,
         on_end: Callable[[], None] | None = None,
         boundary: bytes | str | None = None,
         file_name: bytes | None = None,
-        FileClass: type[FileProtocol] = File,
-        FieldClass: type[FieldProtocol] = Field,
         config: dict[Any, Any] = {},
     ) -> None:
         self.logger = logging.getLogger(__name__)
@@ -1566,10 +1526,6 @@ class FormParser:
         self.on_file = on_file
         self.on_end = on_end
 
-        # Save classes.
-        self.FileClass = File
-        self.FieldClass = Field
-
         # Set configuration options.
         self.config: FormParserConfig = self.DEFAULT_CONFIG.copy()
         self.config.update(config)  # type: ignore[typeddict-item]
@@ -1578,18 +1534,20 @@ class FormParser:
 
         # Depending on the Content-Type, we instantiate the correct parser.
         if content_type == "application/octet-stream":
-            file: FileProtocol = None  # type: ignore
+            file: File | None = None
 
             def on_start() -> None:
                 nonlocal file
-                file = FileClass(file_name, None, config=self.config)
+                file = File(file_name, None, config=self.config)
 
             def on_data(data: bytes, start: int, end: int) -> None:
                 nonlocal file
+                assert file is not None
                 file.write(data[start:end])
 
             def _on_end() -> None:
                 nonlocal file
+                assert file is not None
                 # Finalize the file itself.
                 file.finalize()
 
@@ -1610,7 +1568,7 @@ class FormParser:
         elif content_type == "application/x-www-form-urlencoded" or content_type == "application/x-url-encoded":
             name_buffer: list[bytes] = []
 
-            f: FieldProtocol | None = None
+            f: Field | None = None
 
             def on_field_start() -> None:
                 pass
@@ -1621,7 +1579,7 @@ class FormParser:
             def on_field_data(data: bytes, start: int, end: int) -> None:
                 nonlocal f
                 if f is None:
-                    f = FieldClass(b"".join(name_buffer))
+                    f = Field(b"".join(name_buffer))
                     del name_buffer[:]
                 f.write(data[start:end])
 
@@ -1631,7 +1589,7 @@ class FormParser:
                 if f is None:
                     # If we get here, it's because there was no field data.
                     # We create a field, set it to None, and then continue.
-                    f = FieldClass(b"".join(name_buffer))
+                    f = Field(b"".join(name_buffer))
                     del name_buffer[:]
                     f.set_none()
 
@@ -1665,8 +1623,8 @@ class FormParser:
             header_value: list[bytes] = []
             headers: dict[bytes, bytes] = {}
 
-            f_multi: FileProtocol | FieldProtocol | None = None
-            writer = None
+            f_multi: File | Field | None = None
+            writer: File | Field | Base64Decoder | QuotedPrintableDecoder | None = None
             is_file = False
 
             def on_part_begin() -> None:
@@ -1686,10 +1644,12 @@ class FormParser:
                 f_multi.finalize()
                 if is_file:
                     if on_file:
+                        assert isinstance(f_multi, File)
                         on_file(f_multi)
                 else:
                     if on_field:
-                        on_field(cast("FieldProtocol", f_multi))
+                        assert isinstance(f_multi, Field)
+                        on_field(f_multi)
 
             def on_header_field(data: bytes, start: int, end: int) -> None:
                 header_name.append(data[start:end])
@@ -1722,9 +1682,9 @@ class FormParser:
                 content_type_b = headers.get(b"content-type")
                 content_type = content_type_b.decode("latin-1") if content_type_b is not None else None
                 if file_name is None:
-                    f_multi = FieldClass(field_name, content_type=content_type)
+                    f_multi = Field(field_name, content_type=content_type)
                 else:
-                    f_multi = FileClass(file_name, field_name, config=self.config, content_type=content_type)
+                    f_multi = File(file_name, field_name, config=self.config, content_type=content_type)
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
@@ -1810,8 +1770,8 @@ class FormParser:
 
 def create_form_parser(
     headers: dict[str, bytes],
-    on_field: OnFieldCallback | None,
-    on_file: OnFileCallback | None,
+    on_field: Callable[[Field], None] | None,
+    on_file: Callable[[File], None] | None,
     config: dict[Any, Any] = {},
 ) -> FormParser:
     """This function is a helper function to aid in creating a FormParser
@@ -1849,8 +1809,8 @@ def create_form_parser(
 def parse_form(
     headers: dict[str, bytes],
     input_stream: SupportsRead,
-    on_field: OnFieldCallback | None,
-    on_file: OnFileCallback | None,
+    on_field: Callable[[Field], None] | None,
+    on_file: Callable[[File], None] | None,
     chunk_size: int = 1048576,
 ) -> None:
     """This function is useful if you just want to parse a request body,

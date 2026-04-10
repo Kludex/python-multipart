@@ -7,7 +7,7 @@ import sys
 import tempfile
 import unittest
 from io import BytesIO
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
 import pytest
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import Any, TypedDict
 
-    from python_multipart.multipart import FieldProtocol, FileConfig, FileProtocol
+    from python_multipart.multipart import FileConfig
 
     class TestParams(TypedDict):
         name: str
@@ -753,11 +753,11 @@ class TestFormParser(unittest.TestCase):
         self.files: list[File] = []
         self.fields: list[Field] = []
 
-        def on_field(f: FieldProtocol) -> None:
-            self.fields.append(cast(Field, f))
+        def on_field(f: Field) -> None:
+            self.fields.append(f)
 
-        def on_file(f: FileProtocol) -> None:
-            self.files.append(cast(File, f))
+        def on_file(f: File) -> None:
+            self.files.append(f)
 
         def on_end() -> None:
             self.ended = True
@@ -1159,8 +1159,8 @@ class TestFormParser(unittest.TestCase):
     def test_octet_stream(self) -> None:
         files: list[File] = []
 
-        def on_file(f: FileProtocol) -> None:
-            files.append(cast(File, f))
+        def on_file(f: File) -> None:
+            files.append(f)
 
         on_field = Mock()
         on_end = Mock()
@@ -1181,8 +1181,8 @@ class TestFormParser(unittest.TestCase):
     def test_querystring(self) -> None:
         fields: list[Field] = []
 
-        def on_field(f: FieldProtocol) -> None:
-            fields.append(cast(Field, f))
+        def on_field(f: Field) -> None:
+            fields.append(f)
 
         on_file = Mock()
         on_end = Mock()
@@ -1252,8 +1252,8 @@ class TestFormParser(unittest.TestCase):
 
         files: list[File] = []
 
-        def on_file(f: FileProtocol) -> None:
-            files.append(cast(File, f))
+        def on_file(f: File) -> None:
+            files.append(f)
 
         on_field = Mock()
         on_end = Mock()
@@ -1292,8 +1292,8 @@ class TestFormParser(unittest.TestCase):
     def test_handles_None_fields(self) -> None:
         fields: list[Field] = []
 
-        def on_field(f: FieldProtocol) -> None:
-            fields.append(cast(Field, f))
+        def on_field(f: Field) -> None:
+            fields.append(f)
 
         on_file = Mock()
         on_end = Mock()
@@ -1324,8 +1324,8 @@ class TestFormParser(unittest.TestCase):
 
         files: list[File] = []
 
-        def on_file(f: FileProtocol) -> None:
-            files.append(cast(File, f))
+        def on_file(f: File) -> None:
+            files.append(f)
 
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
         f.write(data.encode("latin-1"))
@@ -1343,8 +1343,8 @@ class TestFormParser(unittest.TestCase):
 
         files: list[File] = []
 
-        def on_file(f: FileProtocol) -> None:
-            files.append(cast(File, f))
+        def on_file(f: File) -> None:
+            files.append(f)
 
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
         f.write(data.encode("latin-1"))
@@ -1365,8 +1365,8 @@ class TestFormParser(unittest.TestCase):
 
         files: list[File] = []
 
-        def on_file(f: FileProtocol) -> None:
-            files.append(cast(File, f))
+        def on_file(f: File) -> None:
+            files.append(f)
 
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
         with self._caplog.at_level(logging.WARNING):
@@ -1413,8 +1413,8 @@ class TestFormParser(unittest.TestCase):
     def test_octet_stream_max_size(self) -> None:
         files: list[File] = []
 
-        def on_file(f: FileProtocol) -> None:
-            files.append(cast(File, f))
+        def on_file(f: File) -> None:
+            files.append(f)
 
         on_field = Mock()
         on_end = Mock()
@@ -1491,12 +1491,12 @@ class TestHelperFunctions(unittest.TestCase):
         self.assertEqual(on_file.call_args[0][0].size, 15)
 
     def test_parse_form_content_length(self) -> None:
-        files: list[FileProtocol] = []
+        files: list[File] = []
 
-        def on_field(field: FieldProtocol) -> None:
+        def on_field(field: Field) -> None:
             pass
 
-        def on_file(file: FileProtocol) -> None:
+        def on_file(file: File) -> None:
             files.append(file)
 
         parse_form(
@@ -1507,7 +1507,7 @@ class TestHelperFunctions(unittest.TestCase):
         )
 
         self.assertEqual(len(files), 1)
-        self.assertEqual(files[0].size, 10)  # type: ignore[attr-defined]
+        self.assertEqual(files[0].size, 10)
 
     def test_parse_form_invalid_chunk_size(self) -> None:
         with self.assertRaisesRegex(ValueError, "chunk_size must be a positive number, not 0"):
