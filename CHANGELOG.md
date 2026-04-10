@@ -8,6 +8,7 @@
 * Add `UPLOAD_DELETE_TMP` to `FormParser` config [#254](https://github.com/Kludex/python-multipart/pull/254).
 * Emit `field_end` for trailing bare field names on finalize [#230](https://github.com/Kludex/python-multipart/pull/230).
 * Handle multipart headers case-insensitively [#252](https://github.com/Kludex/python-multipart/pull/252).
+* Apply Apache-2.0 properly [#247](https://github.com/Kludex/python-multipart/pull/247).
 
 ## 0.0.24 (2026-04-05)
 
