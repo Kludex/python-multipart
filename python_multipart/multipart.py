@@ -109,6 +109,7 @@ class MultipartState(IntEnum):
     PART_DATA_END = 10
     END_BOUNDARY = 11
     END = 12
+    PREAMBLE = 13
 
 
 # Flags for the multipart parser.
@@ -1111,9 +1112,16 @@ class MultipartParser(BaseParser):
                 # index is used as in index into our boundary.  Set to 0.
                 index = 0
 
-                # Move to the next state, but decrement i so that we re-process
-                # this character.
-                state = MultipartState.START_BOUNDARY
+                # If the first non-CRLF byte is a hyphen, assume the boundary
+                # starts here and validate it via START_BOUNDARY.  Otherwise,
+                # we're looking at a preamble (RFC 2046 section 5.1.1): bytes
+                # before the first boundary delimiter that must be ignored.
+                if c == HYPHEN:
+                    state = MultipartState.START_BOUNDARY
+                else:
+                    state = MultipartState.PREAMBLE
+
+                # Re-process this character under the new state.
                 i -= 1
 
             elif state == MultipartState.START_BOUNDARY:
@@ -1161,6 +1169,53 @@ class MultipartParser(BaseParser):
 
                     # Increment index into boundary and continue.
                     index += 1
+
+            elif state == MultipartState.PREAMBLE:
+                # Preamble: bytes before the first boundary delimiter.  Per
+                # RFC 2046 section 5.1.1, these must be ignored.  We scan
+                # forward for the boundary, taking care to handle the case
+                # where a partial match spans chunk boundaries.
+                boundary_length = len(boundary)
+
+                # Fast path: try to locate the full boundary in the current
+                # buffer.  `index` carries over a partial match from a
+                # previous chunk, so only use find when we don't have one.
+                if index == 0:
+                    i0 = data.find(boundary, i, length)
+                    if i0 >= 0:
+                        # Found the full boundary.  Hand off to START_BOUNDARY
+                        # positioned to validate the trailing bytes (either
+                        # CRLF for a new part, or "--" for an empty message).
+                        i = i0 + boundary_length
+                        index = boundary_length - 2
+                        state = MultipartState.START_BOUNDARY
+                        continue
+
+                    # No full match; there may be a partial match at the end
+                    # of the buffer.  Skip ahead to the last position where a
+                    # boundary could still start.
+                    i = max(i, length - boundary_length)
+                    while i < length and data[i] != boundary[0]:
+                        i += 1
+                    if i >= length:
+                        break
+                    c = data[i]
+
+                # Byte-by-byte matching for a partial boundary that may span
+                # chunks.  `index` tracks how many boundary bytes have matched.
+                if boundary[index] == c:
+                    index += 1
+                    if index == boundary_length:
+                        # Completed the boundary match across chunks.  Hand
+                        # off to START_BOUNDARY to validate trailing bytes.
+                        index = boundary_length - 2
+                        state = MultipartState.START_BOUNDARY
+                else:
+                    # Mismatch on a partial match carried over from a prior
+                    # chunk.  Discard it and reconsider the current byte as a
+                    # potential new start.
+                    index = 0
+                    i -= 1
 
             elif state == MultipartState.HEADER_FIELD_START:
                 # Mark the start of a header field here, reset the index, and
@@ -1461,9 +1516,16 @@ class MultipartParser(BaseParser):
         are in the final state of the parser (i.e. the end of the multipart
         message is well-formed), and, if not, throw an error.
         """
+        # If we are still scanning the preamble, no boundary was ever found -
+        # which means the input is not a valid multipart message.
+        if self.state == MultipartState.PREAMBLE:
+            msg = "No boundary found in multipart body"
+            self.logger.warning(msg)
+            e = MultipartParseError(msg)
+            e.offset = 0
+            raise e
         # TODO: verify that we're in the state MultipartState.END, otherwise throw an
         # error or otherwise state that we're not finished parsing.
-        pass
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(boundary={self.boundary!r})"
