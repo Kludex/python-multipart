@@ -1335,16 +1335,43 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(fields[2].field_name, b"baz")
         self.assertEqual(fields[2].value, b"asdf")
 
-    def test_multipart_parser_newlines_before_first_boundary(self) -> None:
-        """This test makes sure that the parser does not handle when there is junk data after the last boundary."""
-        num = 5_000_000
-        data = (
-            "\r\n" * num + "--boundary\r\n"
-            'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
-            "Content-Type: text/plain\r\n\r\n"
-            "hello\r\n"
-            "--boundary--"
-        )
+    @parametrize(
+        "chunks",
+        [
+            [
+                b"\r\nignored preamble\r\n"
+                + (
+                    b"--boundary\r\n"
+                    b'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+                    b"Content-Type: text/plain\r\n\r\n"
+                    b"hello\r\n"
+                    b"--boundary--"
+                )
+            ],
+            [
+                b"\r\n" * 5_000_000
+                + (
+                    b"--boundary\r\n"
+                    b'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+                    b"Content-Type: text/plain\r\n\r\n"
+                    b"hello\r\n"
+                    b"--boundary--"
+                )
+            ],
+            [
+                b"\r\n" * 5_000_000,
+                (
+                    b"--boundary\r\n"
+                    b'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+                    b"Content-Type: text/plain\r\n\r\n"
+                    b"hello\r\n"
+                    b"--boundary--"
+                ),
+            ],
+        ],
+    )
+    def test_multipart_parser_preamble_before_first_boundary(self, chunks: list[bytes]) -> None:
+        """Parser must not hang or blow up on a preamble before the first boundary."""
 
         files: list[File] = []
 
@@ -1352,7 +1379,11 @@ class TestFormParser(unittest.TestCase):
             files.append(f)
 
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
-        f.write(data.encode("latin-1"))
+        for chunk in chunks:
+            f.write(chunk)
+
+        assert len(files) == 1
+        self.assert_file_data(files[0], b"hello")
 
     def test_multipart_parser_data_after_last_boundary(self) -> None:
         """This test makes sure that the parser does not handle when there is junk data after the last boundary."""

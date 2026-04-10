@@ -1105,7 +1105,11 @@ class MultipartParser(BaseParser):
             if state == MultipartState.START:
                 # Skip leading newlines
                 if c == CR or c == LF:
-                    i += 1
+                    i = data.find(b"-", i)
+                    if i == -1:
+                        # No boundary candidate in this chunk, so ignore the content after the leading CR/LF.
+                        i = length
+                        break
                     continue
 
                 # index is used as in index into our boundary.  Set to 0.
