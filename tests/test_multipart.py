@@ -1275,9 +1275,14 @@ class TestFormParser(unittest.TestCase):
         self.assert_file_data(files[0], b"Test")
 
     def test_bad_content_disposition(self) -> None:
-        # Field name is required.
+        # Field name is required per RFC 7578 §4.2.
         data = (
-            b"----boundary\r\nContent-Disposition: form-data;\r\nContent-Type: text/plain\r\nTest\r\n----boundary--\r\n"
+            b"----boundary\r\n"
+            b"Content-Disposition: form-data;\r\n"
+            b"Content-Type: text/plain\r\n"
+            b"\r\n"
+            b"Test\r\n"
+            b"----boundary--\r\n"
         )
 
         on_field = Mock()
@@ -1285,7 +1290,7 @@ class TestFormParser(unittest.TestCase):
 
         f = FormParser("multipart/form-data", on_field, on_file, boundary="--boundary")
 
-        with self.assertRaises(FormParserError):
+        with self.assertRaisesRegex(FormParserError, "Field name not found in Content-Disposition"):
             f.write(data)
             f.finalize()
 
