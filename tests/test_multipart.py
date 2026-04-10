@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import os
 import random
 import sys
@@ -734,6 +733,14 @@ single_byte_tests = [
     "single_field_single_file",
 ]
 
+EPILOGUE_TEST_HEAD = (
+    "--boundary\r\n"
+    'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+    "Content-Type: text/plain\r\n\r\n"
+    "hello\r\n"
+    "--boundary--"
+).encode("latin-1")
+
 
 def split_all(val: bytes) -> Iterator[tuple[bytes, bytes]]:
     """
@@ -1386,7 +1393,7 @@ class TestFormParser(unittest.TestCase):
         self.assert_file_data(files[0], b"hello")
 
     def test_multipart_parser_data_after_last_boundary(self) -> None:
-        """This test makes sure that the parser does not handle when there is junk data after the last boundary."""
+        """Parser must short-circuit on arbitrary epilogue data after the closing boundary (no O(N) scan)."""
         num = 50_000_000
         data = (
             "--boundary\r\n"
@@ -1404,29 +1411,32 @@ class TestFormParser(unittest.TestCase):
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
         f.write(data.encode("latin-1"))
 
-    @pytest.fixture(autouse=True)
-    def inject_fixtures(self, caplog: pytest.LogCaptureFixture) -> None:
-        self._caplog = caplog
+    @parametrize(
+        "chunks",
+        [
+            [EPILOGUE_TEST_HEAD + b"\r\n"],
+            [EPILOGUE_TEST_HEAD + b"\r", b"\n"],
+            [EPILOGUE_TEST_HEAD, b"\r\n"],
+            [EPILOGUE_TEST_HEAD + b"\r\n--boundary\r\nthis is not a valid header\r\n\r\nnot a real part"],
+        ],
+    )
+    def test_multipart_parser_ignores_epilogue(self, chunks: list[bytes]) -> None:
+        """Epilogue data after the closing boundary must be ignored.
 
-    def test_multipart_parser_data_end_with_crlf_without_warnings(self) -> None:
-        """This test makes sure that the parser does not handle when the data ends with a CRLF."""
-        data = (
-            "--boundary\r\n"
-            'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
-            "Content-Type: text/plain\r\n\r\n"
-            "hello\r\n"
-            "--boundary--\r\n"
-        )
-
+        Covers both the single-chunk case and the case where trailing CRLF is split across `write()` calls.
+        The final case asserts that epilogue bytes are not parsed or validated.
+        """
         files: list[File] = []
 
         def on_file(f: File) -> None:
             files.append(f)
 
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
-        with self._caplog.at_level(logging.WARNING):
-            f.write(data.encode("latin-1"))
-            assert len(self._caplog.records) == 0
+        for chunk in chunks:
+            f.write(chunk)
+
+        assert len(files) == 1
+        self.assert_file_data(files[0], b"hello")
 
     def test_max_size_multipart(self) -> None:
         # Load test data.

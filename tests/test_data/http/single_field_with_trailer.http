@@ -3,5 +3,5 @@ Content-Disposition: form-data; name="field"
 
 This is a test.
 ------WebKitFormBoundaryTkr3kCBQlBe1nrhc--
-this trailer causes a warning
-but should be ignored
+this trailer is epilogue data
+and should be silently ignored
