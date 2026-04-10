@@ -1665,7 +1665,9 @@ class FormParser:
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
                 # TODO: check that we properly handle 8bit / 7bit encoding.
-                transfer_encoding = headers.get(b"content-transfer-encoding", b"7bit")
+                # RFC 2045 section 6.1: Content-Transfer-Encoding values are case-insensitive.
+                # https://www.rfc-editor.org/rfc/rfc2045#section-6.1
+                transfer_encoding = headers.get(b"content-transfer-encoding", b"7bit").lower()
 
                 if transfer_encoding in (b"binary", b"8bit", b"7bit"):
                     writer = f_multi
