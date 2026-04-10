@@ -37,7 +37,8 @@ from python_multipart.multipart import (
 from .compat import parametrize, parametrize_class
 
 if TYPE_CHECKING:
-    from typing import Any, Iterator, TypedDict
+    from collections.abc import Iterator
+    from typing import Any, TypedDict
 
     from python_multipart.multipart import FieldProtocol, FileConfig, FileProtocol
 
@@ -374,6 +375,18 @@ class TestQuerystringParser(unittest.TestCase):
         self.p.write(b"foo=bar&")
 
         self.assert_fields((b"foo", b"bar"))
+
+    def test_querystring_trailing_bare_field_name(self) -> None:
+        # A trailing bare field name (no '=') must still emit field_end on
+        # finalize - otherwise the field is silently dropped.
+        self.p.write(b"foo=bar&baz")
+
+        self.assert_fields((b"foo", b"bar"), (b"baz", b""))
+
+    def test_querystring_only_bare_field_name(self) -> None:
+        self.p.write(b"foo")
+
+        self.assert_fields((b"foo", b""))
 
     def test_multiple_querystring(self) -> None:
         self.p.write(b"foo=bar&asdf=baz")
@@ -874,6 +887,31 @@ class TestFormParser(unittest.TestCase):
             self.assert_field(b"field", b"test1")
             self.assert_file(b"file", b"file.txt", "text/plain", b"test2")
 
+    def test_upload_delete_tmp_config(self) -> None:
+        with tempfile.TemporaryDirectory() as upload_dir:
+            self.make(
+                "----WebKitFormBoundary5BZGOJCWtXGYC9HW",
+                config={"UPLOAD_DIR": upload_dir, "UPLOAD_DELETE_TMP": False, "MAX_MEMORY_FILE_SIZE": 1},
+            )
+
+            test_file = "single_file.http"
+            with open(os.path.join(http_tests_dir, test_file), "rb") as f:
+                test_data = f.read()
+
+            self.f.write(test_data)
+            self.f.finalize()
+
+            self.assertEqual(len(self.files), 1)
+            uploaded_file = self.files[0]
+            assert uploaded_file.actual_file_name is not None
+            actual_file_name = uploaded_file.actual_file_name.decode(sys.getfilesystemencoding())
+            uploaded_file.close()
+
+            try:
+                self.assertTrue(os.path.exists(actual_file_name))
+            finally:
+                os.unlink(actual_file_name)
+
     @parametrize("param", [t for t in http_tests if t["name"] in single_byte_tests])
     def test_feed_single_bytes(self, param: TestParams) -> None:
         """
@@ -911,8 +949,7 @@ class TestFormParser(unittest.TestCase):
                 self.assert_field(name, e["data"])
 
             elif type == "file":
-                content_type = "text/plain"
-                self.assert_file(name, e["file_name"].encode("latin-1"), content_type, e["data"])
+                self.assert_file(name, e["file_name"].encode("latin-1"), e["content_type"], e["data"])
 
             else:
                 assert False
@@ -1114,7 +1151,9 @@ class TestFormParser(unittest.TestCase):
 
         self.make("boundary")
         data = b"--Boundary\r\nfoobar"
-        with self.assertRaisesRegex(MultipartParseError, "Expected boundary character %r, got %r" % (b"b"[0], b"B"[0])):
+        with self.assertRaisesRegex(
+            MultipartParseError, "Expected boundary character {!r}, got {!r}".format(b"b"[0], b"B"[0])
+        ):
             self.f.write(data)
 
     def test_octet_stream(self) -> None:
@@ -1428,6 +1467,7 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(calls, 3)
 
 
+@parametrize_class
 class TestHelperFunctions(unittest.TestCase):
     def test_create_form_parser(self) -> None:
         r = create_form_parser({"Content-Type": b"application/octet-stream"}, None, None)
@@ -1468,6 +1508,16 @@ class TestHelperFunctions(unittest.TestCase):
 
         self.assertEqual(len(files), 1)
         self.assertEqual(files[0].size, 10)  # type: ignore[attr-defined]
+
+    def test_parse_form_invalid_chunk_size(self) -> None:
+        with self.assertRaisesRegex(ValueError, "chunk_size must be a positive number, not 0"):
+            parse_form(
+                {"Content-Type": b"application/octet-stream"},
+                BytesIO(b"123456789012345"),
+                lambda _: None,
+                lambda _: None,
+                chunk_size=0,
+            )
 
 
 def suite() -> unittest.TestSuite:

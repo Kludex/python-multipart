@@ -15,9 +15,8 @@ from .decoders import Base64Decoder, QuotedPrintableDecoder
 from .exceptions import FileError, FormParserError, MultipartParseError, QuerystringParseError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import Any, Callable, Literal, Protocol, TypedDict
-
-    from typing_extensions import TypeAlias
+    from collections.abc import Callable
+    from typing import Any, Literal, Protocol, TypeAlias, TypedDict
 
     class SupportsRead(Protocol):
         def read(self, __n: int) -> bytes: ...
@@ -45,20 +44,16 @@ if TYPE_CHECKING:  # pragma: no cover
         on_headers_finished: Callable[[], None]
         on_end: Callable[[], None]
 
-    class FormParserConfig(TypedDict):
-        UPLOAD_DIR: str | None
-        UPLOAD_KEEP_FILENAME: bool
-        UPLOAD_KEEP_EXTENSIONS: bool
-        UPLOAD_ERROR_ON_BAD_CTE: bool
-        MAX_MEMORY_FILE_SIZE: int
-        MAX_BODY_SIZE: float
-
     class FileConfig(TypedDict, total=False):
         UPLOAD_DIR: str | bytes | None
         UPLOAD_DELETE_TMP: bool
         UPLOAD_KEEP_FILENAME: bool
         UPLOAD_KEEP_EXTENSIONS: bool
         MAX_MEMORY_FILE_SIZE: int
+
+    class FormParserConfig(FileConfig):
+        UPLOAD_ERROR_ON_BAD_CTE: bool
+        MAX_BODY_SIZE: float
 
     class _FormProtocol(Protocol):
         def write(self, data: bytes) -> int: ...
@@ -132,7 +127,8 @@ class MultipartState(IntEnum):
     PART_DATA_START = 8
     PART_DATA = 9
     PART_DATA_END = 10
-    END = 11
+    END_BOUNDARY = 11
+    END = 12
 
 
 # Flags for the multipart parser.
@@ -340,7 +336,7 @@ class Field:
         else:
             v = repr(self.value)
 
-        return "{}(field_name={!r}, value={})".format(self.__class__.__name__, self.field_name, v)
+        return f"{self.__class__.__name__}(field_name={self.field_name!r}, value={v})"
 
 
 class File:
@@ -363,16 +359,16 @@ class File:
         file_name: The name of the file that this [`File`][python_multipart.File] represents.
         field_name: The name of the form field that this file was uploaded with.  This can be None, if, for example,
             the file was uploaded with Content-Type application/octet-stream.
-        content_type: The value of the Content-Type header.
         config: The configuration for this File.  See above for valid configuration keys and their corresponding values.
+        content_type: The value of the Content-Type header.
     """  # noqa: E501
 
     def __init__(
         self,
         file_name: bytes | None,
         field_name: bytes | None = None,
-        content_type: str | None = None,
         config: FileConfig = {},
+        content_type: str | None = None,
     ) -> None:
         # Save configuration, set other variables default.
         self.logger = logging.getLogger(__name__)
@@ -392,7 +388,9 @@ class File:
 
         # Split the extension from the filename.
         if file_name is not None:
-            base, ext = os.path.splitext(file_name)
+            # Extract just the basename to avoid directory traversal
+            basename = os.path.basename(file_name)
+            base, ext = os.path.splitext(basename)
             self._file_base = base
             self._ext = ext
 
@@ -591,7 +589,7 @@ class File:
         self._fileobj.close()
 
     def __repr__(self) -> str:
-        return "{}(file_name={!r}, field_name={!r})".format(self.__class__.__name__, self.file_name, self.field_name)
+        return f"{self.__class__.__name__}(file_name={self.file_name!r}, field_name={self.field_name!r})"
 
 
 class BaseParser:
@@ -956,7 +954,7 @@ class QuerystringParser(BaseParser):
 
         self.state = state
         self._found_sep = found_sep
-        return len(data)
+        return length
 
     def finalize(self) -> None:
         """Finalize this parser, which signals to that we are finished parsing,
@@ -964,7 +962,7 @@ class QuerystringParser(BaseParser):
         then the on_end callback.
         """
         # If we're currently in the middle of a field, we finish it.
-        if self.state == QuerystringState.FIELD_DATA:
+        if self.state in (QuerystringState.FIELD_DATA, QuerystringState.FIELD_NAME):
             self.callback("field_end")
         self.callback("end")
 
@@ -1141,7 +1139,10 @@ class MultipartParser(BaseParser):
                 # Check to ensure that the last 2 characters in our boundary
                 # are CRLF.
                 if index == len(boundary) - 2:
-                    if c != CR:
+                    if c == HYPHEN:
+                        # Potential empty message.
+                        state = MultipartState.END_BOUNDARY
+                    elif c != CR:
                         # Error!
                         msg = "Did not find CR at end of boundary (%d)" % (i,)
                         self.logger.warning(msg)
@@ -1259,7 +1260,7 @@ class MultipartParser(BaseParser):
             elif state == MultipartState.HEADER_VALUE_ALMOST_DONE:
                 # The last character should be a LF.  If not, it's an error.
                 if c != LF:
-                    msg = "Did not find LF character at end of header (found %r)" % (c,)
+                    msg = f"Did not find LF character at end of header (found {c!r})"
                     self.logger.warning(msg)
                     e = MultipartParseError(msg)
                     e.offset = i
@@ -1418,6 +1419,18 @@ class MultipartParser(BaseParser):
                     # the start of the boundary itself.
                     i -= 1
 
+            elif state == MultipartState.END_BOUNDARY:
+                if index == len(boundary) - 2 + 1:
+                    if c != HYPHEN:
+                        msg = "Did not find - at end of boundary (%d)" % (i,)
+                        self.logger.warning(msg)
+                        e = MultipartParseError(msg)
+                        e.offset = i
+                        raise e
+                    index += 1
+                    self.callback("end")
+                    state = MultipartState.END
+
             elif state == MultipartState.END:
                 # Don't do anything if chunk ends with CRLF.
                 if c == CR and i + 1 < length and data[i + 1] == LF:
@@ -1493,8 +1506,8 @@ class FormParser:
             information about the uploaded file.  In such cases, you can provide the file name of the uploaded file
             manually.
         FileClass: The class to use for uploaded files.  Defaults to :class:`File`, but you can provide your own class
-            if you wish to customize behaviour.  The class will be instantiated as FileClass(file_name, field_name), and
-            it must provide the following functions::
+            if you wish to customize behaviour.  The class will be instantiated as
+            FileClass(file_name, field_name, config=config), and it must provide the following functions::
                 - file_instance.write(data)
                 - file_instance.finalize()
                 - file_instance.close()
@@ -1515,6 +1528,7 @@ class FormParser:
         "MAX_BODY_SIZE": float("inf"),
         "MAX_MEMORY_FILE_SIZE": 1 * 1024 * 1024,
         "UPLOAD_DIR": None,
+        "UPLOAD_DELETE_TMP": True,
         "UPLOAD_KEEP_FILENAME": False,
         "UPLOAD_KEEP_EXTENSIONS": False,
         # Error on invalid Content-Transfer-Encoding?
@@ -1562,7 +1576,7 @@ class FormParser:
 
             def on_start() -> None:
                 nonlocal file
-                file = FileClass(file_name, None, config=cast("FileConfig", self.config))
+                file = FileClass(file_name, None, config=self.config)
 
             def on_data(data: bytes, start: int, end: int) -> None:
                 nonlocal file
@@ -1695,7 +1709,7 @@ class FormParser:
                 field_name = options.get(b"name")
                 file_name = options.get(b"filename")
                 if field_name is None:
-                    raise FormParserError('Field name not found in Content-Disposition: "{!r}"'.format(content_disp))
+                    raise FormParserError(f'Field name not found in Content-Disposition: "{content_disp!r}"')
                 # TODO: check for other errors
 
                 # Create the proper class.
@@ -1704,9 +1718,7 @@ class FormParser:
                 if file_name is None:
                     f_multi = FieldClass(field_name, content_type=content_type)
                 else:
-                    f_multi = FileClass(
-                        file_name, field_name, config=cast("FileConfig", self.config), content_type=content_type
-                    )
+                    f_multi = FileClass(file_name, field_name, config=self.config, content_type=content_type)
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
@@ -1726,7 +1738,7 @@ class FormParser:
                 else:
                     self.logger.warning("Unknown Content-Transfer-Encoding: %r", transfer_encoding)
                     if self.config["UPLOAD_ERROR_ON_BAD_CTE"]:
-                        raise FormParserError('Unknown Content-Transfer-Encoding "{!r}"'.format(transfer_encoding))
+                        raise FormParserError(f'Unknown Content-Transfer-Encoding "{transfer_encoding!r}"')
                     else:
                         # If we aren't erroring, then we just treat this as an
                         # unencoded Content-Transfer-Encoding.
@@ -1734,8 +1746,8 @@ class FormParser:
 
             def _on_end() -> None:
                 nonlocal writer
-                assert writer is not None
-                writer.finalize()
+                if writer is not None:
+                    writer.finalize()
                 if self.on_end is not None:
                     self.on_end()
 
@@ -1757,7 +1769,7 @@ class FormParser:
 
         else:
             self.logger.warning("Unknown Content-Type: %r", content_type)
-            raise FormParserError("Unknown Content-Type: {}".format(content_type))
+            raise FormParserError(f"Unknown Content-Type: {content_type}")
 
         self.parser = parser
 
@@ -1787,14 +1799,13 @@ class FormParser:
             self.parser.close()
 
     def __repr__(self) -> str:
-        return "{}(content_type={!r}, parser={!r})".format(self.__class__.__name__, self.content_type, self.parser)
+        return f"{self.__class__.__name__}(content_type={self.content_type!r}, parser={self.parser!r})"
 
 
 def create_form_parser(
     headers: dict[str, bytes],
     on_field: OnFieldCallback | None,
     on_file: OnFileCallback | None,
-    trust_x_headers: bool = False,
     config: dict[Any, Any] = {},
 ) -> FormParser:
     """This function is a helper function to aid in creating a FormParser
@@ -1807,8 +1818,6 @@ def create_form_parser(
         headers: A dictionary-like object of HTTP headers.  The only required header is Content-Type.
         on_field: Callback to call with each parsed field.
         on_file: Callback to call with each parsed file.
-        trust_x_headers: Whether or not to trust information received from certain X-Headers - for example, the file
-            name from X-File-Name.
         config: Configuration variables to pass to the FormParser.
     """
     content_type: str | bytes | None = headers.get("Content-Type")
@@ -1824,11 +1833,8 @@ def create_form_parser(
     # We need content_type to be a string, not a bytes object.
     content_type = content_type.decode("latin-1")
 
-    # File names are optional.
-    file_name = headers.get("X-File-Name")
-
     # Instantiate a form parser.
-    form_parser = FormParser(content_type, on_field, on_file, boundary=boundary, file_name=file_name, config=config)
+    form_parser = FormParser(content_type, on_field, on_file, boundary=boundary, config=config)
 
     # Return our parser.
     return form_parser
@@ -1854,6 +1860,9 @@ def parse_form(
         chunk_size: The maximum size to read from the input stream and write to the parser at one time.
             Defaults to 1 MiB.
     """
+    if chunk_size < 1:
+        raise ValueError(f"chunk_size must be a positive number, not {chunk_size!r}")
+
     # Create our form parser.
     parser = create_form_parser(headers, on_field, on_file)
 

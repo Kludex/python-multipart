@@ -5,14 +5,19 @@ on:
     tags:
       - "**"
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
     steps:
-      - uses: actions/checkout@v4
+      # `mkdocs gh-deploy` pushes the built docs to `gh-pages`, so this job needs
+      # a real checkout with the authenticated origin remote preserved.
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2  # zizmor: ignore[artipacked]
 
       - name: Configure Git Credentials
         run: |
@@ -20,10 +25,10 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
         with:
-          version: "0.4.12"
-          enable-cache: true
+          version: "0.9.12"
+          enable-cache: false
 
       - name: Set up Python
         run: uv python install 3.12

@@ -1,5 +1,20 @@
 # Python-Multipart
 
+<p align="center">
+<a href="https://github.com/Kludex/python-multipart/actions">
+    <img src="https://github.com/Kludex/python-multipart/workflows/CI/badge.svg" alt="Build Status">
+</a>
+<a href="https://pypi.org/project/python-multipart/">
+    <img src="https://badge.fury.io/py/python-multipart.svg" alt="Package version">
+</a>
+<a href="https://pypi.org/project/python-multipart" target="_blank">
+    <img src="https://img.shields.io/pypi/pyversions/python-multipart.svg?color=%2334D058" alt="Supported Python versions">
+</a>
+<a href="https://discord.gg/RxKUF5JuHs">
+    <img src="https://img.shields.io/discord/1051468649518616576?logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2" alt="Discord">
+</a>
+</p>
+
 Python-Multipart is a streaming multipart parser for Python.
 
 ## Quickstart
@@ -25,8 +40,6 @@ def simple_app(environ, start_response):
     # name of the header, since this library does not assume that you are
     # using WSGI.
     headers = {'Content-Type': environ['CONTENT_TYPE']}
-    if 'HTTP_X_FILE_NAME' in environ:
-        headers['X-File-Name'] = environ['HTTP_X_FILE_NAME']
     if 'CONTENT_LENGTH' in environ:
         headers['Content-Length'] = environ['CONTENT_LENGTH']
 
