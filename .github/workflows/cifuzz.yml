@@ -15,6 +15,7 @@ on:
 permissions: {}
 
 jobs:
+  # https://google.github.io/oss-fuzz/getting-started/continuous-integration/
   Fuzzing:
     runs-on: ubuntu-latest
 
