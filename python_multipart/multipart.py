@@ -44,20 +44,16 @@ if TYPE_CHECKING:  # pragma: no cover
         on_headers_finished: Callable[[], None]
         on_end: Callable[[], None]
 
-    class FormParserConfig(TypedDict):
-        UPLOAD_DIR: str | None
-        UPLOAD_KEEP_FILENAME: bool
-        UPLOAD_KEEP_EXTENSIONS: bool
-        UPLOAD_ERROR_ON_BAD_CTE: bool
-        MAX_MEMORY_FILE_SIZE: int
-        MAX_BODY_SIZE: float
-
     class FileConfig(TypedDict, total=False):
         UPLOAD_DIR: str | bytes | None
         UPLOAD_DELETE_TMP: bool
         UPLOAD_KEEP_FILENAME: bool
         UPLOAD_KEEP_EXTENSIONS: bool
         MAX_MEMORY_FILE_SIZE: int
+
+    class FormParserConfig(FileConfig):
+        UPLOAD_ERROR_ON_BAD_CTE: bool
+        MAX_BODY_SIZE: float
 
     class _FormProtocol(Protocol):
         def write(self, data: bytes) -> int: ...
@@ -1488,8 +1484,8 @@ class FormParser:
             information about the uploaded file.  In such cases, you can provide the file name of the uploaded file
             manually.
         FileClass: The class to use for uploaded files.  Defaults to :class:`File`, but you can provide your own class
-            if you wish to customize behaviour.  The class will be instantiated as FileClass(file_name, field_name), and
-            it must provide the following functions::
+            if you wish to customize behaviour.  The class will be instantiated as
+            FileClass(file_name, field_name, config=config), and it must provide the following functions::
                 - file_instance.write(data)
                 - file_instance.finalize()
                 - file_instance.close()
@@ -1510,6 +1506,7 @@ class FormParser:
         "MAX_BODY_SIZE": float("inf"),
         "MAX_MEMORY_FILE_SIZE": 1 * 1024 * 1024,
         "UPLOAD_DIR": None,
+        "UPLOAD_DELETE_TMP": True,
         "UPLOAD_KEEP_FILENAME": False,
         "UPLOAD_KEEP_EXTENSIONS": False,
         # Error on invalid Content-Transfer-Encoding?
@@ -1557,7 +1554,7 @@ class FormParser:
 
             def on_start() -> None:
                 nonlocal file
-                file = FileClass(file_name, None, config=cast("FileConfig", self.config))
+                file = FileClass(file_name, None, config=self.config)
 
             def on_data(data: bytes, start: int, end: int) -> None:
                 nonlocal file
@@ -1695,7 +1692,7 @@ class FormParser:
                 if file_name is None:
                     f_multi = FieldClass(field_name)
                 else:
-                    f_multi = FileClass(file_name, field_name, config=cast("FileConfig", self.config))
+                    f_multi = FileClass(file_name, field_name, config=self.config)
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
