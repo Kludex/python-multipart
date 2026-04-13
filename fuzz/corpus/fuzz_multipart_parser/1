@@ -1,0 +1,6 @@
+--x
+Content-Disposition: form-data; name="a"; filename="..\\x"
+Content-Transfer-Encoding: base64
+
+%%%=
+--x--
