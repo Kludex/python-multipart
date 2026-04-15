@@ -54,6 +54,8 @@ if TYPE_CHECKING:
     class FormParserConfig(FileConfig):
         UPLOAD_ERROR_ON_BAD_CTE: bool
         MAX_BODY_SIZE: float
+        MAX_HEADER_COUNT: int
+        MAX_HEADER_SIZE: int
 
     CallbackName: TypeAlias = Literal[
         "start",
@@ -139,6 +141,9 @@ TOKEN_CHARS_SET = frozenset(
     b"0123456789"
     b"!#$%&'*+-.^_`|~")
 # fmt: on
+
+DEFAULT_MAX_HEADER_COUNT = 8
+DEFAULT_MAX_HEADER_SIZE = 4096 + 128
 
 
 def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, bytes]]:
@@ -967,10 +972,18 @@ class MultipartParser(BaseParser):
         boundary: The multipart boundary.  This is required, and must match what is given in the HTTP request - usually in the Content-Type header.
         callbacks: A dictionary of callbacks.  See the documentation for [`BaseParser`][python_multipart.BaseParser].
         max_size: The maximum size of body to parse.  Defaults to infinity - i.e. unbounded.
+        max_header_count: The maximum number of headers allowed per part.
+        max_header_size: The maximum size of a single header line (excluding the trailing CRLF).
     """  # noqa: E501
 
     def __init__(
-        self, boundary: bytes | str, callbacks: MultipartCallbacks = {}, max_size: float = float("inf")
+        self,
+        boundary: bytes | str,
+        callbacks: MultipartCallbacks = {},
+        max_size: float = float("inf"),
+        *,
+        max_header_count: int = DEFAULT_MAX_HEADER_COUNT,
+        max_header_size: int = DEFAULT_MAX_HEADER_SIZE,
     ) -> None:
         # Initialize parser state.
         super().__init__()
@@ -983,6 +996,12 @@ class MultipartParser(BaseParser):
             raise ValueError("max_size must be a positive number, not %r" % max_size)
         self.max_size = max_size
         self._current_size = 0
+
+        self.max_header_count = max_header_count
+        self._current_header_count = 0
+
+        self.max_header_size = max_header_size
+        self._current_header_size = 0
 
         # Setup marks.  These are used to track the state of data received.
         self.marks: dict[str, int] = {}
@@ -1037,9 +1056,20 @@ class MultipartParser(BaseParser):
         state = self.state
         index = self.index
         flags = self.flags
+        current_header_count = self._current_header_count
+        current_header_size = self._current_header_size
 
         # Our index defaults to 0.
         i = 0
+
+        def raise_parse_error(msg: str, offset: int) -> None:
+            raise MultipartParseError(msg, offset=offset)
+
+        def advance_header_size(amount: int = 1) -> None:
+            nonlocal current_header_size
+            current_header_size += amount
+            if current_header_size > self.max_header_size:
+                raise_parse_error("Maximum header size exceeded", i)
 
         # Set a mark.
         def set_mark(name: str) -> None:
@@ -1141,6 +1171,8 @@ class MultipartParser(BaseParser):
 
                     # Callback for the start of a part.
                     self.callback("part_begin")
+                    current_header_count = 0
+                    current_header_size = 0
 
                     # Move to the next character and state.
                     state = MultipartState.HEADER_FIELD_START
@@ -1159,6 +1191,12 @@ class MultipartParser(BaseParser):
                 # Mark the start of a header field here, reset the index, and
                 # continue parsing our header field.
                 index = 0
+
+                if c != CR:
+                    current_header_count += 1
+                    if current_header_count > self.max_header_count:
+                        raise_parse_error("Maximum header count exceeded", i)
+                    current_header_size = 0
 
                 # Set a mark of our header field.
                 set_mark("header_field")
@@ -1189,6 +1227,7 @@ class MultipartParser(BaseParser):
 
                 # If we've reached a colon, we're done with this header.
                 if c == COLON:
+                    advance_header_size()
                     # A 0-length header is an error.
                     if index == 1:
                         msg = "Found 0-length header at %d" % (i,)
@@ -1205,10 +1244,13 @@ class MultipartParser(BaseParser):
                     msg = "Found invalid character %r in header at %d" % (c, i)
                     self.logger.warning(msg)
                     raise MultipartParseError(msg, offset=i)
+                else:
+                    advance_header_size()
 
             elif state == MultipartState.HEADER_VALUE_START:
                 # Skip leading spaces.
                 if c == SPACE:
+                    advance_header_size()
                     i += 1
                     continue
 
@@ -1225,7 +1267,10 @@ class MultipartParser(BaseParser):
                 if c == CR:
                     data_callback("header_value", i)
                     self.callback("header_end")
+                    current_header_size = 0
                     state = MultipartState.HEADER_VALUE_ALMOST_DONE
+                else:
+                    advance_header_size()
 
             elif state == MultipartState.HEADER_VALUE_ALMOST_DONE:
                 # The last character should be a LF.  If not, it's an error.
@@ -1345,6 +1390,8 @@ class MultipartParser(BaseParser):
                             # a part, and are starting a new one.
                             self.callback("part_end")
                             self.callback("part_begin")
+                            current_header_count = 0
+                            current_header_size = 0
 
                             # Move to parsing new headers.
                             index = 0
@@ -1426,6 +1473,8 @@ class MultipartParser(BaseParser):
         self.state = state
         self.index = index
         self.flags = flags
+        self._current_header_count = current_header_count
+        self._current_header_size = current_header_size
 
         # Return our data length to indicate no errors, and that we processed
         # all of it.
@@ -1471,6 +1520,8 @@ class FormParser:
     #: Note: all file sizes should be in bytes.
     DEFAULT_CONFIG: FormParserConfig = {
         "MAX_BODY_SIZE": float("inf"),
+        "MAX_HEADER_COUNT": DEFAULT_MAX_HEADER_COUNT,
+        "MAX_HEADER_SIZE": DEFAULT_MAX_HEADER_SIZE,
         "MAX_MEMORY_FILE_SIZE": 1 * 1024 * 1024,
         "UPLOAD_DIR": None,
         "UPLOAD_DELETE_TMP": True,
@@ -1710,6 +1761,8 @@ class FormParser:
                     "on_end": _on_end,
                 },
                 max_size=self.config["MAX_BODY_SIZE"],
+                max_header_count=self.config["MAX_HEADER_COUNT"],
+                max_header_size=self.config["MAX_HEADER_SIZE"],
             )
 
         else:

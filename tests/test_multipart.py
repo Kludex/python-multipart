@@ -1182,6 +1182,25 @@ class TestFormParser(unittest.TestCase):
         ):
             self.f.write(data)
 
+    def test_multipart_header_count_limit(self) -> None:
+        self.make("poc")
+        payload = (
+            b'--poc\r\nContent-Disposition: form-data; name="x"\r\n'
+            + (b"X-A: 1\r\n" * 8)
+        )
+        with self.assertRaisesRegex(MultipartParseError, "Maximum header count exceeded"):
+            self.f.write(payload)
+
+    def test_multipart_header_size_limit(self) -> None:
+        self.make("poc")
+        payload = (
+            b'--poc\r\nContent-Disposition: form-data; name="x"\r\n'
+            + b"X-A: "
+            + (b"a" * (4096 + 124))
+        )
+        with self.assertRaisesRegex(MultipartParseError, "Maximum header size exceeded"):
+            self.f.write(payload)
+
     def test_octet_stream(self) -> None:
         files: list[File] = []
 
