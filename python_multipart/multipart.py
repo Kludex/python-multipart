@@ -820,9 +820,7 @@ class QuerystringParser(BaseParser):
                     if found_sep:
                         # If we're parsing strictly, we disallow blank chunks.
                         if strict_parsing:
-                            e = QuerystringParseError("Skipping duplicate ampersand/semicolon at %d" % i)
-                            e.offset = i
-                            raise e
+                            raise QuerystringParseError("Skipping duplicate ampersand/semicolon at %d" % i, offset=i)
                         else:
                             self.logger.debug("Skipping duplicate ampersand/semicolon at %d", i)
                     else:
@@ -886,13 +884,12 @@ class QuerystringParser(BaseParser):
                         # We're parsing strictly.  If we find a separator,
                         # this is an error - we require an equals sign.
                         if sep_pos != -1:
-                            e = QuerystringParseError(
+                            raise QuerystringParseError(
                                 "When strict_parsing is True, we require an "
                                 "equals sign in all field chunks. Did not "
-                                "find one in the chunk that starts at %d" % (i,)
+                                "find one in the chunk that starts at %d" % (i,),
+                                offset=i,
                             )
-                            e.offset = i
-                            raise e
 
                         # No separator in the rest of this chunk, so it's just
                         # a field name.
@@ -927,9 +924,7 @@ class QuerystringParser(BaseParser):
             else:  # pragma: no cover (error case)
                 msg = "Reached an unknown state %d at %d" % (state, i)
                 self.logger.warning(msg)
-                e = QuerystringParseError(msg)
-                e.offset = i
-                raise e
+                raise QuerystringParseError(msg, offset=i)
 
             i += 1
 
@@ -1131,9 +1126,7 @@ class MultipartParser(BaseParser):
                         # Error!
                         msg = "Did not find CR at end of boundary (%d)" % (i,)
                         self.logger.warning(msg)
-                        e = MultipartParseError(msg)
-                        e.offset = i
-                        raise e
+                        raise MultipartParseError(msg, offset=i)
 
                     index += 1
 
@@ -1141,9 +1134,7 @@ class MultipartParser(BaseParser):
                     if c != LF:
                         msg = "Did not find LF at end of boundary (%d)" % (i,)
                         self.logger.warning(msg)
-                        e = MultipartParseError(msg)
-                        e.offset = i
-                        raise e
+                        raise MultipartParseError(msg, offset=i)
 
                     # The index is now used for indexing into our boundary.
                     index = 0
@@ -1159,9 +1150,7 @@ class MultipartParser(BaseParser):
                     if c != boundary[index + 2]:
                         msg = "Expected boundary character %r, got %r at index %d" % (boundary[index + 2], c, index + 2)
                         self.logger.warning(msg)
-                        e = MultipartParseError(msg)
-                        e.offset = i
-                        raise e
+                        raise MultipartParseError(msg, offset=i)
 
                     # Increment index into boundary and continue.
                     index += 1
@@ -1204,9 +1193,7 @@ class MultipartParser(BaseParser):
                     if index == 1:
                         msg = "Found 0-length header at %d" % (i,)
                         self.logger.warning(msg)
-                        e = MultipartParseError(msg)
-                        e.offset = i
-                        raise e
+                        raise MultipartParseError(msg, offset=i)
 
                     # Call our callback with the header field.
                     data_callback("header_field", i)
@@ -1217,9 +1204,7 @@ class MultipartParser(BaseParser):
                 elif c not in TOKEN_CHARS_SET:
                     msg = "Found invalid character %r in header at %d" % (c, i)
                     self.logger.warning(msg)
-                    e = MultipartParseError(msg)
-                    e.offset = i
-                    raise e
+                    raise MultipartParseError(msg, offset=i)
 
             elif state == MultipartState.HEADER_VALUE_START:
                 # Skip leading spaces.
@@ -1247,9 +1232,7 @@ class MultipartParser(BaseParser):
                 if c != LF:
                     msg = f"Did not find LF character at end of header (found {c!r})"
                     self.logger.warning(msg)
-                    e = MultipartParseError(msg)
-                    e.offset = i
-                    raise e
+                    raise MultipartParseError(msg, offset=i)
 
                 # Move back to the start of another header.  Note that if that
                 # state detects ANOTHER newline, it'll trigger the end of our
@@ -1263,9 +1246,7 @@ class MultipartParser(BaseParser):
                 if c != LF:
                     msg = f"Did not find LF at end of headers (found {c!r})"
                     self.logger.warning(msg)
-                    e = MultipartParseError(msg)
-                    e.offset = i
-                    raise e
+                    raise MultipartParseError(msg, offset=i)
 
                 self.callback("headers_finished")
                 state = MultipartState.PART_DATA_START
@@ -1409,9 +1390,7 @@ class MultipartParser(BaseParser):
                     if c != HYPHEN:
                         msg = "Did not find - at end of boundary (%d)" % (i,)
                         self.logger.warning(msg)
-                        e = MultipartParseError(msg)
-                        e.offset = i
-                        raise e
+                        raise MultipartParseError(msg, offset=i)
                     index += 1
                     self.callback("end")
                     state = MultipartState.END
@@ -1426,9 +1405,7 @@ class MultipartParser(BaseParser):
                 # We got into a strange state somehow!  Just stop processing.
                 msg = "Reached an unknown state %d at %d" % (state, i)
                 self.logger.warning(msg)
-                e = MultipartParseError(msg)
-                e.offset = i
-                raise e
+                raise MultipartParseError(msg, offset=i)
 
             # Move to the next byte.
             i += 1
