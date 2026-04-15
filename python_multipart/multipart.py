@@ -143,7 +143,10 @@ TOKEN_CHARS_SET = frozenset(
 # fmt: on
 
 DEFAULT_MAX_HEADER_COUNT = 8
+"""Default maximum number of headers allowed per multipart part."""
+
 DEFAULT_MAX_HEADER_SIZE = 4096 + 128
+"""Default maximum size of a single multipart header line, including syntax overhead."""
 
 
 def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, bytes]]:
@@ -1062,14 +1065,11 @@ class MultipartParser(BaseParser):
         # Our index defaults to 0.
         i = 0
 
-        def raise_parse_error(msg: str, offset: int) -> None:
-            raise MultipartParseError(msg, offset=offset)
-
         def advance_header_size(amount: int = 1) -> None:
             nonlocal current_header_size
             current_header_size += amount
             if current_header_size > self.max_header_size:
-                raise_parse_error("Maximum header size exceeded", i)
+                raise MultipartParseError("Maximum header size exceeded", offset=i)
 
         # Set a mark.
         def set_mark(name: str) -> None:
@@ -1195,7 +1195,7 @@ class MultipartParser(BaseParser):
                 if c != CR:
                     current_header_count += 1
                     if current_header_count > self.max_header_count:
-                        raise_parse_error("Maximum header count exceeded", i)
+                        raise MultipartParseError("Maximum header count exceeded", offset=i)
                     current_header_size = 0
 
                 # Set a mark of our header field.
