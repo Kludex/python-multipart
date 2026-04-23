@@ -36,7 +36,9 @@ jobs:
           oss-fuzz-project-name: "python-multipart"
           language: python
           fuzz-seconds: 600
-          output-sarif: true
+          # Temporarily disable sarif generation due to upstream bug:
+          # index out of range in sarif_utils.py during crash parsing
+          output-sarif: false
 
       - name: Upload Crash
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
@@ -45,9 +47,10 @@ jobs:
           name: artifacts
           path: ./out/artifacts
 
-      - name: Upload Sarif
-        if: always() && steps.build.outcome == 'success'
-        uses: github/codeql-action/upload-sarif@014f16e7ab1402f30e7c3329d33797e7948572db # v4.31.3
-        with:
-          sarif_file: cifuzz-sarif/results.sarif
-          checkout_path: cifuzz-sarif
+      # Temporarily disabled as sarif generation is stopped
+      # - name: Upload Sarif
+      #   if: always() && steps.build.outcome == 'success'
+      #   uses: github/codeql-action/upload-sarif@014f16e7ab1402f30e7c3329d33797e7948572db # v4.31.3
+      #   with:
+      #     sarif_file: cifuzz-sarif/results.sarif
+      #     checkout_path: cifuzz-sarif
