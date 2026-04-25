@@ -171,7 +171,10 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
     # ctype, rest = value.split(b';', 1)
     message = Message()
     message["content-type"] = value
-    params = message.get_params()
+    try:
+        params = message.get_params()
+    except ValueError:
+        return (value.split(";", 1)[0].lower().strip().encode("latin-1"), {})
     # If there were no parameters, this would have already returned above
     assert params, "At least the content type value should be present"
     ctype = params.pop(0)[0].encode("latin-1")
