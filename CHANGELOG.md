@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.27 (2026-04-27)
+
+* Add multipart header limits [#267](https://github.com/Kludex/python-multipart/pull/267).
+* Pass parse offsets via constructors [#268](https://github.com/Kludex/python-multipart/pull/268).
+
 ## 0.0.26 (2026-04-10)
 
 * Skip preamble before the first multipart boundary more efficiently [#262](https://github.com/Kludex/python-multipart/pull/262).
