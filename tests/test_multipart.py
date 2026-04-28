@@ -304,17 +304,17 @@ class TestParseOptionsHeader(unittest.TestCase):
 
         self.assertEqual(p[b"param"], b"encoded message")
 
-    def test_handles_oversized_rfc_2231_index(self) -> None:
+    def test_rejects_oversized_rfc_2231_index(self) -> None:
         t, p = parse_options_header("text/plain; filename*" + ("1" * 4301) + "*=utf-8''x")
 
-        self.assertEqual(t, b"text/plain; filename*" + (b"1" * 4301) + b"*=utf-8''x")
+        self.assertEqual(t, b"text/plain")
         self.assertEqual(p, {})
 
-    def test_handles_mixed_rfc_2231_continuations(self) -> None:
+    def test_rejects_mixed_rfc_2231_continuations(self) -> None:
         t, p = parse_options_header("text/plain; filename*=utf-8''a; filename*0*=utf-8''b")
 
-        self.assertIn(t, (b"text/plain", b"text/plain; filename*=utf-8''a; filename*0*=utf-8''b"))
-        self.assertIn(p, ({}, {b"filename": b"b"}))
+        self.assertEqual(t, b"text/plain")
+        self.assertEqual(p, {})
 
 
 class TestBaseParser(unittest.TestCase):
