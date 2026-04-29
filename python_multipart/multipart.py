@@ -167,11 +167,26 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
     if ";" not in value:
         return (value.lower().strip().encode("latin-1"), {})
 
+    ctype_part, params_part = value.split(";", 1)
+
+    # Pre check for mixed RFC2231 parameter continuations (e.g., `filename*` and `filename*0*`).
+    # email.message.Message.get_params() handles these maliciously formed headers
+    # differently in Python 3.12 vs 3.13. We validate them here to ensure consistent behavior.
+    param_names = [p.split("=", 1)[0].strip().lower() for p in params_part.split(";") if "=" in p]
+    for name in param_names:
+        if "*" in name:
+            base, _, rest = name.partition("*")
+            if rest.rstrip("*").isdigit() and f"{base}*" in param_names:
+                return (ctype_part.lower().strip().encode("latin-1"), {})
+
     # Split at the first semicolon, to get our value and then options.
     # ctype, rest = value.split(b';', 1)
     message = Message()
     message["content-type"] = value
-    params = message.get_params()
+    try:
+        params = message.get_params()
+    except (TypeError, ValueError):
+        return (ctype_part.lower().strip().encode("latin-1"), {})
     # If there were no parameters, this would have already returned above
     assert params, "At least the content type value should be present"
     ctype = params.pop(0)[0].encode("latin-1")
