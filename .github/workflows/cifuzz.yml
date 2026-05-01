@@ -25,13 +25,13 @@ jobs:
     steps:
       - name: Build Fuzzers
         id: build
-        uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@675ddfb89ae1c614f1dfa99d18b91cd6d1d6b88b # master 2026-04-10
+        uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@9ff5089dbb11800055b6bc1af919a84b06dee2c8 # master 2026-04-27
         with:
           oss-fuzz-project-name: "python-multipart"
           language: python
 
       - name: Run Fuzzers
-        uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@675ddfb89ae1c614f1dfa99d18b91cd6d1d6b88b # master 2026-04-10
+        uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@9ff5089dbb11800055b6bc1af919a84b06dee2c8 # master 2026-04-27
         with:
           oss-fuzz-project-name: "python-multipart"
           language: python
