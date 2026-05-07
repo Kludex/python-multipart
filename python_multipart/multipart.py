@@ -149,6 +149,27 @@ DEFAULT_MAX_HEADER_SIZE = 4096 + 128
 """Default maximum size of a single multipart header line, including syntax overhead."""
 
 
+def _split_mime_parameters(value: str) -> list[str]:
+    """Split a MIME parameter string on semicolons that are outside quoted strings."""
+    parts: list[str] = []
+    start = 0
+    in_quotes = False
+    i = 0
+    while i < len(value):
+        c = value[i]
+        if in_quotes and c == "\\":
+            i += 2  # skip the escaped character
+            continue
+        if c == '"':
+            in_quotes = not in_quotes
+        elif c == ";" and not in_quotes:
+            parts.append(value[start:i])
+            start = i + 1
+        i += 1
+    parts.append(value[start:])
+    return parts
+
+
 def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, bytes]]:
     """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
     # Uses email.message.Message to parse the header as described in PEP 594.
@@ -169,10 +190,11 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
 
     ctype_part, params_part = value.split(";", 1)
 
-    # Pre check for mixed RFC2231 parameter continuations (e.g., `filename*` and `filename*0*`).
+    # Pre-check for mixed RFC2231 parameter continuations (e.g., `filename*` and `filename*0*`).
     # email.message.Message.get_params() handles these maliciously formed headers
     # differently in Python 3.12 vs 3.13. We validate them here to ensure consistent behavior.
-    param_names = [p.split("=", 1)[0].strip().lower() for p in params_part.split(";") if "=" in p]
+    # _split_mime_parameters is used to avoid false positives from semicolons inside quoted values.
+    param_names = [p.split("=", 1)[0].strip().lower() for p in _split_mime_parameters(params_part) if "=" in p]
     for name in param_names:
         if "*" in name:
             base, _, rest = name.partition("*")
