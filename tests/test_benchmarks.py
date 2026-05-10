@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import string
+from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 import pytest
@@ -79,30 +80,37 @@ WORSTCASE_BCHAR_CHUNKS = split(WORSTCASE_BCHAR)
 URLENCODED_LARGE = b"&".join(f"field{i}={'v' * 64}".encode() for i in range(100))
 
 
-def parse_multipart(chunks: list[bytes]) -> None:
+@pytest.fixture
+def multipart_parser() -> Iterator[MultipartParser]:
     parser = MultipartParser(BOUNDARY, MULTIPART_CALLBACKS)
-    for chunk in chunks:
-        parser.write(chunk)
+    yield parser
     parser.finalize()
 
 
-def test_multipart_simple_form() -> None:
-    parse_multipart([SIMPLE_FORM])
-
-
-def test_multipart_large_form() -> None:
-    parse_multipart([LARGE_FORM])
-
-
-def test_multipart_file_upload() -> None:
-    parse_multipart(FILE_UPLOAD_CHUNKS)
-
-
-def test_multipart_worstcase_boundary_chars() -> None:
-    parse_multipart(WORSTCASE_BCHAR_CHUNKS)
-
-
-def test_querystring_large_form() -> None:
+@pytest.fixture
+def querystring_parser() -> Iterator[QuerystringParser]:
     parser = QuerystringParser(QUERYSTRING_CALLBACKS)
-    parser.write(URLENCODED_LARGE)
+    yield parser
     parser.finalize()
+
+
+def test_multipart_simple_form(multipart_parser: MultipartParser) -> None:
+    multipart_parser.write(SIMPLE_FORM)
+
+
+def test_multipart_large_form(multipart_parser: MultipartParser) -> None:
+    multipart_parser.write(LARGE_FORM)
+
+
+def test_multipart_file_upload(multipart_parser: MultipartParser) -> None:
+    for chunk in FILE_UPLOAD_CHUNKS:
+        multipart_parser.write(chunk)
+
+
+def test_multipart_worstcase_boundary_chars(multipart_parser: MultipartParser) -> None:
+    for chunk in WORSTCASE_BCHAR_CHUNKS:
+        multipart_parser.write(chunk)
+
+
+def test_querystring_large_form(querystring_parser: QuerystringParser) -> None:
+    querystring_parser.write(URLENCODED_LARGE)
