@@ -1,35 +1,44 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 from python_multipart import MultipartParser, QuerystringParser
+
+if TYPE_CHECKING:
+    from python_multipart.multipart import MultipartCallbacks, QuerystringCallbacks
 
 pytestmark = pytest.mark.benchmark
 
 BOUNDARY = b"----python-multipart-benchmark"
 
 
-def _noop(*_args: object, **_kwargs: object) -> None:
+def _on_event() -> None:
     pass
 
 
-_MULTIPART_CALLBACKS = {
-    "on_part_begin": _noop,
-    "on_part_data": _noop,
-    "on_part_end": _noop,
-    "on_header_field": _noop,
-    "on_header_value": _noop,
-    "on_header_end": _noop,
-    "on_headers_finished": _noop,
-    "on_end": _noop,
+def _on_data(_data: bytes, _start: int, _end: int) -> None:
+    pass
+
+
+_MULTIPART_CALLBACKS: MultipartCallbacks = {
+    "on_part_begin": _on_event,
+    "on_part_data": _on_data,
+    "on_part_end": _on_event,
+    "on_header_field": _on_data,
+    "on_header_value": _on_data,
+    "on_header_end": _on_event,
+    "on_headers_finished": _on_event,
+    "on_end": _on_event,
 }
 
-_QUERYSTRING_CALLBACKS = {
-    "on_field_start": _noop,
-    "on_field_name": _noop,
-    "on_field_data": _noop,
-    "on_field_end": _noop,
-    "on_end": _noop,
+_QUERYSTRING_CALLBACKS: QuerystringCallbacks = {
+    "on_field_start": _on_event,
+    "on_field_name": _on_data,
+    "on_field_data": _on_data,
+    "on_field_end": _on_event,
+    "on_end": _on_event,
 }
 
 
