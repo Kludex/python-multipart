@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "codspeed@codspeed-plugin-marketplace": true
+  }
+}
