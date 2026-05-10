@@ -75,7 +75,7 @@ SIMPLE_FORM = build_form(
 LARGE_FORM = build_form([build_part(f"field{i}".encode(), pattern(PRINTABLE, i)) for i in range(100)])
 FILE_UPLOAD = build_form([build_part(b"file", pattern(PRINTABLE, 8 * 1024 * 1024), filename=b"file.bin")])
 FILE_UPLOAD_CHUNKS = split(FILE_UPLOAD)
-WORSTCASE_BCHAR = build_form([build_part(b"file", pattern(BOUNDARY[:1], 1024 * 1024), filename=b"file.bin")])
+WORSTCASE_BCHAR = build_form([build_part(b"file", pattern(b"\r\n", 1024 * 1024), filename=b"file.bin")])
 WORSTCASE_BCHAR_CHUNKS = split(WORSTCASE_BCHAR)
 
 LONG_BOUNDARY = b"-" * 16 + b"x" * (16 * 1024 - 16)
