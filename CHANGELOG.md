@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.28 (2026-05-10)
+
+* Speed up partial-boundary tail scan via `bytes.find` [#281](https://github.com/Kludex/python-multipart/pull/281).
+* Cap multipart boundary length at 256 bytes [#282](https://github.com/Kludex/python-multipart/pull/282).
+
 ## 0.0.27 (2026-04-27)
 
 * Add multipart header limits [#267](https://github.com/Kludex/python-multipart/pull/267).
