@@ -148,6 +148,14 @@ DEFAULT_MAX_HEADER_COUNT = 8
 DEFAULT_MAX_HEADER_SIZE = 4096 + 128
 """Default maximum size of a single multipart header line, including syntax overhead."""
 
+MAX_BOUNDARY_LENGTH = 256
+"""Maximum allowed length of a multipart boundary.
+
+[RFC 2046 §5.1.1](https://datatracker.ietf.org/doc/html/rfc2046#section-5.1.1)
+recommends boundaries be at most 70 bytes. 256 bytes is generous headroom over
+every HTTP client.
+"""
+
 
 def _split_mime_parameters(value: str) -> list[str]:
     """Split a MIME parameter string on semicolons that are outside quoted strings."""
@@ -1049,6 +1057,8 @@ class MultipartParser(BaseParser):
         # Save our boundary.
         if isinstance(boundary, str):  # pragma: no cover
             boundary = boundary.encode("latin-1")
+        if len(boundary) > MAX_BOUNDARY_LENGTH:
+            raise FormParserError(f"Boundary length {len(boundary)} exceeds maximum of {MAX_BOUNDARY_LENGTH}")
         self.boundary = b"\r\n--" + boundary
 
     def write(self, data: bytes) -> int:
@@ -1369,14 +1379,12 @@ class MultipartParser(BaseParser):
                         # No match found for whole string.
                         # There may be a partial boundary at the end of the
                         # data, which the find will not match.
-                        # Since the length should to be searched is limited to
-                        # the boundary length, just perform a naive search.
+                        # Since the length to be searched is limited to the
+                        # boundary length, scan the tail for boundary[0] via
+                        # bytes.find (C-level) to keep cost off the Python loop.
                         i = max(i, data_length - boundary_length)
-
-                        # Search forward until we either hit the end of our buffer,
-                        # or reach a potential start of the boundary.
-                        while i < data_length - 1 and data[i] != boundary[0]:
-                            i += 1
+                        j = data.find(boundary[:1], i, data_length - 1)
+                        i = j if j >= 0 else data_length - 1
 
                     c = data[i]
 
