@@ -75,14 +75,36 @@ SIMPLE_FORM = build_form(
 LARGE_FORM = build_form([build_part(f"field{i}".encode(), pattern(PRINTABLE, i)) for i in range(100)])
 FILE_UPLOAD = build_form([build_part(b"file", pattern(PRINTABLE, 8 * 1024 * 1024), filename=b"file.bin")])
 FILE_UPLOAD_CHUNKS = split(FILE_UPLOAD)
-WORSTCASE_BCHAR = build_form([build_part(b"file", pattern(b"Wqcl", 1024 * 1024), filename=b"file.bin")])
+WORSTCASE_BCHAR = build_form([build_part(b"file", pattern(BOUNDARY[:1], 1024 * 1024), filename=b"file.bin")])
 WORSTCASE_BCHAR_CHUNKS = split(WORSTCASE_BCHAR)
+
+LONG_BOUNDARY = b"-" * 16 + b"x" * (16 * 1024 - 16)
+LONG_BOUNDARY_BODY = (
+    b"--"
+    + LONG_BOUNDARY
+    + b"\r\n"
+    + b'Content-Disposition: form-data; name="file"; filename="file.bin"\r\n'
+    + b"Content-Type: application/octet-stream\r\n\r\n"
+    + pattern(PRINTABLE, 2 * 1024 * 1024)
+    + b"\r\n--"
+    + LONG_BOUNDARY
+    + b"--\r\n"
+)
+LONG_BOUNDARY_CHUNKS = split(LONG_BOUNDARY_BODY, 16 * 1024)
+
 URLENCODED_LARGE = b"&".join(f"field{i}={'v' * 64}".encode() for i in range(100))
 
 
 @pytest.fixture
 def multipart_parser() -> Iterator[MultipartParser]:
     parser = MultipartParser(BOUNDARY, MULTIPART_CALLBACKS)
+    yield parser
+    parser.finalize()
+
+
+@pytest.fixture
+def long_boundary_parser() -> Iterator[MultipartParser]:
+    parser = MultipartParser(LONG_BOUNDARY, MULTIPART_CALLBACKS)
     yield parser
     parser.finalize()
 
@@ -110,6 +132,11 @@ def test_multipart_file_upload(multipart_parser: MultipartParser) -> None:
 def test_multipart_worstcase_boundary_chars(multipart_parser: MultipartParser) -> None:
     for chunk in WORSTCASE_BCHAR_CHUNKS:
         multipart_parser.write(chunk)
+
+
+def test_multipart_long_boundary(long_boundary_parser: MultipartParser) -> None:
+    for chunk in LONG_BOUNDARY_CHUNKS:
+        long_boundary_parser.write(chunk)
 
 
 def test_querystring_large_form(querystring_parser: QuerystringParser) -> None:
