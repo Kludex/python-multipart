@@ -85,7 +85,7 @@ LONG_BOUNDARY_BODY = (
     + b"\r\n"
     + b'Content-Disposition: form-data; name="file"; filename="file.bin"\r\n'
     + b"Content-Type: application/octet-stream\r\n\r\n"
-    + pattern(PRINTABLE, 2 * 1024 * 1024)
+    + pattern(b"abcdefgh", 8 * 1024 * 1024)
     + b"\r\n--"
     + LONG_BOUNDARY
     + b"--\r\n"
