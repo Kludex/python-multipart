@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import string
 from typing import TYPE_CHECKING
 
 import pytest
@@ -11,7 +12,8 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.benchmark
 
-BOUNDARY = b"----python-multipart-benchmark"
+BOUNDARY = b"------------------------WqclBHaXe8KIsoSum4zfZ6"
+CHUNK_SIZE = 64 * 1024
 
 
 def _on_event() -> None:
@@ -42,67 +44,65 @@ _QUERYSTRING_CALLBACKS: QuerystringCallbacks = {
 }
 
 
-def _build_multipart_form(parts: list[tuple[bytes, bytes, bytes | None]]) -> bytes:
-    chunks: list[bytes] = []
-    for name, data, filename in parts:
-        chunks.append(b"--" + BOUNDARY + b"\r\n")
-        disposition = b'Content-Disposition: form-data; name="' + name + b'"'
-        if filename is not None:
-            disposition += b'; filename="' + filename + b'"'
-        chunks.append(disposition + b"\r\n")
-        if filename is not None:
-            chunks.append(b"Content-Type: application/octet-stream\r\n")
-        chunks.append(b"\r\n")
-        chunks.append(data)
-        chunks.append(b"\r\n")
-    chunks.append(b"--" + BOUNDARY + b"--\r\n")
-    return b"".join(chunks)
+def _pattern(pat: bytes, size: int) -> bytes:
+    return (pat * (size // len(pat) + 1))[:size]
 
 
-def _split(data: bytes, chunk_size: int) -> list[bytes]:
+def _build_part(name: bytes, body: bytes, *, filename: bytes | None = None) -> bytes:
+    disposition = b'form-data; name="' + name + b'"'
+    if filename is not None:
+        disposition += b'; filename="' + filename + b'"'
+    headers = b"Content-Disposition: " + disposition + b"\r\n"
+    if filename is not None:
+        headers += b"Content-Type: application/octet-stream\r\n"
+    return b"--" + BOUNDARY + b"\r\n" + headers + b"\r\n" + body
+
+
+def _build_form(parts: list[bytes]) -> bytes:
+    return b"\r\n".join(parts) + b"\r\n--" + BOUNDARY + b"--\r\n"
+
+
+def _split(data: bytes, chunk_size: int = CHUNK_SIZE) -> list[bytes]:
     return [data[i : i + chunk_size] for i in range(0, len(data), chunk_size)]
 
 
-_SMALL_FORM = _build_multipart_form([(b"username", b"alice", None), (b"password", b"hunter2", None)])
-_FILE_UPLOAD = _build_multipart_form([(b"upload", b"A" * (2 * 1024 * 1024), b"big.bin")])
-_FILE_UPLOAD_CHUNKS = _split(_FILE_UPLOAD, 64 * 1024)
-_MIXED_FORM = _build_multipart_form(
-    [(b"title", b"hello world", None), (b"description", b"x" * 4096, None), (b"upload", b"A" * 256 * 1024, b"img.bin")]
+_PRINTABLE = string.printable.encode("ascii")
+
+_SIMPLE_FORM = _build_form(
+    [_build_part(b"email", _pattern(_PRINTABLE, 24)), _build_part(b"password", _pattern(_PRINTABLE, 16))]
 )
-_MIXED_FORM_CHUNKS = _split(_MIXED_FORM, 64 * 1024)
-_URLENCODED_SMALL = b"username=alice&password=hunter2&remember=on"
-_URLENCODED_LARGE = b"&".join(f"field{i}={'v' * 64}".encode() for i in range(256))
-_URLENCODED_LARGE_CHUNKS = _split(_URLENCODED_LARGE, 64)
+_LARGE_FORM = _build_form([_build_part(f"field{i}".encode(), _pattern(_PRINTABLE, i)) for i in range(100)])
+_FILE_UPLOAD = _build_form([_build_part(b"file", _pattern(_PRINTABLE, 8 * 1024 * 1024), filename=b"file.bin")])
+_FILE_UPLOAD_CHUNKS = _split(_FILE_UPLOAD)
+_WORSTCASE_BCHAR = _build_form([_build_part(b"file", _pattern(b"Wqcl", 1024 * 1024), filename=b"file.bin")])
+_WORSTCASE_BCHAR_CHUNKS = _split(_WORSTCASE_BCHAR)
+_URLENCODED_LARGE = b"&".join(f"field{i}={'v' * 64}".encode() for i in range(100))
 
 
-def test_multipart_small_form() -> None:
+def _parse_multipart(chunks: list[bytes]) -> None:
     parser = MultipartParser(BOUNDARY, _MULTIPART_CALLBACKS)
-    parser.write(_SMALL_FORM)
+    for chunk in chunks:
+        parser.write(chunk)
     parser.finalize()
+
+
+def test_multipart_simple_form() -> None:
+    _parse_multipart([_SIMPLE_FORM])
+
+
+def test_multipart_large_form() -> None:
+    _parse_multipart([_LARGE_FORM])
 
 
 def test_multipart_file_upload() -> None:
-    parser = MultipartParser(BOUNDARY, _MULTIPART_CALLBACKS)
-    for chunk in _FILE_UPLOAD_CHUNKS:
-        parser.write(chunk)
-    parser.finalize()
+    _parse_multipart(_FILE_UPLOAD_CHUNKS)
 
 
-def test_multipart_mixed_form() -> None:
-    parser = MultipartParser(BOUNDARY, _MULTIPART_CALLBACKS)
-    for chunk in _MIXED_FORM_CHUNKS:
-        parser.write(chunk)
-    parser.finalize()
+def test_multipart_worstcase_boundary_chars() -> None:
+    _parse_multipart(_WORSTCASE_BCHAR_CHUNKS)
 
 
-def test_urlencoded_small_form() -> None:
+def test_querystring_large_form() -> None:
     parser = QuerystringParser(_QUERYSTRING_CALLBACKS)
-    parser.write(_URLENCODED_SMALL)
-    parser.finalize()
-
-
-def test_urlencoded_large_form_fragmented() -> None:
-    parser = QuerystringParser(_QUERYSTRING_CALLBACKS)
-    for chunk in _URLENCODED_LARGE_CHUNKS:
-        parser.write(chunk)
+    parser.write(_URLENCODED_LARGE)
     parser.finalize()
