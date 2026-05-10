@@ -148,6 +148,14 @@ DEFAULT_MAX_HEADER_COUNT = 8
 DEFAULT_MAX_HEADER_SIZE = 4096 + 128
 """Default maximum size of a single multipart header line, including syntax overhead."""
 
+MAX_BOUNDARY_LENGTH = 256
+"""Maximum allowed length of a multipart boundary.
+
+[RFC 2046 §5.1.1](https://datatracker.ietf.org/doc/html/rfc2046#section-5.1.1)
+recommends boundaries be at most 70 bytes. 256 bytes is generous headroom over
+every HTTP client.
+"""
+
 
 def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, bytes]]:
     """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
@@ -1012,6 +1020,8 @@ class MultipartParser(BaseParser):
         # Save our boundary.
         if isinstance(boundary, str):  # pragma: no cover
             boundary = boundary.encode("latin-1")
+        if len(boundary) > MAX_BOUNDARY_LENGTH:
+            raise FormParserError(f"Boundary length {len(boundary)} exceeds maximum of {MAX_BOUNDARY_LENGTH}")
         self.boundary = b"\r\n--" + boundary
 
     def write(self, data: bytes) -> int:

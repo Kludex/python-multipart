@@ -1514,6 +1514,12 @@ class TestFormParser(unittest.TestCase):
         with self.assertRaises(ValueError):
             MultipartParser(b"bound", max_size="foo")  # type: ignore[arg-type]
 
+    def test_boundary_too_long(self) -> None:
+        with self.assertRaisesRegex(FormParserError, "Boundary length 257 exceeds maximum of 256"):
+            MultipartParser(b"x" * 257)
+        # 256 should be accepted.
+        MultipartParser(b"x" * 256)
+
     def test_header_begin_callback(self) -> None:
         """
         This test verifies we call the `on_header_begin` callback.
