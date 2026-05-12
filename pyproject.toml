@@ -59,6 +59,9 @@ dev = [
     "pymdown-extensions>=10.21.2",
 ]
 
+[tool.uv]
+exclude-newer = "7 days"
+
 [tool.uv.pip]
 reinstall-package = ["python-multipart"]
 
