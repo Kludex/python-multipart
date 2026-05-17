@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.29 (2026-05-17)
+
+* Handle malformed RFC 2231 continuations in `parse_options_header` [#270](https://github.com/Kludex/python-multipart/pull/270).
+
 ## 0.0.28 (2026-05-10)
 
 * Speed up partial-boundary tail scan via `bytes.find` [#281](https://github.com/Kludex/python-multipart/pull/281).
