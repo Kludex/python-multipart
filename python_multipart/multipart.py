@@ -157,27 +157,6 @@ every HTTP client.
 """
 
 
-def _split_mime_parameters(value: str) -> list[str]:
-    """Split a MIME parameter string on semicolons that are outside quoted strings."""
-    parts: list[str] = []
-    start = 0
-    in_quotes = False
-    i = 0
-    while i < len(value):
-        c = value[i]
-        if in_quotes and c == "\\":
-            i += 2  # skip the escaped character
-            continue
-        if c == '"':
-            in_quotes = not in_quotes
-        elif c == ";" and not in_quotes:
-            parts.append(value[start:i])
-            start = i + 1
-        i += 1
-    parts.append(value[start:])
-    return parts
-
-
 def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, bytes]]:
     """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
     # Uses email.message.Message to parse the header as described in PEP 594.
@@ -196,27 +175,19 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
     if ";" not in value:
         return (value.lower().strip().encode("latin-1"), {})
 
-    ctype_part, params_part = value.split(";", 1)
-
-    # Pre-check for mixed RFC2231 parameter continuations (e.g., `filename*` and `filename*0*`).
-    # email.message.Message.get_params() handles these maliciously formed headers
-    # differently in Python 3.12 vs 3.13. We validate them here to ensure consistent behavior.
-    # _split_mime_parameters is used to avoid false positives from semicolons inside quoted values.
-    param_names = [p.split("=", 1)[0].strip().lower() for p in _split_mime_parameters(params_part) if "=" in p]
-    for name in param_names:
-        if "*" in name:
-            base, _, rest = name.partition("*")
-            if rest.rstrip("*").isdigit() and f"{base}*" in param_names:
-                return (ctype_part.lower().strip().encode("latin-1"), {})
-
     # Split at the first semicolon, to get our value and then options.
     # ctype, rest = value.split(b';', 1)
     message = Message()
     message["content-type"] = value
+    # `get_params()` can raise on malformed RFC 2231 headers found via fuzzing:
+    # - ValueError on oversized continuation indices (all supported versions).
+    # - TypeError on mixed `filename*` + `filename*0*` continuations (Python 3.12 only;
+    #   3.13+ silently picks a value).
+    # TODO: drop `TypeError` once Python 3.12 reaches EOL (October 2028).
     try:
         params = message.get_params()
-    except (TypeError, ValueError):
-        return (ctype_part.lower().strip().encode("latin-1"), {})
+    except (TypeError, ValueError):  # pragma: no cover
+        return (value.split(";", 1)[0].lower().strip().encode("latin-1"), {})
     # If there were no parameters, this would have already returned above
     assert params, "At least the content type value should be present"
     ctype = params.pop(0)[0].encode("latin-1")
