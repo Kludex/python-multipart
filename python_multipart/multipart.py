@@ -179,7 +179,15 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
     # ctype, rest = value.split(b';', 1)
     message = Message()
     message["content-type"] = value
-    params = message.get_params()
+    # `get_params()` can raise on malformed RFC 2231 headers found via fuzzing:
+    # - ValueError on oversized continuation indices (all supported versions).
+    # - TypeError on mixed `filename*` + `filename*0*` continuations (Python 3.12 only;
+    #   3.13+ silently picks a value).
+    # TODO: drop `TypeError` once Python 3.12 reaches EOL (October 2028).
+    try:
+        params = message.get_params()
+    except (TypeError, ValueError):  # pragma: no cover
+        return (value.split(";", 1)[0].lower().strip().encode("latin-1"), {})
     # If there were no parameters, this would have already returned above
     assert params, "At least the content type value should be present"
     ctype = params.pop(0)[0].encode("latin-1")
