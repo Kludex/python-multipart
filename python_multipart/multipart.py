@@ -5,7 +5,6 @@ import os
 import shutil
 import sys
 import tempfile
-from email.message import Message
 from enum import IntEnum
 from io import BufferedRandom, BytesIO
 from numbers import Number
@@ -156,10 +155,37 @@ every HTTP client.
 """
 
 
+def _parseparam(s: str) -> list[str]:
+    # Vendored from the standard library's
+    # [`email.message._parseparam`](https://github.com/python/cpython/blob/v3.14.2/Lib/email/message.py#L73-L96)
+    # to split a header into its `;`-separated parts without treating a `;` inside a double-quoted string as a
+    # separator - and without the RFC 2231 decoding that `email.message.Message.get_params` would apply on top.
+    s = ";" + s
+    plist: list[str] = []
+    start = 0
+    while s.find(";", start) == start:
+        start += 1
+        end = s.find(";", start)
+        ind, diff = start, 0
+        while end > 0:
+            diff += s.count('"', ind, end) - s.count('\\"', ind, end)
+            if diff % 2 == 0:
+                break
+            end, ind = ind, s.find(";", end + 1)
+        if end < 0:
+            end = len(s)
+        i = s.find("=", start, end)
+        if i == -1:
+            f = s[start:end]
+        else:
+            f = s[start:i].rstrip().lower() + "=" + s[i + 1 : end].lstrip()
+        plist.append(f.strip())
+        start = end
+    return plist
+
+
 def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, bytes]]:
     """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
-    # Uses email.message.Message to parse the header as described in PEP 594.
-    # Ref: https://peps.python.org/pep-0594/#cgi
     if not value:
         return (b"", {})
 
@@ -174,37 +200,24 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
     if ";" not in value:
         return (value.lower().strip().encode("latin-1"), {})
 
-    # Split at the first semicolon, to get our value and then options.
-    # ctype, rest = value.split(b';', 1)
-    message = Message()
-    message["content-type"] = value
-    # `get_params()` can raise on malformed RFC 2231 headers found via fuzzing:
-    # - ValueError on oversized continuation indices (all supported versions).
-    # - TypeError on mixed `filename*` + `filename*0*` continuations (Python 3.12 only;
-    #   3.13+ silently picks a value).
-    # TODO: drop `TypeError` once Python 3.12 reaches EOL (October 2028).
-    try:
-        params = message.get_params()
-    except (TypeError, ValueError):  # pragma: no cover
-        return (value.split(";", 1)[0].lower().strip().encode("latin-1"), {})
-    # If there were no parameters, this would have already returned above
-    assert params, "At least the content type value should be present"
-    ctype = params.pop(0)[0].encode("latin-1")
+    ctype, *segments = _parseparam(value)
     options: dict[bytes, bytes] = {}
-    for param in params:
-        key, value = param
-        # If the value returned from get_params() is a 3-tuple, the last
-        # element corresponds to the value.
-        # See: https://docs.python.org/3/library/email.compat32-message.html
-        if isinstance(value, tuple):
-            value = value[-1]
-        # If the value is a filename, we need to fix a bug on IE6 that sends
-        # the full file path instead of the filename.
-        if key == "filename":
-            if value[1:3] == ":\\" or value[:2] == "\\\\":
-                value = value.split("\\")[-1]
-        options[key.encode("latin-1")] = value.encode("latin-1")
-    return ctype, options
+    for segment in segments:
+        key, _, val = segment.partition("=")
+        # [RFC 7578 §4.2](https://datatracker.ietf.org/doc/html/rfc7578#section-4.2)
+        # forbids the RFC 5987/2231 extended syntax (`key*=`, `key*0`, ...) in
+        # multipart/form-data, so we ignore those parameters and keep the plain
+        # `key` authoritative.
+        if "*" in key:
+            continue
+        if len(val) >= 2 and val[0] == '"' and val[-1] == '"':
+            val = val[1:-1].replace("\\\\", "\\").replace('\\"', '"')
+        # Work around an IE6 bug where the full file path is sent instead of
+        # just the filename.
+        if key == "filename" and (val[1:3] == ":\\" or val[:2] == "\\\\"):
+            val = val.split("\\")[-1]
+        options[key.encode("latin-1")] = val.encode("latin-1")
+    return ctype.encode("latin-1"), options
 
 
 class Field:
