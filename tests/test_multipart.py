@@ -428,10 +428,10 @@ class TestQuerystringParser(unittest.TestCase):
         self.p.write(b"f=baz")
         self.assert_fields((b"asdf", b"baz"))
 
-    def test_semicolon_separator(self) -> None:
-        self.p.write(b"foo=bar;asdf=baz")
+    def test_semicolon_is_data_not_a_field_separator(self) -> None:
+        self.p.write(b"role=user&x=;role=admin")
 
-        self.assert_fields((b"foo", b"bar"), (b"asdf", b"baz"))
+        self.assert_fields((b"role", b"user"), (b"x", b";role=admin"))
 
     def test_too_large_field(self) -> None:
         self.p.max_size = 15

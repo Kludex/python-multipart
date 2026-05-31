@@ -126,7 +126,6 @@ COLON = b":"[0]
 SPACE = b" "[0]
 HYPHEN = b"-"[0]
 AMPERSAND = b"&"[0]
-SEMICOLON = b";"[0]
 LOWER_A = b"a"[0]
 LOWER_Z = b"z"[0]
 NULL = b"\x00"[0]
@@ -840,13 +839,13 @@ class QuerystringParser(BaseParser):
                 # yet reached a separator, and thus, if we do, we need to skip
                 # it as it will be the boundary between fields that's supposed
                 # to be there.
-                if ch == AMPERSAND or ch == SEMICOLON:
+                if ch == AMPERSAND:
                     if found_sep:
                         # If we're parsing strictly, we disallow blank chunks.
                         if strict_parsing:
-                            raise QuerystringParseError("Skipping duplicate ampersand/semicolon at %d" % i, offset=i)
+                            raise QuerystringParseError("Skipping duplicate ampersand at %d" % i, offset=i)
                         else:
-                            self.logger.debug("Skipping duplicate ampersand/semicolon at %d", i)
+                            self.logger.debug("Skipping duplicate ampersand at %d", i)
                     else:
                         # This case is when we're skipping the (first)
                         # separator between fields, so we just set our flag
@@ -864,9 +863,7 @@ class QuerystringParser(BaseParser):
             elif state == QuerystringState.FIELD_NAME:
                 # Try and find a separator - we ensure that, if we do, we only
                 # look for the equal sign before it.
-                sep_pos = data.find(b"&", i)
-                if sep_pos == -1:
-                    sep_pos = data.find(b";", i)
+                sep_pos = data.find(b"&", i, length)
 
                 # See if we can find an equals sign in the remaining data.  If
                 # so, we can immediately emit the field name and jump to the
@@ -874,7 +871,7 @@ class QuerystringParser(BaseParser):
                 if sep_pos != -1:
                     equals_pos = data.find(b"=", i, sep_pos)
                 else:
-                    equals_pos = data.find(b"=", i)
+                    equals_pos = data.find(b"=", i, length)
 
                 if equals_pos != -1:
                     # Emit this name.
@@ -921,11 +918,8 @@ class QuerystringParser(BaseParser):
                         i = length
 
             elif state == QuerystringState.FIELD_DATA:
-                # Try finding either an ampersand or a semicolon after this
-                # position.
-                sep_pos = data.find(b"&", i)
-                if sep_pos == -1:
-                    sep_pos = data.find(b";", i)
+                # Try finding an ampersand after this position.
+                sep_pos = data.find(b"&", i, length)
 
                 # If we found it, callback this bit as data and then go back
                 # to expecting to find a field.

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+* Parse `application/x-www-form-urlencoded` bodies per the WHATWG URL standard, treating only `&` as a field separator.
+
 ## 0.0.29 (2026-05-17)
 
 * Handle malformed RFC 2231 continuations in `parse_options_header` [#270](https://github.com/Kludex/python-multipart/pull/270).
