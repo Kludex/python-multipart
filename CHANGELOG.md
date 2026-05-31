@@ -2,8 +2,10 @@
 
 ## Unreleased
 
-* Parse `application/x-www-form-urlencoded` bodies per the WHATWG URL standard, treating only `&` as a field separator.
-* Ignore RFC 2231/5987 extended parameters (`name*`, `filename*`) in `parse_options_header`, keeping the plain parameter authoritative per [RFC 7578 §4.2](https://datatracker.ietf.org/doc/html/rfc7578#section-4.2).
+## 0.0.30 (2026-05-31)
+
+* Parse `application/x-www-form-urlencoded` bodies per the WHATWG URL standard, treating only `&` as a field separator [#290](https://github.com/Kludex/python-multipart/pull/290).
+* Ignore RFC 2231/5987 extended parameters (`name*`, `filename*`) in `parse_options_header`, keeping the plain parameter authoritative per [RFC 7578 §4.2](https://datatracker.ietf.org/doc/html/rfc7578#section-4.2) [#291](https://github.com/Kludex/python-multipart/pull/291).
 
 ## 0.0.29 (2026-05-17)
 
