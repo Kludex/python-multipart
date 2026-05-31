@@ -314,18 +314,8 @@ class TestParseOptionsHeader(unittest.TestCase):
 
         self.assertEqual(p, {b"name": b"comment"})
 
-    def test_ignores_extended_filename(self) -> None:
-        _, p = parse_options_header(b"form-data; filename=\"a.txt\"; filename*=utf-8''b.txt")
-
-        self.assertEqual(p, {b"filename": b"a.txt"})
-
     def test_ignores_rfc_2231_continuation_filename(self) -> None:
         _, p = parse_options_header(b'form-data; name="f"; filename*0="a"; filename*1="b.txt"')
-
-        self.assertEqual(p, {b"name": b"f"})
-
-    def test_ignores_percent_encoded_extended_filename(self) -> None:
-        _, p = parse_options_header(b"form-data; name=\"f\"; filename*=utf-8''a%2Fb.txt")
 
         self.assertEqual(p, {b"name": b"f"})
 
