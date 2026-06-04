@@ -1146,29 +1146,13 @@ class MultipartParser(BaseParser):
             else:
                 self.marks.pop(name, None)
 
-        # For each byte...
+        # For each byte...  Branches are ordered by how often each state is the
+        # active one (boundary and part-data states first), so the hot path walks
+        # fewer comparisons per iteration rather than reading in lifecycle order.
         while i < length:
             c = data[i]
 
-            if state == MultipartState.START:
-                # Skip leading newlines
-                if c == CR or c == LF:
-                    i = data.find(b"-", i)
-                    if i == -1:
-                        # No boundary candidate in this chunk, so ignore the content after the leading CR/LF.
-                        i = length
-                        break
-                    continue
-
-                # index is used as in index into our boundary.  Set to 0.
-                index = 0
-
-                # Move to the next state, but decrement i so that we re-process
-                # this character.
-                state = MultipartState.START_BOUNDARY
-                i -= 1
-
-            elif state == MultipartState.START_BOUNDARY:
+            if state == MultipartState.START_BOUNDARY:
                 # Check to ensure that the last 2 characters in our boundary
                 # are CRLF.
                 if index == boundary_length - 2:
@@ -1209,6 +1193,129 @@ class MultipartParser(BaseParser):
 
                     # Increment index into boundary and continue.
                     index += 1
+
+            elif state == MultipartState.PART_DATA:
+                # We're processing our part data right now.  During this, we
+                # need to efficiently search for our boundary, since any data
+                # on any number of lines can be a part of the current data.
+
+                # Save the current value of our index.  We use this in case we
+                # find part of a boundary, but it doesn't match fully.
+                prev_index = index
+
+                # If our index is 0, we're starting a new part, so start our
+                # search.
+                if index == 0:
+                    # The most common case is likely to be that the whole
+                    # boundary is present in the buffer.
+                    # Calling `find` is much faster than iterating here.
+                    i0 = data.find(boundary, i, length)
+                    if i0 >= 0:
+                        # We matched the whole boundary string.
+                        index = boundary_length - 1
+                        i = i0 + boundary_length - 1
+                        c = data[i]
+                    else:
+                        # No whole boundary, but the tail may hold a partial one
+                        # that completes in the next chunk. Boundary starts with
+                        # CR, which an RFC boundary contains nowhere else, so the
+                        # last CR in the tail is the only candidate prefix start.
+                        k = data.rfind(boundary[:1], max(i, length - boundary_length + 1), length)
+                        if k != -1 and boundary.startswith(data[k:length]):
+                            index = length - k
+                        # Carry the partial via index; the end-of-chunk flush
+                        # emits the data before it and re-marks the lookbehind.
+                        i = length
+                        continue
+
+                # Now, we have a couple of cases here.  If our index is before
+                # the end of the boundary...
+                if index < boundary_length:
+                    # If the character matches...
+                    if boundary[index] == c:
+                        # The current character matches, so continue!
+                        index += 1
+                    else:
+                        index = 0
+
+                # Our index is equal to the length of our boundary!
+                elif index == boundary_length:
+                    # First we increment it.
+                    index += 1
+
+                    # Now, if we've reached a newline, we need to set this as
+                    # the potential end of our boundary.
+                    if c == CR:
+                        flags |= FLAG_PART_BOUNDARY
+
+                    # Otherwise, if this is a hyphen, we might be at the last
+                    # of all boundaries.
+                    elif c == HYPHEN:
+                        flags |= FLAG_LAST_BOUNDARY
+
+                    # Otherwise, we reset our index, since this isn't either a
+                    # newline or a hyphen.
+                    else:
+                        index = 0
+
+                # Our index is right after the part boundary, which should be
+                # a LF.
+                elif index == boundary_length + 1:
+                    # If we're at a part boundary (i.e. we've seen a CR
+                    # character already)...
+                    if flags & FLAG_PART_BOUNDARY:
+                        # We need a LF character next.
+                        if c == LF:
+                            # Unset the part boundary flag.
+                            flags &= ~FLAG_PART_BOUNDARY
+
+                            # We have identified a boundary, callback for any data before it.
+                            data_callback("part_data", i - index)
+                            # Callback indicating that we've reached the end of
+                            # a part, and are starting a new one.
+                            self.callback("part_end")
+                            self.callback("part_begin")
+                            current_header_count = 0
+                            current_header_size = 0
+
+                            # Move to parsing new headers.
+                            index = 0
+                            state = MultipartState.HEADER_FIELD_START
+                            i += 1
+                            continue
+
+                        # We didn't find an LF character, so no match.  Reset
+                        # our index and clear our flag.
+                        index = 0
+                        flags &= ~FLAG_PART_BOUNDARY
+
+                    # Otherwise, if we're at the last boundary (i.e. we've
+                    # seen a hyphen already)...
+                    elif flags & FLAG_LAST_BOUNDARY:
+                        # We need a second hyphen here.
+                        if c == HYPHEN:
+                            # We have identified a boundary, callback for any data before it.
+                            data_callback("part_data", i - index)
+                            # Callback to end the current part, and then the
+                            # message.
+                            self.callback("part_end")
+                            self.callback("end")
+                            state = MultipartState.END
+                        else:
+                            # No match, so reset index.
+                            index = 0
+
+                # Otherwise, our index is 0.  If the previous index is not, it
+                # means we reset something, and we need to take the data we
+                # thought was part of our boundary and send it along as actual
+                # data.
+                if index == 0 and prev_index > 0:
+                    # Overwrite our previous index.
+                    prev_index = 0
+
+                    # Re-consider the current character, since this could be
+                    # the start of the boundary itself.
+                    i -= 1
 
             elif state == MultipartState.HEADER_FIELD_START:
                 # Mark the start of a header field here, reset the index, and
@@ -1341,129 +1448,6 @@ class MultipartParser(BaseParser):
                 state = MultipartState.PART_DATA
                 i -= 1
 
-            elif state == MultipartState.PART_DATA:
-                # We're processing our part data right now.  During this, we
-                # need to efficiently search for our boundary, since any data
-                # on any number of lines can be a part of the current data.
-
-                # Save the current value of our index.  We use this in case we
-                # find part of a boundary, but it doesn't match fully.
-                prev_index = index
-
-                # If our index is 0, we're starting a new part, so start our
-                # search.
-                if index == 0:
-                    # The most common case is likely to be that the whole
-                    # boundary is present in the buffer.
-                    # Calling `find` is much faster than iterating here.
-                    i0 = data.find(boundary, i, length)
-                    if i0 >= 0:
-                        # We matched the whole boundary string.
-                        index = boundary_length - 1
-                        i = i0 + boundary_length - 1
-                        c = data[i]
-                    else:
-                        # No whole boundary, but the tail may hold a partial one
-                        # that completes in the next chunk. Boundary starts with
-                        # CR, which an RFC boundary contains nowhere else, so the
-                        # last CR in the tail is the only candidate prefix start.
-                        k = data.rfind(boundary[:1], max(i, length - boundary_length + 1), length)
-                        if k != -1 and boundary.startswith(data[k:length]):
-                            index = length - k
-                        # Carry the partial via index; the end-of-chunk flush
-                        # emits the data before it and re-marks the lookbehind.
-                        i = length
-                        continue
-
-                # Now, we have a couple of cases here.  If our index is before
-                # the end of the boundary...
-                if index < boundary_length:
-                    # If the character matches...
-                    if boundary[index] == c:
-                        # The current character matches, so continue!
-                        index += 1
-                    else:
-                        index = 0
-
-                # Our index is equal to the length of our boundary!
-                elif index == boundary_length:
-                    # First we increment it.
-                    index += 1
-
-                    # Now, if we've reached a newline, we need to set this as
-                    # the potential end of our boundary.
-                    if c == CR:
-                        flags |= FLAG_PART_BOUNDARY
-
-                    # Otherwise, if this is a hyphen, we might be at the last
-                    # of all boundaries.
-                    elif c == HYPHEN:
-                        flags |= FLAG_LAST_BOUNDARY
-
-                    # Otherwise, we reset our index, since this isn't either a
-                    # newline or a hyphen.
-                    else:
-                        index = 0
-
-                # Our index is right after the part boundary, which should be
-                # a LF.
-                elif index == boundary_length + 1:
-                    # If we're at a part boundary (i.e. we've seen a CR
-                    # character already)...
-                    if flags & FLAG_PART_BOUNDARY:
-                        # We need a LF character next.
-                        if c == LF:
-                            # Unset the part boundary flag.
-                            flags &= ~FLAG_PART_BOUNDARY
-
-                            # We have identified a boundary, callback for any data before it.
-                            data_callback("part_data", i - index)
-                            # Callback indicating that we've reached the end of
-                            # a part, and are starting a new one.
-                            self.callback("part_end")
-                            self.callback("part_begin")
-                            current_header_count = 0
-                            current_header_size = 0
-
-                            # Move to parsing new headers.
-                            index = 0
-                            state = MultipartState.HEADER_FIELD_START
-                            i += 1
-                            continue
-
-                        # We didn't find an LF character, so no match.  Reset
-                        # our index and clear our flag.
-                        index = 0
-                        flags &= ~FLAG_PART_BOUNDARY
-
-                    # Otherwise, if we're at the last boundary (i.e. we've
-                    # seen a hyphen already)...
-                    elif flags & FLAG_LAST_BOUNDARY:
-                        # We need a second hyphen here.
-                        if c == HYPHEN:
-                            # We have identified a boundary, callback for any data before it.
-                            data_callback("part_data", i - index)
-                            # Callback to end the current part, and then the
-                            # message.
-                            self.callback("part_end")
-                            self.callback("end")
-                            state = MultipartState.END
-                        else:
-                            # No match, so reset index.
-                            index = 0
-
-                # Otherwise, our index is 0.  If the previous index is not, it
-                # means we reset something, and we need to take the data we
-                # thought was part of our boundary and send it along as actual
-                # data.
-                if index == 0 and prev_index > 0:
-                    # Overwrite our previous index.
-                    prev_index = 0
-
-                    # Re-consider the current character, since this could be
-                    # the start of the boundary itself.
-                    i -= 1
-
             elif state == MultipartState.END_BOUNDARY:
                 if index == boundary_length - 1:
                     if c != HYPHEN:
@@ -1473,6 +1457,24 @@ class MultipartParser(BaseParser):
                     index += 1
                     self.callback("end")
                     state = MultipartState.END
+
+            elif state == MultipartState.START:
+                # Skip leading newlines
+                if c == CR or c == LF:
+                    i = data.find(b"-", i)
+                    if i == -1:
+                        # No boundary candidate in this chunk, so ignore the content after the leading CR/LF.
+                        i = length
+                        break
+                    continue
+
+                # index is used as in index into our boundary.  Set to 0.
+                index = 0
+
+                # Move to the next state, but decrement i so that we re-process
+                # this character.
+                state = MultipartState.START_BOUNDARY
+                i -= 1
 
             elif state == MultipartState.END:
                 # Silently discard any epilogue data (RFC 2046 section 5.1.1 allows a CRLF and optional
