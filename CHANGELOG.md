@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.0.31 (2026-06-04)
+
+* Speed up multipart header parsing and callback dispatch [#295](https://github.com/Kludex/python-multipart/pull/295).
+* Bound header field name size before validating [#296](https://github.com/Kludex/python-multipart/pull/296).
+* Validate `Content-Length` is non-negative in `parse_form` [#297](https://github.com/Kludex/python-multipart/pull/297).
+
 ## 0.0.30 (2026-05-31)
 
 * Parse `application/x-www-form-urlencoded` bodies per the WHATWG URL standard, treating only `&` as a field separator [#290](https://github.com/Kludex/python-multipart/pull/290).
