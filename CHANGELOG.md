@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.0.32 (2026-06-04)
+
+* Speed up partial-boundary scanning for CR/LF-dense part data [#300](https://github.com/Kludex/python-multipart/pull/300).
+
 ## 0.0.31 (2026-06-04)
 
 * Speed up multipart header parsing and callback dispatch [#295](https://github.com/Kludex/python-multipart/pull/295).
