@@ -1900,6 +1900,8 @@ def parse_form(
     content_length: int | float | bytes | None = headers.get("Content-Length")
     if content_length is not None:
         content_length = int(content_length)
+        if content_length < 0:
+            raise ValueError("Content-Length must be non-negative")
     else:
         content_length = float("inf")
     bytes_read = 0
