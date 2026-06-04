@@ -1249,6 +1249,11 @@ class MultipartParser(BaseParser):
                 # validate the whole span at once instead of byte by byte.
                 colon = data.find(b":", i, length)
                 end = colon if colon != -1 else length
+
+                # Enforce the size limit before slicing and validating, so an oversized header
+                # name fails fast instead of copying and scanning a potentially huge span.
+                advance_header_size(end - i if colon == -1 else end - i + 1)
+
                 field = data[i:end]
                 if field.translate(None, TOKEN_CHARS):
                     bad = next(b for b in field if b not in TOKEN_CHARS_SET)
@@ -1260,10 +1265,8 @@ class MultipartParser(BaseParser):
                 index += end - i
                 if colon == -1:
                     # Field name continues into the next chunk.
-                    advance_header_size(end - i)
                     i = length
                 else:
-                    advance_header_size(end - i + 1)
                     # A 0-length header is an error.
                     if index == 0:
                         msg = "Found 0-length header at %d" % (i,)
