@@ -1,0 +1,34 @@
+--boundary
+Content-Disposition: form-data; name="file"; filename="crlf.bin"
+Content-Type: application/octet-stream
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--boundar
+
+
+
+
+
+--bound
+
+--boundary--

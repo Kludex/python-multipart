@@ -1361,18 +1361,19 @@ class MultipartParser(BaseParser):
                         # We matched the whole boundary string.
                         index = boundary_length - 1
                         i = i0 + boundary_length - 1
+                        c = data[i]
                     else:
-                        # No match found for whole string.
-                        # There may be a partial boundary at the end of the
-                        # data, which the find will not match.
-                        # Since the length to be searched is limited to the
-                        # boundary length, scan the tail for boundary[0] via
-                        # bytes.find (C-level) to keep cost off the Python loop.
-                        i = max(i, length - boundary_length)
-                        j = data.find(boundary[:1], i, length - 1)
-                        i = j if j >= 0 else length - 1
-
-                    c = data[i]
+                        # No whole boundary, but the tail may hold a partial one
+                        # that completes in the next chunk. Boundary starts with
+                        # CR, which an RFC boundary contains nowhere else, so the
+                        # last CR in the tail is the only candidate prefix start.
+                        k = data.rfind(boundary[:1], max(i, length - boundary_length + 1), length)
+                        if k != -1 and boundary.startswith(data[k:length]):
+                            index = length - k
+                        # Carry the partial via index; the end-of-chunk flush
+                        # emits the data before it and re-marks the lookbehind.
+                        i = length
+                        continue
 
                 # Now, we have a couple of cases here.  If our index is before
                 # the end of the boundary...
