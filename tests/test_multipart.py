@@ -779,6 +779,7 @@ single_byte_tests = [
     "almost_match_boundary_without_LF",
     "almost_match_boundary_without_final_hyphen",
     "single_field_single_file",
+    "crlf_dense_part_data",
 ]
 
 EPILOGUE_TEST_HEAD = (
