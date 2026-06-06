@@ -1130,6 +1130,7 @@ class TestFormParser(unittest.TestCase):
 
             # Pick what we're supposed to do.
             choice = random.choice([1, 2, 3])
+            msg = ""
             if choice == 1:
                 # Add a random byte.
                 i = random.randrange(len(test_data))
@@ -1659,6 +1660,72 @@ class TestHelperFunctions(unittest.TestCase):
                 lambda _: None,
                 lambda _: None,
             )
+
+
+# A field followed by a file, framed entirely with bare LF instead of CRLF.
+_BARE_LF_BODY = (
+    b"--boundary\n"
+    b'Content-Disposition: form-data; name="field"\n'
+    b"\n"
+    b"test1\n"
+    b"--boundary\n"
+    b'Content-Disposition: form-data; name="file"; filename="file.txt"\n'
+    b"Content-Type: text/plain\n"
+    b"\n"
+    b"test2\n"
+    b"--boundary--"
+)
+
+
+def _parse_bare_lf(chunks: list[bytes]) -> tuple[list[Field], list[File]]:
+    """Feed ``chunks`` to a bare-LF-enabled FormParser and return the parsed fields/files."""
+    fields: list[Field] = []
+    files: list[File] = []
+    parser = FormParser(
+        "multipart/form-data", fields.append, files.append, boundary="boundary", config={"ALLOW_BARE_LF": True}
+    )
+    for chunk in chunks:
+        parser.write(chunk)
+    parser.finalize()
+    return fields, files
+
+
+def _assert_bare_lf_parsed(fields: list[Field], files: list[File]) -> None:
+    """Assert the field + file framed in ``_BARE_LF_BODY`` were parsed correctly."""
+    assert [(f.field_name, f.value) for f in fields] == [(b"field", b"test1")]
+    assert len(files) == 1
+    assert files[0].field_name == b"file"
+    assert files[0].file_name == b"file.txt"
+    files[0].file_object.seek(0)
+    assert files[0].file_object.read() == b"test2"
+    files[0].close()
+
+
+def test_bare_lf_boundary_rejected_by_default() -> None:
+    """A bare-LF boundary is a parse error unless explicitly allowed."""
+    parser = FormParser("multipart/form-data", lambda _: None, lambda _: None, boundary="boundary")
+    with pytest.raises(MultipartParseError):
+        parser.write(_BARE_LF_BODY)
+
+
+def test_bare_lf_body_parses_across_every_chunk_split() -> None:
+    """The LF body parses identically however it is split, exercising the boundary look-behind."""
+    for first, last in split_all(_BARE_LF_BODY):
+        _assert_bare_lf_parsed(*_parse_bare_lf([first, last]))
+
+
+def test_parse_form_forwards_config_to_enable_bare_lf() -> None:
+    """parse_form forwards config, so the bare-LF opt-in is reachable from the top-level helper."""
+    fields: list[Field] = []
+    files: list[File] = []
+    parse_form(
+        {"Content-Type": b"multipart/form-data; boundary=boundary"},
+        BytesIO(_BARE_LF_BODY),
+        fields.append,
+        files.append,
+        config={"ALLOW_BARE_LF": True},
+    )
+    _assert_bare_lf_parsed(fields, files)
 
 
 def suite() -> unittest.TestSuite:
