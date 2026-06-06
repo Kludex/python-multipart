@@ -55,6 +55,7 @@ if TYPE_CHECKING:
         MAX_BODY_SIZE: float
         MAX_HEADER_COUNT: int
         MAX_HEADER_SIZE: int
+        ALLOW_BARE_LF: bool
 
     CallbackName: TypeAlias = Literal[
         "start",
@@ -997,6 +998,9 @@ class MultipartParser(BaseParser):
         max_size: The maximum size of body to parse.  Defaults to infinity - i.e. unbounded.
         max_header_count: The maximum number of headers allowed per part.
         max_header_size: The maximum size of a single header line (excluding the trailing CRLF).
+        allow_bare_lf: Accept bare ``\\n`` instead of ``\\r\\n`` as the framing line terminator. Defaults to ``False``
+            (strict RFC 2046). The convention is detected from the opening boundary and applied to the whole message;
+            part data is never altered.
     """  # noqa: E501
 
     def __init__(
@@ -1007,6 +1011,7 @@ class MultipartParser(BaseParser):
         *,
         max_header_count: int = DEFAULT_MAX_HEADER_COUNT,
         max_header_size: int = DEFAULT_MAX_HEADER_SIZE,
+        allow_bare_lf: bool = False,
     ) -> None:
         # Initialize parser state.
         super().__init__()
@@ -1017,7 +1022,7 @@ class MultipartParser(BaseParser):
 
         if not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" % max_size)
-        self.max_size = max_size
+        self.max_size: int | float = max_size
         self._current_size = 0
 
         self.max_header_count = max_header_count
@@ -1029,11 +1034,15 @@ class MultipartParser(BaseParser):
         # Setup marks.  These are used to track the state of data received.
         self.marks: dict[str, int] = {}
 
+        self.allow_bare_lf = allow_bare_lf
+        self._lf_only = False
+
         # Save our boundary.
         if isinstance(boundary, str):  # pragma: no cover
             boundary = boundary.encode("latin-1")
         if len(boundary) > MAX_BOUNDARY_LENGTH:
             raise FormParserError(f"Boundary length {len(boundary)} exceeds maximum of {MAX_BOUNDARY_LENGTH}")
+        self._boundary_token = boundary
         self.boundary = b"\r\n--" + boundary
 
     def write(self, data: bytes) -> int:
@@ -1085,6 +1094,9 @@ class MultipartParser(BaseParser):
         current_header_count = self._current_header_count
         current_header_size = self._current_header_size
 
+        allow_bare_lf = self.allow_bare_lf
+        lf_only = self._lf_only
+
         # Our index defaults to 0.
         i = 0
 
@@ -1129,10 +1141,10 @@ class MultipartParser(BaseParser):
                 if lookbehind_len <= boundary_length:
                     self.callback(name, boundary, 0, lookbehind_len)
                 elif self.flags & FLAG_PART_BOUNDARY:
-                    lookback = boundary + b"\r\n"
+                    lookback = boundary + (b"\n" if self._lf_only else b"\r\n")
                     self.callback(name, lookback, 0, lookbehind_len)
                 elif self.flags & FLAG_LAST_BOUNDARY:
-                    lookback = boundary + b"--\r\n"
+                    lookback = boundary + (b"--\n" if self._lf_only else b"--\r\n")
                     self.callback(name, lookback, 0, lookbehind_len)
                 else:  # pragma: no cover (error case)
                     self.logger.warning("Look-back buffer error")
@@ -1175,13 +1187,23 @@ class MultipartParser(BaseParser):
                     if c == HYPHEN:
                         # Potential empty message.
                         state = MultipartState.END_BOUNDARY
-                    elif c != CR:
-                        # Error!
+                        index += 1
+                    elif c == CR:
+                        index += 1
+                    elif allow_bare_lf and c == LF:
+                        # Bare-LF body: use the \n-prefixed boundary.
+                        lf_only = self._lf_only = True
+                        boundary = self.boundary = b"\n--" + self._boundary_token
+                        boundary_length = len(boundary)
+                        index = 0
+                        self.callback("part_begin")
+                        current_header_count = 0
+                        current_header_size = 0
+                        state = MultipartState.HEADER_FIELD_START
+                    else:
                         msg = "Did not find CR at end of boundary (%d)" % (i,)
                         self.logger.warning(msg)
                         raise MultipartParseError(msg, offset=i)
-
-                    index += 1
 
                 elif index == boundary_length - 1:
                     if c != LF:
@@ -1214,8 +1236,9 @@ class MultipartParser(BaseParser):
                 # Mark the start of a header field here, reset the index, and
                 # continue parsing our header field.
                 index = 0
+                nl = LF if lf_only else CR
 
-                if c != CR:
+                if c != nl:
                     current_header_count += 1
                     if current_header_count > self.max_header_count:
                         raise MultipartParseError("Maximum header count exceeded", offset=i)
@@ -1224,11 +1247,9 @@ class MultipartParser(BaseParser):
                 # Set a mark of our header field.
                 set_mark("header_field")
 
-                # Notify that we're starting a header if the next character is
-                # not a CR; a CR at the beginning of the header will cause us
-                # to stop parsing headers in the MultipartState.HEADER_FIELD state,
-                # below.
-                if c != CR:
+                # Notify that we're starting a header unless this is the blank
+                # line that ends the headers (handled in HEADER_FIELD below).
+                if c != nl:
                     self.callback("header_begin")
 
                 # Move to parsing header fields.
@@ -1236,12 +1257,15 @@ class MultipartParser(BaseParser):
                 i -= 1
 
             elif state == MultipartState.HEADER_FIELD:
-                # If we've reached a CR at the beginning of a header, it means
-                # that we've reached the second of 2 newlines, and so there are
-                # no more headers to parse.
-                if c == CR and index == 0:
+                # A line terminator at the start of a header is the blank line
+                # that ends the headers.
+                if index == 0 and c == (LF if lf_only else CR):
                     delete_mark("header_field")
-                    state = MultipartState.HEADERS_ALMOST_DONE
+                    if lf_only:
+                        self.callback("headers_finished")
+                        state = MultipartState.PART_DATA_START
+                    else:
+                        state = MultipartState.HEADERS_ALMOST_DONE
                     i += 1
                     continue
 
@@ -1295,17 +1319,16 @@ class MultipartParser(BaseParser):
                 i -= 1
 
             elif state == MultipartState.HEADER_VALUE:
-                # The value runs until the terminating CR; jump straight to it
-                # instead of inspecting every byte.
-                cr = data.find(b"\r", i, length)
-                end = cr if cr != -1 else length
+                # The value runs until its terminator (CR for CRLF, LF for bare LF).
+                term = data.find(b"\n" if lf_only else b"\r", i, length)
+                end = term if term != -1 else length
                 advance_header_size(end - i)
-                if cr != -1:
-                    i = cr
+                if term != -1:
+                    i = term
                     data_callback("header_value", i)
                     self.callback("header_end")
                     current_header_size = 0
-                    state = MultipartState.HEADER_VALUE_ALMOST_DONE
+                    state = MultipartState.HEADER_FIELD_START if lf_only else MultipartState.HEADER_VALUE_ALMOST_DONE
                 else:
                     i = length
 
@@ -1387,12 +1410,24 @@ class MultipartParser(BaseParser):
 
                 # Our index is equal to the length of our boundary!
                 elif index == boundary_length:
+                    if lf_only and c == LF:
+                        # Bare-LF part boundary: the single LF terminates it.
+                        data_callback("part_data", i - index)
+                        self.callback("part_end")
+                        self.callback("part_begin")
+                        current_header_count = 0
+                        current_header_size = 0
+                        index = 0
+                        state = MultipartState.HEADER_FIELD_START
+                        i += 1
+                        continue
+
                     # First we increment it.
                     index += 1
 
                     # Now, if we've reached a newline, we need to set this as
                     # the potential end of our boundary.
-                    if c == CR:
+                    if c == CR and not lf_only:
                         flags |= FLAG_PART_BOUNDARY
 
                     # Otherwise, if this is a hyphen, we might be at the last
@@ -1561,6 +1596,8 @@ class FormParser:
         "UPLOAD_KEEP_EXTENSIONS": False,
         # Error on invalid Content-Transfer-Encoding?
         "UPLOAD_ERROR_ON_BAD_CTE": False,
+        # Accept bare LF (instead of CRLF) as the framing line terminator.
+        "ALLOW_BARE_LF": False,
     }
 
     def __init__(
@@ -1795,6 +1832,7 @@ class FormParser:
                 max_size=self.config["MAX_BODY_SIZE"],
                 max_header_count=self.config["MAX_HEADER_COUNT"],
                 max_header_size=self.config["MAX_HEADER_SIZE"],
+                allow_bare_lf=self.config["ALLOW_BARE_LF"],
             )
 
         else:
@@ -1876,6 +1914,7 @@ def parse_form(
     on_field: Callable[[Field], None] | None,
     on_file: Callable[[File], None] | None,
     chunk_size: int = 1048576,
+    config: dict[Any, Any] = {},
 ) -> None:
     """This function is useful if you just want to parse a request body,
     without too much work.  Pass it a dictionary-like object of the request's
@@ -1889,12 +1928,13 @@ def parse_form(
         on_file: Callback to call with each parsed file.
         chunk_size: The maximum size to read from the input stream and write to the parser at one time.
             Defaults to 1 MiB.
+        config: Configuration variables to pass to the FormParser (e.g. ``{"ALLOW_BARE_LF": True}``).
     """
     if chunk_size < 1:
         raise ValueError(f"chunk_size must be a positive number, not {chunk_size!r}")
 
     # Create our form parser.
-    parser = create_form_parser(headers, on_field, on_file)
+    parser = create_form_parser(headers, on_field, on_file, config)
 
     # Read chunks of 1MiB and write to the parser, but never read more than
     # the given Content-Length, if any.
