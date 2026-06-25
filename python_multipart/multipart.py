@@ -409,8 +409,10 @@ class File:
             # Extract just the basename to avoid directory traversal
             basename = os.path.basename(file_name)
             base, ext = os.path.splitext(basename)
-            self._file_base = base
-            self._ext = ext
+        else:
+            base, ext = b"", b""
+        self._file_base = base
+        self._ext = ext
 
     @property
     def field_name(self) -> bytes | None:
