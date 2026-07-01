@@ -41,7 +41,7 @@ dev = [
     "pbr==7.0.3",
     "pluggy==1.6.0",
     "py==1.11.0",
-    "pytest==9.0.3",
+    "pytest==9.1.1",
     "pytest-cov==7.1.0",
     "pytest-codspeed>=4.1.1",
     "PyYAML==6.0.3",
