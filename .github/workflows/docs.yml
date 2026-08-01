@@ -17,7 +17,7 @@ jobs:
     steps:
       # `mkdocs gh-deploy` pushes the built docs to `gh-pages`, so this job needs
       # a real checkout with the authenticated origin remote preserved.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6.0.2  # zizmor: ignore[artipacked]
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.0.2  # zizmor: ignore[artipacked]
 
       - name: Configure Git Credentials
         run: |
@@ -25,7 +25,7 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
 
       - name: Install uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           version: "0.9.12"
           enable-cache: false
