@@ -429,6 +429,19 @@ class TestQuerystringParser(unittest.TestCase):
         self.assertEqual(parser.write(b"foo=bar"), 7)
         parser.finalize()
 
+    def test_none_callbacks(self) -> None:
+        callbacks: Any = {
+            "on_field_start": None,
+            "on_field_name": None,
+            "on_field_data": None,
+            "on_field_end": None,
+            "on_end": None,
+        }
+        parser = QuerystringParser(callbacks)
+
+        self.assertEqual(parser.write(b"foo=bar"), 7)
+        parser.finalize()
+
     def test_querystring_blank_beginning(self) -> None:
         self.p.write(b"&foo=bar")
 
