@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Speed up querystring callback dispatch.
+
 ## 0.0.32 (2026-06-04)
 
 * Speed up partial-boundary scanning for CR/LF-dense part data [#300](https://github.com/Kludex/python-multipart/pull/300).

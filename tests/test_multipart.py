@@ -365,6 +365,10 @@ class TestBaseParser(unittest.TestCase):
             nonlocal called
             called += 1
 
+        def on_data(data: bytes, start: int, end: int) -> None:
+            nonlocal called
+            called += 1
+
         self.b.set_callback("foo", on_foo)  # type: ignore[arg-type]
         self.b.callback("foo")  # type: ignore[arg-type]
         self.assertEqual(called, 1)
@@ -372,6 +376,12 @@ class TestBaseParser(unittest.TestCase):
         self.b.set_callback("foo", None)  # type: ignore[arg-type]
         self.b.callback("foo")  # type: ignore[arg-type]
         self.assertEqual(called, 1)
+
+        self.b.set_callback("data", on_data)
+        self.b.callback("data", b"", 0, 0)
+        self.assertEqual(called, 1)
+        self.b.callback("data", b"x", 0, 1)
+        self.assertEqual(called, 2)
 
 
 class TestQuerystringParser(unittest.TestCase):
@@ -412,6 +422,23 @@ class TestQuerystringParser(unittest.TestCase):
         self.p.write(b"foo=bar")
 
         self.assert_fields((b"foo", b"bar"))
+
+    def test_set_callback_during_write(self) -> None:
+        names: list[bytes] = []
+
+        def on_field_start() -> None:
+            parser.set_callback("field_name", on_replacement_field_name)
+
+        def on_initial_field_name(data: bytes, start: int, end: int) -> None:
+            raise AssertionError("The replaced callback was called")
+
+        def on_replacement_field_name(data: bytes, start: int, end: int) -> None:
+            names.append(data[start:end])
+
+        parser = QuerystringParser(callbacks={"on_field_start": on_field_start, "on_field_name": on_initial_field_name})
+        parser.write(b"foo=bar")
+
+        self.assertEqual(names, [b"foo"])
 
     def test_querystring_blank_beginning(self) -> None:
         self.p.write(b"&foo=bar")

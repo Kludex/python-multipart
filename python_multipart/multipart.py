@@ -836,6 +836,7 @@ class QuerystringParser(BaseParser):
         state = self.state
         strict_parsing = self.strict_parsing
         found_sep = self._found_sep
+        callbacks = cast("QuerystringCallbacks", self.callbacks)
 
         i = 0
         while i < length:
@@ -865,7 +866,9 @@ class QuerystringParser(BaseParser):
                     # Emit a field-start event, and go to that state.  Also,
                     # reset the "found_sep" flag, for the next time we get to
                     # this state.
-                    self.callback("field_start")
+                    callback_event = callbacks.get("on_field_start")
+                    if callback_event is not None:
+                        callback_event()
                     i -= 1
                     state = QuerystringState.FIELD_NAME
                     found_sep = False
@@ -885,7 +888,9 @@ class QuerystringParser(BaseParser):
 
                 if equals_pos != -1:
                     # Emit this name.
-                    self.callback("field_name", data, i, equals_pos)
+                    callback_data = callbacks.get("on_field_name")
+                    if callback_data is not None and i != equals_pos:
+                        callback_data(data, i, equals_pos)
 
                     # Jump i to this position.  Note that it will then have 1
                     # added to it below, which means the next iteration of this
@@ -900,15 +905,21 @@ class QuerystringParser(BaseParser):
                         # end - there's no data callback at all (not even with
                         # a blank value).
                         if sep_pos != -1:
-                            self.callback("field_name", data, i, sep_pos)
-                            self.callback("field_end")
+                            callback_data = callbacks.get("on_field_name")
+                            if callback_data is not None and i != sep_pos:
+                                callback_data(data, i, sep_pos)
+                            callback_event = callbacks.get("on_field_end")
+                            if callback_event is not None:
+                                callback_event()
 
                             i = sep_pos - 1
                             state = QuerystringState.BEFORE_FIELD
                         else:
                             # Otherwise, no separator in this block, so the
                             # rest of this chunk must be a name.
-                            self.callback("field_name", data, i, length)
+                            callback_data = callbacks.get("on_field_name")
+                            if callback_data is not None and i != length:
+                                callback_data(data, i, length)
                             i = length
 
                     else:
@@ -924,7 +935,9 @@ class QuerystringParser(BaseParser):
 
                         # No separator in the rest of this chunk, so it's just
                         # a field name.
-                        self.callback("field_name", data, i, length)
+                        callback_data = callbacks.get("on_field_name")
+                        if callback_data is not None and i != length:
+                            callback_data(data, i, length)
                         i = length
 
             elif state == QuerystringState.FIELD_DATA:
@@ -934,8 +947,12 @@ class QuerystringParser(BaseParser):
                 # If we found it, callback this bit as data and then go back
                 # to expecting to find a field.
                 if sep_pos != -1:
-                    self.callback("field_data", data, i, sep_pos)
-                    self.callback("field_end")
+                    callback_data = callbacks.get("on_field_data")
+                    if callback_data is not None and i != sep_pos:
+                        callback_data(data, i, sep_pos)
+                    callback_event = callbacks.get("on_field_end")
+                    if callback_event is not None:
+                        callback_event()
 
                     # Note that we go to the separator, which brings us to the
                     # "before field" state.  This allows us to properly emit
@@ -946,7 +963,9 @@ class QuerystringParser(BaseParser):
 
                 # Otherwise, emit the rest as data and finish.
                 else:
-                    self.callback("field_data", data, i, length)
+                    callback_data = callbacks.get("on_field_data")
+                    if callback_data is not None and i != length:
+                        callback_data(data, i, length)
                     i = length
 
             else:  # pragma: no cover (error case)
@@ -965,10 +984,15 @@ class QuerystringParser(BaseParser):
         if we're still in the middle of a field, an on_field_end callback, and
         then the on_end callback.
         """
+        callbacks = cast("QuerystringCallbacks", self.callbacks)
         # If we're currently in the middle of a field, we finish it.
         if self.state in (QuerystringState.FIELD_DATA, QuerystringState.FIELD_NAME):
-            self.callback("field_end")
-        self.callback("end")
+            callback = callbacks.get("on_field_end")
+            if callback is not None:
+                callback()
+        callback = callbacks.get("on_end")
+        if callback is not None:
+            callback()
 
     def __repr__(self) -> str:
         return "{}(strict_parsing={!r}, max_size={!r})".format(
