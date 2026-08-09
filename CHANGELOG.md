@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* Speed up querystring callback dispatch.
+* Speed up querystring callback dispatch [#316](https://github.com/Kludex/python-multipart/pull/316).
 
 ## 0.0.32 (2026-06-04)
 
