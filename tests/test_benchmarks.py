@@ -88,33 +88,33 @@ def make_querystring_parser() -> QuerystringParser:
     return QuerystringParser(QUERYSTRING_CALLBACKS)
 
 
-def test_multipart_simple_form() -> None:
+def test_parse_multipart_simple_form() -> None:
     parser = make_multipart_parser()
     parser.write(SIMPLE_FORM)
     parser.finalize()
 
 
-def test_multipart_large_form() -> None:
+def test_parse_multipart_large_form() -> None:
     parser = make_multipart_parser()
     parser.write(LARGE_FORM)
     parser.finalize()
 
 
-def test_multipart_file_upload() -> None:
+def test_parse_multipart_file_upload() -> None:
     parser = make_multipart_parser()
     for chunk in FILE_UPLOAD_CHUNKS:
         parser.write(chunk)
     parser.finalize()
 
 
-def test_multipart_worstcase_boundary_chars() -> None:
+def test_parse_multipart_worstcase_boundary_chars() -> None:
     parser = make_multipart_parser()
     for chunk in WORSTCASE_BCHAR_CHUNKS:
         parser.write(chunk)
     parser.finalize()
 
 
-def test_querystring_large_form() -> None:
+def test_parse_querystring_large_form() -> None:
     parser = make_querystring_parser()
     parser.write(URLENCODED_LARGE)
     parser.finalize()
