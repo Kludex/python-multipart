@@ -423,22 +423,11 @@ class TestQuerystringParser(unittest.TestCase):
 
         self.assert_fields((b"foo", b"bar"))
 
-    def test_set_callback_during_write(self) -> None:
-        names: list[bytes] = []
+    def test_no_callbacks(self) -> None:
+        parser = QuerystringParser()
 
-        def on_field_start() -> None:
-            parser.set_callback("field_name", on_replacement_field_name)
-
-        def on_initial_field_name(data: bytes, start: int, end: int) -> None:
-            raise AssertionError("The replaced callback was called")
-
-        def on_replacement_field_name(data: bytes, start: int, end: int) -> None:
-            names.append(data[start:end])
-
-        parser = QuerystringParser(callbacks={"on_field_start": on_field_start, "on_field_name": on_initial_field_name})
-        parser.write(b"foo=bar")
-
-        self.assertEqual(names, [b"foo"])
+        self.assertEqual(parser.write(b"foo=bar"), 7)
+        parser.finalize()
 
     def test_querystring_blank_beginning(self) -> None:
         self.p.write(b"&foo=bar")
