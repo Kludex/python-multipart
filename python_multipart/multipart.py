@@ -678,6 +678,10 @@ class BaseParser:
         :param new_func: The new function for the callback.  If None, then the
                          callback will be removed (with no error if it does not
                          exist).
+
+        Updates made while a parser operation is running are not guaranteed to
+        affect later callbacks in that operation. They are guaranteed to apply
+        to the next call to ``write()`` or ``finalize()``.
         """
         if new_func is None:
             self.callbacks.pop("on_" + name, None)  # type: ignore[misc]
