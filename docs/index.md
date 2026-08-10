@@ -191,6 +191,28 @@ Part hash: 0b64696c0f7ddb9e3435341720988d5455b3b0f0724688f98ec8e6019af3d931
 ```
 
 
+## Limiting size
+
+You can bound how much the parser buffers via the `config` dictionary accepted by `FormParser` and `create_form_parser`:
+
+```python
+from python_multipart import FormParser
+
+parser = FormParser(
+    content_type,
+    on_field,
+    on_file,
+    boundary=boundary,
+    config={
+        "MAX_BODY_SIZE": 10 * 1024 * 1024,        # default: float("inf")
+        "MAX_MEMORY_FILE_SIZE": 1 * 1024 * 1024,  # default: 1 MiB
+    },
+)
+```
+
+- `MAX_MEMORY_FILE_SIZE` is the per-file in-memory threshold: once a file exceeds it, its contents are flushed to a temporary file on disk instead of being kept in memory.
+- `MAX_BODY_SIZE` caps how many bytes the parser will process. Note that exceeding it does **not** raise: the excess is silently truncated (with a logged warning). To reject oversized requests outright, enforce a limit before feeding the parser (for example, based on the `Content-Length` header).
+
 ## Historical note
 
 This package used to be accessed via `import multipart`. This still works for
