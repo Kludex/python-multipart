@@ -5,7 +5,7 @@ import os
 import re
 import sys
 import types
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar, cast
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -61,7 +61,7 @@ def parametrize(field_names: tuple[str] | list[str] | str, field_values: list[An
 class ParametrizingMetaclass(type):
     IDENTIFIER_RE = re.compile("[^A-Za-z0-9]")
 
-    def __new__(klass, name: str, bases: tuple[type, ...], attrs: types.MappingProxyType[str, Any]) -> type:
+    def __new__(cls, name: str, bases: tuple[type, ...], attrs: types.MappingProxyType[str, Any]) -> type:
         new_attrs = attrs.copy()
         for attr_name, attr in attrs.items():
             # We only care about functions
@@ -74,15 +74,14 @@ class ParametrizingMetaclass(type):
                 continue
 
             # Create multiple copies of the function.
-            for _, values in enumerate(param_values):
+            for i, values in enumerate(param_values):
                 assert len(param_names) == len(values)
 
                 # Get a repr of the values, and fix it to be a valid identifier
-                human = "_".join([klass.IDENTIFIER_RE.sub("", repr(x)) for x in values])
+                human = "_".join([cls.IDENTIFIER_RE.sub("", repr(x)) for x in values])
 
-                # Create a new name.
-                # new_name = attr.__name__ + "_%d" % i
-                new_name = attr.__name__ + "__" + human
+                # Cap length so multi-MB params can't overflow Windows' PYTEST_CURRENT_TEST env var.
+                new_name = f"{attr.__name__}__{i}_{human[:64]}"
 
                 # Create a replacement function.
                 def create_new_func(
@@ -109,9 +108,12 @@ class ParametrizingMetaclass(type):
             del new_attrs[attr_name]
 
         # We create the class as normal, except we use our new attributes.
-        return type.__new__(klass, name, bases, new_attrs)
+        return type.__new__(cls, name, bases, new_attrs)
 
 
 # This is a class decorator that actually applies the above metaclass.
-def parametrize_class(klass: type) -> ParametrizingMetaclass:
-    return ParametrizingMetaclass(klass.__name__, klass.__bases__, klass.__dict__)
+_ClassT = TypeVar("_ClassT", bound=type)
+
+
+def parametrize_class(klass: _ClassT) -> _ClassT:
+    return cast(_ClassT, ParametrizingMetaclass(klass.__name__, klass.__bases__, klass.__dict__))
