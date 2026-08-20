@@ -1,0 +1,10 @@
+schema = 1
+command = ["uv", "run", "python", "tests/http_compliance_adapter.py"]
+suites = ["multipart"]
+profiles = ["multipart.form-data.receiver-core"]
+exclude_tags = ["preamble", "transport-padding"]
+timeout_ms = 5000
+max_output_bytes = 1048576
+fail_on_unsupported = true
+report_json = "reports/http-compliance.json"
+report_junit = "reports/http-compliance.xml"

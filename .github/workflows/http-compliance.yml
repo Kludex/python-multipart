@@ -1,0 +1,64 @@
+name: HTTP Compliance
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions: {}
+
+jobs:
+  http-compliance:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          python-version: "3.14"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Install Rust
+        run: rustup toolchain install 1.85.0 --profile minimal
+
+      - name: Cache HTTP Compliance
+        id: cache-http-compliance
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/git
+            ~/.cargo/registry
+            .http-compliance
+            .http-compliance-target
+          key: http-compliance-${{ runner.os }}-${{ runner.arch }}-rust-1.85.0-a6217077
+          restore-keys: http-compliance-${{ runner.os }}-${{ runner.arch }}-rust-1.85.0-
+
+      - name: Install HTTP Compliance
+        if: steps.cache-http-compliance.outputs.cache-hit != 'true'
+        env:
+          CARGO_TARGET_DIR: .http-compliance-target
+        run: >-
+          cargo +1.85.0 install
+          --locked
+          --git https://github.com/Kludex/http-compliance.git
+          --rev a6217077c938b59ae7a46495349831387d2f60f0
+          --root .http-compliance
+          http-compliance
+
+      - name: Run HTTP Compliance
+        uses: Kludex/http-compliance@a6217077c938b59ae7a46495349831387d2f60f0
+        with:
+          config: .github/http-compliance.toml
+          runner-path: .http-compliance/bin/http-compliance
+          upload-results: false
