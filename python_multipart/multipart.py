@@ -193,6 +193,19 @@ def _parseparam(s: str) -> list[str]:
     return plist
 
 
+def _encode_header_token(value: str) -> bytes:
+    """Encode a header token from a Python ``str``.
+
+    HTTP header fields are ISO-8859-1. Values that cannot be encoded that way
+    (for example a Unicode filename passed as ``str``) are encoded as UTF-8 so
+    the public ``str`` API does not raise ``UnicodeEncodeError``.
+    """
+    try:
+        return value.encode("latin-1")
+    except UnicodeEncodeError:
+        return value.encode("utf-8")
+
+
 def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, bytes]]:
     """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
     if not value:
@@ -207,7 +220,7 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
 
     # If we have no options, return the string as-is.
     if ";" not in value:
-        return (value.lower().strip().encode("latin-1"), {})
+        return (_encode_header_token(value.lower().strip()), {})
 
     ctype, *segments = _parseparam(value)
     options: dict[bytes, bytes] = {}
@@ -225,8 +238,8 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
         # just the filename.
         if key == "filename" and (val[1:3] == ":\\" or val[:2] == "\\\\"):
             val = val.split("\\")[-1]
-        options[key.encode("latin-1")] = val.encode("latin-1")
-    return ctype.encode("latin-1"), options
+        options[_encode_header_token(key)] = _encode_header_token(val)
+    return _encode_header_token(ctype), options
 
 
 class Field:
