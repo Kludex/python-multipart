@@ -253,6 +253,14 @@ class TestParseOptionsHeader(unittest.TestCase):
         self.assertEqual(t, b"application/json")
         self.assertEqual(p, {})
 
+    def test_unicode_filename_str(self) -> None:
+        t, p = parse_options_header(
+            'form-data; name="upload"; filename="中文.doc"'
+        )
+        self.assertEqual(t, b"form-data")
+        self.assertEqual(p[b"name"], b"upload")
+        self.assertEqual(p[b"filename"], "中文.doc".encode("utf-8"))
+
     def test_blank(self) -> None:
         t, p = parse_options_header("")
         self.assertEqual(t, b"")
