@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from io import BytesIO
 from typing import TYPE_CHECKING
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 import yaml
@@ -1009,12 +1009,44 @@ class TestFormParser(unittest.TestCase):
             uploaded_file = self.files[0]
             assert uploaded_file.actual_file_name is not None
             actual_file_name = uploaded_file.actual_file_name.decode(sys.getfilesystemencoding())
+            self.f.close()
+
+            self.assertFalse(uploaded_file.file_object.closed)
             uploaded_file.close()
 
             try:
                 self.assertTrue(os.path.exists(actual_file_name))
             finally:
                 os.unlink(actual_file_name)
+
+    def test_close_closes_incomplete_upload(self) -> None:
+        for transfer_encoding, data in ((b"binary", b"test"), (b"base64", b"dGVzdA=="), (b"quoted-printable", b"test")):
+            with (
+                self.subTest(transfer_encoding=transfer_encoding),
+                tempfile.TemporaryDirectory() as upload_dir,
+                patch.object(File, "close", autospec=True, side_effect=File.close) as close,
+            ):
+                self.make(
+                    "boundary", config={"UPLOAD_DIR": upload_dir, "UPLOAD_DELETE_TMP": False, "MAX_MEMORY_FILE_SIZE": 1}
+                )
+                body = (
+                    b"--boundary\r\n"
+                    b'Content-Disposition: form-data; name="file"; filename="test.txt"\r\n'
+                    b"Content-Type: text/plain\r\n"
+                    b"Content-Transfer-Encoding: " + transfer_encoding + b"\r\n\r\n" + data
+                )
+
+                self.f.write(body)
+                paths = os.listdir(upload_dir)
+                self.assertEqual(len(paths), 1)
+
+                self.f.close()
+                self.f.close()
+
+                close.assert_called_once()
+                self.assertTrue(close.call_args.args[0].file_object.closed)
+                self.assertEqual(os.listdir(upload_dir), paths)
+                self.assertEqual(self.files, [])
 
     @parametrize("param", [t for t in http_tests if t["name"] in single_byte_tests])
     def test_feed_single_bytes(self, param: TestParams) -> None:
@@ -1294,6 +1326,33 @@ class TestFormParser(unittest.TestCase):
         self.assert_file_data(files[0], b"test1234")
         self.assertTrue(on_end.called)
 
+        f.close()
+        self.assertFalse(files[0].file_object.closed)
+        files[0].close()
+
+    def test_close_closes_incomplete_octet_stream_upload(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as upload_dir,
+            patch.object(File, "close", autospec=True, side_effect=File.close) as close,
+        ):
+            f = FormParser(
+                "application/octet-stream",
+                None,
+                None,
+                file_name=b"test.txt",
+                config={"UPLOAD_DIR": upload_dir, "UPLOAD_DELETE_TMP": False, "MAX_MEMORY_FILE_SIZE": 1},
+            )
+            f.write(b"test")
+            paths = os.listdir(upload_dir)
+            self.assertEqual(len(paths), 1)
+
+            f.close()
+            f.close()
+
+            close.assert_called_once()
+            self.assertTrue(close.call_args.args[0].file_object.closed)
+            self.assertEqual(os.listdir(upload_dir), paths)
+
     def test_querystring(self) -> None:
         fields: list[Field] = []
 
@@ -1389,6 +1448,34 @@ class TestFormParser(unittest.TestCase):
         f.write(data)
         f.finalize()
         self.assert_file_data(files[0], b"Test")
+
+    def test_bad_content_transfer_encoding_closes_current_file(self) -> None:
+        data = (
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="first"; filename="first.txt"\r\n\r\n'
+            b"first\r\n"
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="second"; filename="second.txt"\r\n'
+            b"Content-Transfer-Encoding: badstuff\r\n\r\n"
+        )
+        files: list[File] = []
+        f = FormParser(
+            "multipart/form-data", None, files.append, boundary="boundary", config={"UPLOAD_ERROR_ON_BAD_CTE": True}
+        )
+
+        with patch.object(File, "close", autospec=True, side_effect=File.close) as close:
+            with self.assertRaises(FormParserError):
+                f.write(data)
+
+            self.assertEqual(len(files), 1)
+            f.close()
+
+            close.assert_called_once()
+            self.assertIsNot(close.call_args.args[0], files[0])
+            self.assertTrue(close.call_args.args[0].file_object.closed)
+            self.assertFalse(files[0].file_object.closed)
+
+        files[0].close()
 
     def test_bad_content_disposition(self) -> None:
         # Field name is required per RFC 7578 §4.2.
