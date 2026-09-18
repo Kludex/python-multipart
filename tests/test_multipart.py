@@ -512,6 +512,12 @@ class TestQuerystringParser(unittest.TestCase):
         with self.assertRaises(ValueError):
             p = QuerystringParser(max_size=-100)
 
+    def test_rejects_bool_max_size(self) -> None:
+        """bool is a Number; max_size=True must not silently become 1."""
+        for value in (True, False):
+            with self.assertRaises(ValueError):
+                QuerystringParser(max_size=value)
+
     def test_strict_parsing_pass(self) -> None:
         data = b"foo=bar&another=asdf"
         for first, last in split_all(data):
@@ -638,6 +644,12 @@ class TestOctetStreamParser(unittest.TestCase):
     def test_invalid_max_size(self) -> None:
         with self.assertRaises(ValueError):
             q = OctetStreamParser(max_size="foo")  # type: ignore[arg-type]
+
+    def test_rejects_bool_max_size_octet(self) -> None:
+        """bool is a Number; max_size=True must not silently become 1."""
+        for value in (True, False):
+            with self.assertRaises(ValueError):
+                OctetStreamParser(max_size=value)
 
 
 class TestBase64Decoder(unittest.TestCase):
@@ -1591,6 +1603,21 @@ class TestFormParser(unittest.TestCase):
     def test_invalid_max_size_multipart(self) -> None:
         with self.assertRaises(ValueError):
             MultipartParser(b"bound", max_size="foo")  # type: ignore[arg-type]
+
+    def test_rejects_bool_max_size_and_header_limits(self) -> None:
+        """bool subclasses Number/int; True must not silently become size/count 1."""
+        for value in (True, False):
+            with self.assertRaises(ValueError):
+                MultipartParser(b"bound", max_size=value)
+            with self.assertRaises(ValueError):
+                MultipartParser(b"bound", max_header_count=value)
+            with self.assertRaises(ValueError):
+                MultipartParser(b"bound", max_header_size=value)
+        # valid ints still accepted
+        p = MultipartParser(b"bound", max_size=100, max_header_count=4, max_header_size=256)
+        assert p.max_size == 100
+        assert p.max_header_count == 4
+        assert p.max_header_size == 256
 
     def test_boundary_too_long(self) -> None:
         with self.assertRaisesRegex(FormParserError, "Boundary length 257 exceeds maximum of 256"):

@@ -714,7 +714,7 @@ class OctetStreamParser(BaseParser):
         self.callbacks = callbacks
         self._started = False
 
-        if not isinstance(max_size, Number) or max_size < 1:
+        if isinstance(max_size, bool) or not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" % max_size)
         self.max_size: int | float = max_size
         self._current_size = 0
@@ -796,7 +796,7 @@ class QuerystringParser(BaseParser):
         self.callbacks = callbacks
 
         # Max-size stuff
-        if not isinstance(max_size, Number) or max_size < 1:
+        if isinstance(max_size, bool) or not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" % max_size)
         self.max_size: int | float = max_size
         self._current_size = 0
@@ -1049,11 +1049,20 @@ class MultipartParser(BaseParser):
 
         self.callbacks = callbacks
 
-        if not isinstance(max_size, Number) or max_size < 1:
+        if isinstance(max_size, bool) or not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" % max_size)
         self.max_size = max_size
         self._current_size = 0
 
+        # bool subclasses int; True would silently become count/size 1
+        if isinstance(max_header_count, bool) or not isinstance(max_header_count, int):
+            raise ValueError(
+                "max_header_count must be an int, not %r" % max_header_count
+            )
+        if isinstance(max_header_size, bool) or not isinstance(max_header_size, int):
+            raise ValueError(
+                "max_header_size must be an int, not %r" % max_header_size
+            )
         self.max_header_count = max_header_count
         self._current_header_count = 0
 
