@@ -850,6 +850,57 @@ def test_content_transfer_encoding_is_case_insensitive(content_transfer_encoding
     assert file.file_object.read() == b"Test"
 
 
+@pytest.mark.parametrize("boundary", [b"", b"x", b"x" * 256])
+@pytest.mark.parametrize("empty", [False, True])
+def test_multipart_opening_boundary_chunks(boundary: bytes, empty: bool) -> None:
+    opening = b"--" + boundary
+    data = (
+        opening + b"--\r\n"
+        if empty
+        else (opening + b'\r\nContent-Disposition: form-data; name="field"\r\n\r\nvalue\r\n' + opening + b"--\r\n")
+    )
+    for split in [*range(len(opening) + 3), len(data)]:
+        fields: list[Field] = []
+        events: list[str] = []
+        parser = FormParser(
+            "multipart/form-data", fields.append, None, on_end=lambda: events.append("end"), boundary=boundary
+        )
+        for chunk in (data[:split], data[split:]):
+            assert parser.write(chunk) == len(chunk)
+        parser.finalize()
+
+        assert [(field.field_name, field.value) for field in fields] == ([] if empty else [(b"field", b"value")])
+        assert events == ["end"]
+
+
+@pytest.mark.parametrize(
+    ("data", "offset"), [(b"--Boundary\r\n", 2), (b"--boundaryX\n", 10), (b"--boundary\rX", 11), (b"--boundary-X", 11)]
+)
+def test_multipart_opening_boundary_error_offset(data: bytes, offset: int) -> None:
+    for split in range(offset + 1):
+        parser = MultipartParser(b"boundary")
+        assert parser.write(data[:split]) == split
+        with pytest.raises(MultipartParseError) as exc_info:
+            parser.write(data[split:])
+        assert exc_info.value.offset == offset - split
+
+
+@pytest.mark.parametrize("max_size", range(1, 13))
+def test_multipart_opening_boundary_max_size(max_size: int) -> None:
+    data = b"--boundary\r\n\r\nvalue\r\n--boundary--"
+    events: list[str] = []
+    parser = MultipartParser(
+        b"boundary",
+        {"on_part_begin": lambda: events.append("begin"), "on_end": lambda: events.append("end")},
+        max_size=max_size,
+    )
+    assert parser.write(data) == max_size
+    parser.max_size = len(data)
+    assert parser.write(data[max_size:]) == len(data) - max_size
+    parser.finalize()
+    assert events == ["begin", "end"]
+
+
 @parametrize_class
 class TestFormParser(unittest.TestCase):
     def make(self, boundary: str | bytes, config: dict[str, Any] = {}) -> None:

@@ -1051,7 +1051,7 @@ class MultipartParser(BaseParser):
 
         if not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" % max_size)
-        self.max_size = max_size
+        self.max_size: int | float = max_size
         self._current_size = 0
 
         self.max_header_count = max_header_count
@@ -1203,6 +1203,11 @@ class MultipartParser(BaseParser):
                 i -= 1
 
             elif state == MultipartState.START_BOUNDARY:
+                if index == 0 and data.startswith(boundary[2:], i, length):
+                    index = boundary_length - 2
+                    i += index
+                    continue
+
                 # Check to ensure that the last 2 characters in our boundary
                 # are CRLF.
                 if index == boundary_length - 2:
