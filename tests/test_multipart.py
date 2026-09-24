@@ -860,7 +860,7 @@ def test_multipart_opening_boundary_max_size() -> None:
         max_size=max_size,
     )
     assert parser.write(data) == max_size
-    parser.max_size = len(data)
+    parser.max_size = len(data)  # type: ignore[assignment]  # mypy narrows max_size to float & Number.
     assert parser.write(data[max_size:]) == len(data) - max_size
     parser.finalize()
     assert events == ["begin", "end"]

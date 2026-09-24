@@ -1051,7 +1051,7 @@ class MultipartParser(BaseParser):
 
         if not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" % max_size)
-        self.max_size: int | float = max_size
+        self.max_size = max_size
         self._current_size = 0
 
         self.max_header_count = max_header_count
