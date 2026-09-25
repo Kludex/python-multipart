@@ -21,13 +21,17 @@ from python_multipart.exceptions import (
     QuerystringParseError,
 )
 from python_multipart.multipart import (
+    END,
+    FIELD_DATA,
     BaseParser,
     Field,
     File,
     FormParser,
     MultipartParser,
+    MultipartState,
     OctetStreamParser,
     QuerystringParser,
+    QuerystringState,
     create_form_parser,
     parse_form,
     parse_options_header,
@@ -848,6 +852,18 @@ def test_content_transfer_encoding_is_case_insensitive(content_transfer_encoding
     file = files[0]
     file.file_object.seek(0)
     assert file.file_object.read() == b"Test"
+
+
+def test_parser_states_remain_enum_members() -> None:
+    multipart_parser = MultipartParser(b"boundary")
+    multipart_parser.write(b"--boundary--\r\n")
+    multipart_parser.finalize()
+    assert multipart_parser.state is MultipartState.END is END
+
+    querystring_parser = QuerystringParser()
+    querystring_parser.write(b"field=value")
+    querystring_parser.finalize()
+    assert querystring_parser.state is QuerystringState.FIELD_DATA is FIELD_DATA
 
 
 def test_multipart_opening_boundary_max_size() -> None:
