@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Accept Unicode ``str`` values in ``parse_options_header`` instead of raising ``UnicodeEncodeError`` [#319](https://github.com/Kludex/python-multipart/issues/319).
 * Speed up querystring callback dispatch [#316](https://github.com/Kludex/python-multipart/pull/316).
 
 ## 0.0.32 (2026-06-04)
