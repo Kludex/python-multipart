@@ -1614,6 +1614,7 @@ class FormParser:
         self.boundary = boundary
         self.bytes_received = 0
         self.parser = None
+        self._close_files: Callable[[], None] | None = None
 
         # Save callbacks.
         self.on_field = on_field
@@ -1647,11 +1648,21 @@ class FormParser:
 
                 # Call our callback.
                 if on_file:
-                    on_file(file)
+                    completed_file = file
+                    file = None
+                    on_file(completed_file)
 
                 # Call the on-end callback.
                 if self.on_end is not None:
                     self.on_end()
+
+            def close_current_file() -> None:
+                nonlocal file
+                if file is not None:
+                    file.close()
+                    file = None
+
+            self._close_files = close_current_file
 
             # Instantiate an octet-stream parser
             parser = OctetStreamParser(
@@ -1720,6 +1731,7 @@ class FormParser:
             f_multi: File | Field | None = None
             writer: File | Field | Base64Decoder | QuotedPrintableDecoder | None = None
             is_file = False
+            files: list[File] = []
 
             def on_part_begin() -> None:
                 # Reset headers in case this isn't the first part.
@@ -1739,6 +1751,7 @@ class FormParser:
                 if is_file:
                     if on_file:
                         assert isinstance(f_multi, File)
+                        files.remove(f_multi)
                         on_file(f_multi)
                 else:
                     if on_field:
@@ -1780,6 +1793,7 @@ class FormParser:
                 else:
                     f_multi = File(file_name, field_name, config=self.config, content_type=content_type)
                     is_file = True
+                    files.append(f_multi)
 
                 # Parse the given Content-Transfer-Encoding to determine what
                 # we need to do with the incoming data.
@@ -1812,6 +1826,12 @@ class FormParser:
                     writer.finalize()
                 if self.on_end is not None:
                     self.on_end()
+
+            def close_files() -> None:
+                while files:
+                    files.pop().close()
+
+            self._close_files = close_files
 
             # Instantiate a multipart parser.
             parser = MultipartParser(
@@ -1859,8 +1879,12 @@ class FormParser:
 
     def close(self) -> None:
         """Close the parser."""
-        if self.parser is not None and hasattr(self.parser, "close"):
-            self.parser.close()
+        try:
+            if self.parser is not None and hasattr(self.parser, "close"):
+                self.parser.close()
+        finally:
+            if self._close_files is not None:
+                self._close_files()
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(content_type={self.content_type!r}, parser={self.parser!r})"
