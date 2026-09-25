@@ -1203,6 +1203,11 @@ class MultipartParser(BaseParser):
                 i -= 1
 
             elif state == MultipartState.START_BOUNDARY:
+                if index == 0 and data.startswith(boundary[2:], i, length):
+                    index = boundary_length - 2
+                    i += index
+                    continue
+
                 # Check to ensure that the last 2 characters in our boundary
                 # are CRLF.
                 if index == boundary_length - 2:

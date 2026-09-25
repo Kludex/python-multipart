@@ -850,6 +850,22 @@ def test_content_transfer_encoding_is_case_insensitive(content_transfer_encoding
     assert file.file_object.read() == b"Test"
 
 
+def test_multipart_opening_boundary_max_size() -> None:
+    data = b"--boundary\r\n\r\nvalue\r\n--boundary--"
+    max_size = 9
+    events: list[str] = []
+    parser = MultipartParser(
+        b"boundary",
+        {"on_part_begin": lambda: events.append("begin"), "on_end": lambda: events.append("end")},
+        max_size=max_size,
+    )
+    assert parser.write(data) == max_size
+    parser.max_size = len(data)  # type: ignore[assignment]  # mypy narrows max_size to float & Number.
+    assert parser.write(data[max_size:]) == len(data) - max_size
+    parser.finalize()
+    assert events == ["begin", "end"]
+
+
 @parametrize_class
 class TestFormParser(unittest.TestCase):
     def make(self, boundary: str | bytes, config: dict[str, Any] = {}) -> None:
