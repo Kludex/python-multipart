@@ -539,7 +539,7 @@ class File:
             # TODO: what happens if we don't have a filename?
             fname = self._file_base + self._ext if keep_extensions else self._file_base
 
-            path = os.path.join(file_dir, fname)  # type: ignore[arg-type]
+            path = os.path.join(os.fsencode(file_dir), fname)
             try:
                 self.logger.info("Opening file: %r", path)
                 tmp_file = open(path, "w+b")
