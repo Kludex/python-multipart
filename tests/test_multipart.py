@@ -854,6 +854,20 @@ def test_content_transfer_encoding_is_case_insensitive(content_transfer_encoding
     assert file.file_object.read() == b"Test"
 
 
+def test_finalizes_transfer_encoding_before_callback() -> None:
+    data = (
+        b'--b\r\nContent-Disposition: form-data; name="f"\r\n'
+        b"Content-Transfer-Encoding: quoted-printable\r\n\r\n=4\r\n--b--\r\n"
+    )
+    values: list[bytes | None] = []
+    parser = FormParser("multipart/form-data", lambda field: values.append(field.value), None, boundary=b"b")
+
+    parser.write(data)
+    parser.finalize()
+
+    assert values == [b"=4"]
+
+
 def test_parser_states_remain_enum_members() -> None:
     multipart_parser = MultipartParser(b"boundary")
     multipart_parser.write(b"--boundary--\r\n")
