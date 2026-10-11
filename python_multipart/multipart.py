@@ -1759,11 +1759,9 @@ class FormParser:
                 # TODO: check for error here.
 
             def on_part_end() -> None:
-                nonlocal f_multi, is_file, writer
                 assert f_multi is not None
                 assert writer is not None
                 writer.finalize()
-                writer = None
                 if is_file:
                     if on_file:
                         assert isinstance(f_multi, File)
