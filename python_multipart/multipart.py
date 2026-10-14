@@ -1140,6 +1140,39 @@ class MultipartParser(BaseParser):
         current_header_count = self._current_header_count
         current_header_size = self._current_header_size
 
+        # Hoist callback dispatch out of the per-byte loop (same shape as the
+        # QuerystringParser optimization in #316): one dict lookup per write
+        # instead of a `"on_" + name` concatenation, dict lookup and `cast`
+        # per emitted event.
+        callbacks = cast("MultipartCallbacks", self.callbacks)
+        on_part_begin = callbacks.get("on_part_begin")
+        on_part_data = callbacks.get("on_part_data")
+        on_part_end = callbacks.get("on_part_end")
+        on_header_begin = callbacks.get("on_header_begin")
+        on_header_field = callbacks.get("on_header_field")
+        on_header_value = callbacks.get("on_header_value")
+        on_header_end = callbacks.get("on_header_end")
+        on_headers_finished = callbacks.get("on_headers_finished")
+        on_end = callbacks.get("on_end")
+        if on_part_begin is None:
+            on_part_begin = _noop_event
+        if on_part_data is None:
+            on_part_data = _noop_data
+        if on_part_end is None:
+            on_part_end = _noop_event
+        if on_header_begin is None:
+            on_header_begin = _noop_event
+        if on_header_field is None:
+            on_header_field = _noop_data
+        if on_header_value is None:
+            on_header_value = _noop_data
+        if on_header_end is None:
+            on_header_end = _noop_event
+        if on_headers_finished is None:
+            on_headers_finished = _noop_event
+        if on_end is None:
+            on_end = _noop_event
+
         # Our index defaults to 0.
         i = 0
 
@@ -1162,7 +1195,7 @@ class MultipartParser(BaseParser):
         # end of the buffer, and reset the mark, instead of deleting it.  This
         # is used at the end of the function to call our callbacks with any
         # remaining data in this chunk.
-        def data_callback(name: CallbackName, end_i: int, remaining: bool = False) -> None:
+        def data_callback(name: CallbackName, end_i: int, func: Callable[..., Any], remaining: bool = False) -> None:
             marked_index = self.marks.get(name)
             if marked_index is None:
                 return
@@ -1174,7 +1207,7 @@ class MultipartParser(BaseParser):
                 pass
             elif marked_index >= 0:
                 # We are emitting data from the local buffer.
-                self.callback(name, data, marked_index, end_i)
+                func(data, marked_index, end_i)
             else:
                 # Some of the data comes from a partial boundary match.
                 # and requires look-behind.
@@ -1182,18 +1215,18 @@ class MultipartParser(BaseParser):
                 # the state when we entered the loop.
                 lookbehind_len = -marked_index
                 if lookbehind_len <= boundary_length:
-                    self.callback(name, boundary, 0, lookbehind_len)
+                    func(boundary, 0, lookbehind_len)
                 elif self.flags & FLAG_PART_BOUNDARY:
                     lookback = boundary + b"\r\n"
-                    self.callback(name, lookback, 0, lookbehind_len)
+                    func(lookback, 0, lookbehind_len)
                 elif self.flags & FLAG_LAST_BOUNDARY:
                     lookback = boundary + b"--\r\n"
-                    self.callback(name, lookback, 0, lookbehind_len)
+                    func(lookback, 0, lookbehind_len)
                 else:  # pragma: no cover (error case)
                     self.logger.warning("Look-back buffer error")
 
                 if end_i > 0:
-                    self.callback(name, data, 0, end_i)
+                    func(data, 0, end_i)
             # If we're getting remaining data, we have got all the data we
             # can be certain is not a boundary, leaving only a partial boundary match.
             if remaining:
@@ -1253,7 +1286,7 @@ class MultipartParser(BaseParser):
                     index = 0
 
                     # Callback for the start of a part.
-                    self.callback("part_begin")
+                    on_part_begin()
                     current_header_count = 0
                     current_header_size = 0
 
@@ -1289,7 +1322,7 @@ class MultipartParser(BaseParser):
                 # to stop parsing headers in the MultipartState.HEADER_FIELD state,
                 # below.
                 if c != CR:
-                    self.callback("header_begin")
+                    on_header_begin()
 
                 # Move to parsing header fields.
                 state = HEADER_FIELD
@@ -1335,7 +1368,7 @@ class MultipartParser(BaseParser):
 
                     # Call our callback with the header field.
                     i = colon
-                    data_callback("header_field", i)
+                    data_callback("header_field", i, on_header_field)
 
                     # Move to parsing the header value.
                     state = HEADER_VALUE_START
@@ -1362,8 +1395,8 @@ class MultipartParser(BaseParser):
                 advance_header_size(end - i)
                 if cr != -1:
                     i = cr
-                    data_callback("header_value", i)
-                    self.callback("header_end")
+                    data_callback("header_value", i, on_header_value)
+                    on_header_end()
                     current_header_size = 0
                     state = HEADER_VALUE_ALMOST_DONE
                 else:
@@ -1390,7 +1423,7 @@ class MultipartParser(BaseParser):
                     self.logger.warning(msg)
                     raise MultipartParseError(msg, offset=i)
 
-                self.callback("headers_finished")
+                on_headers_finished()
                 state = PART_DATA_START
 
             elif state == PART_DATA_START:
@@ -1477,11 +1510,11 @@ class MultipartParser(BaseParser):
                             flags &= ~FLAG_PART_BOUNDARY
 
                             # We have identified a boundary, callback for any data before it.
-                            data_callback("part_data", i - index)
+                            data_callback("part_data", i - index, on_part_data)
                             # Callback indicating that we've reached the end of
                             # a part, and are starting a new one.
-                            self.callback("part_end")
-                            self.callback("part_begin")
+                            on_part_end()
+                            on_part_begin()
                             current_header_count = 0
                             current_header_size = 0
 
@@ -1502,11 +1535,11 @@ class MultipartParser(BaseParser):
                         # We need a second hyphen here.
                         if c == HYPHEN:
                             # We have identified a boundary, callback for any data before it.
-                            data_callback("part_data", i - index)
+                            data_callback("part_data", i - index, on_part_data)
                             # Callback to end the current part, and then the
                             # message.
-                            self.callback("part_end")
-                            self.callback("end")
+                            on_part_end()
+                            on_end()
                             state = END
                         else:
                             # No match, so reset index.
@@ -1531,7 +1564,7 @@ class MultipartParser(BaseParser):
                         self.logger.warning(msg)
                         raise MultipartParseError(msg, offset=i)
                     index += 1
-                    self.callback("end")
+                    on_end()
                     state = END
 
             elif state == END:
@@ -1557,9 +1590,9 @@ class MultipartParser(BaseParser):
         # that we haven't yet reached the end of this 'thing'.  So, by setting
         # the mark to 0, we cause any data callbacks that take place in future
         # calls to this function to start from the beginning of that buffer.
-        data_callback("header_field", length, True)
-        data_callback("header_value", length, True)
-        data_callback("part_data", length - index, True)
+        data_callback("header_field", length, on_header_field, True)
+        data_callback("header_value", length, on_header_value, True)
+        data_callback("part_data", length - index, on_part_data, True)
 
         # Save values to locals.
         self.state = state
