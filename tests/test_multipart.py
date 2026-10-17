@@ -754,6 +754,22 @@ class TestQuotedPrintableDecoder(unittest.TestCase):
         self.d.write(b"\r\nbar")
         self.assert_data(b"foobar")
 
+    def test_adjacent_escapes_across_chunk_splits(self) -> None:
+        for encoded, expected in (
+            (b"=3D=3D", b"=="),
+            (b"foo=3D=3Dbar", b"foo==bar"),
+            (b"foo=3D=\r\nbar", b"foo=bar"),
+            (b"foo=3D=\nbar", b"foo=bar"),
+        ):
+            for split in range(len(encoded) + 1):
+                with self.subTest(encoded=encoded, split=split):
+                    output = BytesIO()
+                    decoder = QuotedPrintableDecoder(output)
+                    decoder.write(encoded[:split])
+                    decoder.write(encoded[split:])
+                    decoder.finalize()
+                    self.assertEqual(output.getvalue(), expected)
+
     def test_close_and_finalize(self) -> None:
         parser = Mock()
         f = QuotedPrintableDecoder(parser)
@@ -1455,6 +1471,32 @@ class TestFormParser(unittest.TestCase):
         with self.assertRaisesRegex(FormParserError, "Field name not found in Content-Disposition"):
             f.write(data)
             f.finalize()
+
+    def test_quoted_printable_adjacent_escapes_across_chunk_splits(self) -> None:
+        cases = ((b"=3D=3D", b"=="), (b"=3D=\r\n", b"="), (b"=3D=\n", b"="))
+        for is_file in (False, True):
+            filename = b'; filename="test.txt"' if is_file else b""
+            head = (
+                b'--boundary\r\nContent-Disposition: form-data; name="upload"'
+                + filename
+                + b"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n"
+            )
+            for encoded, expected in cases:
+                for split in range(len(encoded) + 1):
+                    with self.subTest(is_file=is_file, encoded=encoded, split=split):
+                        self.make("boundary")
+                        try:
+                            self.f.write(head + encoded[:split])
+                            self.f.write(encoded[split:] + b"\r\n--boundary--\r\n")
+                            self.f.finalize()
+                            if is_file:
+                                self.assert_file(b"upload", b"test.txt", None, expected)
+                            else:
+                                self.assert_field(b"upload", expected)
+                            self.assertTrue(self.ended)
+                        finally:
+                            for file in self.files:
+                                file.close()
 
     def test_handles_None_fields(self) -> None:
         fields: list[Field] = []
