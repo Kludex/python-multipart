@@ -1473,7 +1473,7 @@ class TestFormParser(unittest.TestCase):
             f.finalize()
 
     def test_quoted_printable_adjacent_escapes_across_chunk_splits(self) -> None:
-        encoded = b"=3D=3D"
+        cases = ((b"=3D=3D", b"=="), (b"=3D=\r\n", b"="), (b"=3D=\n", b"="))
         for is_file in (False, True):
             filename = b'; filename="test.txt"' if is_file else b""
             head = (
@@ -1481,21 +1481,22 @@ class TestFormParser(unittest.TestCase):
                 + filename
                 + b"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n"
             )
-            for split in range(len(encoded) + 1):
-                with self.subTest(is_file=is_file, split=split):
-                    self.make("boundary")
-                    try:
-                        self.f.write(head + encoded[:split])
-                        self.f.write(encoded[split:] + b"\r\n--boundary--\r\n")
-                        self.f.finalize()
-                        if is_file:
-                            self.assert_file(b"upload", b"test.txt", None, b"==")
-                        else:
-                            self.assert_field(b"upload", b"==")
-                        self.assertTrue(self.ended)
-                    finally:
-                        for file in self.files:
-                            file.close()
+            for encoded, expected in cases:
+                for split in range(len(encoded) + 1):
+                    with self.subTest(is_file=is_file, encoded=encoded, split=split):
+                        self.make("boundary")
+                        try:
+                            self.f.write(head + encoded[:split])
+                            self.f.write(encoded[split:] + b"\r\n--boundary--\r\n")
+                            self.f.finalize()
+                            if is_file:
+                                self.assert_file(b"upload", b"test.txt", None, expected)
+                            else:
+                                self.assert_field(b"upload", expected)
+                            self.assertTrue(self.ended)
+                        finally:
+                            for file in self.files:
+                                file.close()
 
     def test_handles_None_fields(self) -> None:
         fields: list[Field] = []
