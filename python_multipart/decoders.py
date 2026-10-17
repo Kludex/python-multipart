@@ -142,8 +142,9 @@ class QuotedPrintableDecoder:
         # If the last 2 characters have an '=' sign in it, then we won't be
         # able to decode the encoded value and we'll need to save it for the
         # next decoding step.
-        if data[-2:].find(b"=") != -1:
-            enc, rest = data[:-2], data[-2:]
+        escape_pos = data.find(b"=", max(0, len(data) - 2))
+        if escape_pos != -1:
+            enc, rest = data[:escape_pos], data[escape_pos:]
         else:
             enc = data
             rest = b""
