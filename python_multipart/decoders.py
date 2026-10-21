@@ -60,6 +60,12 @@ class Base64Decoder:
         :param data: base64 data to decode
         """
 
+        # Line breaks and spaces may appear anywhere in Base64 (MIME wraps at
+        # 76 characters).  Drop them before counting, otherwise a chunk
+        # boundary falling inside a quartet is miscounted and the decode fails.
+        written = len(data)
+        data = data.translate(None, b"\r\n \t")
+
         # Prepend any cache info to our data.
         if len(self.cache) > 0:
             data = bytes(self.cache) + data
@@ -85,7 +91,7 @@ class Base64Decoder:
             self.cache[:] = b""
 
         # Return the length of the data to indicate no error.
-        return len(data)
+        return written
 
     def close(self) -> None:
         """Close this decoder.  If the underlying object has a `close()`

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import os
 import random
 import sys
@@ -691,6 +692,17 @@ class TestBase64Decoder(unittest.TestCase):
             self.d.write(first)
             self.d.write(second)
             self.assert_data(b"foobar")
+
+    def test_line_wrapped_input_any_split(self) -> None:
+        # MIME-style Base64 is wrapped with line breaks; the result must not
+        # depend on where the chunk boundaries fall.
+        raw = bytes(range(100))
+        wrapped = base64.encodebytes(raw)
+        for i in range(len(wrapped) + 1):
+            self.setUp()
+            self.assertEqual(self.d.write(wrapped[:i]), i)
+            self.d.write(wrapped[i:])
+            self.assert_data(raw)
 
     def test_close_and_finalize(self) -> None:
         parser = Mock()
