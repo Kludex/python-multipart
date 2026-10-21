@@ -644,6 +644,101 @@ class TestOctetStreamParser(unittest.TestCase):
             q = OctetStreamParser(max_size="foo")  # type: ignore[arg-type]
 
 
+class TestMultipartParser(unittest.TestCase):
+    BOUNDARY = b"boundary"
+    BODY = (
+        b"--boundary\r\n"
+        b'Content-Disposition: form-data; name="a"\r\n'
+        b"\r\n"
+        b"foo\r\n"
+        b"--boundary\r\n"
+        b'Content-Disposition: form-data; name="b"; filename="b.txt"\r\n'
+        b"Content-Type: text/plain\r\n"
+        b"\r\n"
+        b"barbaz\r\n"
+        b"--boundary--\r\n"
+    )
+
+    def parse(self, callbacks: Any = None, chunk_size: int | None = None) -> list[tuple[Any, ...]]:
+        events: list[tuple[Any, ...]] = []
+
+        def make_event(name: str) -> Any:
+            def on_event() -> None:
+                events.append((name,))
+
+            return on_event
+
+        def make_data(name: str) -> Any:
+            def on_data(data: bytes, start: int, end: int) -> None:
+                events.append((name, data[start:end]))
+
+            return on_data
+
+        if callbacks is None:
+            callbacks = {
+                "on_part_begin": make_event("part_begin"),
+                "on_part_data": make_data("part_data"),
+                "on_part_end": make_event("part_end"),
+                "on_header_begin": make_event("header_begin"),
+                "on_header_field": make_data("header_field"),
+                "on_header_value": make_data("header_value"),
+                "on_header_end": make_event("header_end"),
+                "on_headers_finished": make_event("headers_finished"),
+                "on_end": make_event("end"),
+            }
+        parser = MultipartParser(self.BOUNDARY, callbacks)
+        if chunk_size is None:
+            self.assertEqual(parser.write(self.BODY), len(self.BODY))
+        else:
+            for i in range(0, len(self.BODY), chunk_size):
+                parser.write(self.BODY[i : i + chunk_size])
+        parser.finalize()
+        return events
+
+    def test_no_callbacks(self) -> None:
+        parser = MultipartParser(self.BOUNDARY)
+
+        self.assertEqual(parser.write(self.BODY), len(self.BODY))
+        parser.finalize()
+
+    def test_none_callbacks(self) -> None:
+        callbacks: Any = {
+            "on_part_begin": None,
+            "on_part_data": None,
+            "on_part_end": None,
+            "on_header_begin": None,
+            "on_header_field": None,
+            "on_header_value": None,
+            "on_header_end": None,
+            "on_headers_finished": None,
+            "on_end": None,
+        }
+        parser = MultipartParser(self.BOUNDARY, callbacks)
+
+        self.assertEqual(parser.write(self.BODY), len(self.BODY))
+        parser.finalize()
+
+    def test_events_match_across_chunkings(self) -> None:
+        # Chunk boundaries legitimately split data callbacks, so compare the
+        # joined payload per channel plus the notification-event sequence.
+        def summarize(events: list[tuple[Any, ...]]) -> tuple[Any, ...]:
+            joined: dict[str, list[bytes]] = {}
+            notifications: list[str] = []
+            for event in events:
+                if len(event) == 2:
+                    joined.setdefault(event[0], []).append(event[1])
+                else:
+                    notifications.append(event[0])
+            return ({name: b"".join(payloads) for name, payloads in joined.items()}, notifications)
+
+        whole = self.parse()
+        self.assertIn(("part_data", b"foo"), whole)
+        self.assertIn(("part_data", b"barbaz"), whole)
+        expected = summarize(whole)
+        for chunk_size in (1, 3, 7, 64):
+            self.assertEqual(summarize(self.parse(chunk_size=chunk_size)), expected)
+
+
 class TestBase64Decoder(unittest.TestCase):
     # Note: base64('foobar') == 'Zm9vYmFy'
     def setUp(self) -> None:
