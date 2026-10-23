@@ -24,3 +24,21 @@ def test_upload_dir_with_leading_slash_in_filename(tmp_path: Path) -> None:
     assert not file.in_memory
     assert Path(upload_dir / "foo.txt").exists()
     assert Path(upload_dir / "foo.txt").read_bytes() == b"123456789012"
+
+
+def test_str_upload_dir_with_keep_filename(tmp_path: Path) -> None:
+    file = File(
+        b"foo.txt",
+        config={
+            "UPLOAD_DIR": str(tmp_path),
+            "UPLOAD_KEEP_FILENAME": True,
+            "UPLOAD_KEEP_EXTENSIONS": True,
+            "MAX_MEMORY_FILE_SIZE": 10,
+        },
+    )
+    file.write(b"123456789012")
+    file.close()
+
+    assert not file.in_memory
+    assert file.actual_file_name == b"foo.txt"
+    assert (tmp_path / "foo.txt").read_bytes() == b"123456789012"
