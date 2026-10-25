@@ -1298,6 +1298,8 @@ class TestFormParser(unittest.TestCase):
         # Not asserting a specific field count here -- the point of this
         # test is that whatever comes out contains no fabricated bytes.
         for field in self.fields:
+            self.assertIsNotNone(field.value)
+            assert field.value is not None  # for mypy
             self.assertNotIn(b"\r\n--boundary", field.value)
 
     def test_request_body_fuzz(self) -> None:
