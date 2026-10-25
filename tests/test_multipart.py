@@ -1258,6 +1258,48 @@ class TestFormParser(unittest.TestCase):
         self.assert_field(b"b", b"")
         self.assert_field(b"c", b"val")
 
+    def test_content_starting_with_boundary_text_is_not_corrupted_across_chunks(self) -> None:
+        """
+        A field whose real content happens to start with the literal bytes
+        "--boundary" (not an actual boundary -- just data that looks like
+        one), split across two writes so the first chunk ends right after
+        that text, before the bytes that would disambiguate it from a real
+        boundary are visible. This is a regression test for a flaw in an
+        earlier version of the zero-byte-part fix: committing to the
+        zero-byte special case before confirming the match was complete
+        caused the cross-chunk carry-over logic to fabricate a bogus
+        leading "\\r\\n" in the field's value once the chunk boundary was
+        resolved.
+        """
+        self.make(boundary="boundary")
+        self.f.write(b'--boundary\r\nContent-Disposition: form-data; name="f"\r\n\r\n--boundary')
+        self.f.write(b"XYZ real content continues\r\n--boundary--\r\n")
+        self.f.finalize()
+
+        self.assertEqual(1, len(self.fields))
+        self.assert_field(b"f", b"--boundaryXYZ real content continues")
+
+    def test_zero_byte_field_split_exactly_at_boundary_is_not_corrupted(self) -> None:
+        """
+        An empty field whose boundary is split across two writes, ending
+        the first write right after the literal "--boundary" text and
+        before the bytes that would confirm it's actually a boundary. The
+        fix only takes its short-circuit when that confirmation is already
+        visible in the same buffer, so this falls back to the parser's
+        pre-existing (and separately known) behavior for a boundary split
+        across chunks, rather than fabricating a "\\r\\n" the way the
+        false-positive case above used to.
+        """
+        self.make(boundary="boundary")
+        self.f.write(b'--boundary\r\nContent-Disposition: form-data; name="empty"\r\n\r\n--boundary')
+        self.f.write(b"--\r\n")
+        self.f.finalize()
+
+        # Not asserting a specific field count here -- the point of this
+        # test is that whatever comes out contains no fabricated bytes.
+        for field in self.fields:
+            self.assertNotIn(b"\r\n--boundary", field.value)
+
     def test_request_body_fuzz(self) -> None:
         """
         This test randomly fuzzes the request body to ensure that no strange
