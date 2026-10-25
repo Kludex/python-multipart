@@ -1179,6 +1179,85 @@ class TestFormParser(unittest.TestCase):
         actual_content_type = self.fields[0].content_type
         self.assertEqual(actual_content_type, expected_content_type)
 
+    def test_zero_byte_field_is_not_dropped(self) -> None:
+        """
+        A field with an empty value is a part whose body is zero bytes --
+        the boundary begins at the very next byte after the headers end.
+        That boundary line is missed entirely if the search for it starts
+        looking strictly *after* the \\r\\n that terminates the headers,
+        since that's the exact \\r\\n a boundary match requires immediately
+        before it.
+        """
+        self.make(boundary="boundary")
+        self.f.write(b'--boundary\r\nContent-Disposition: form-data; name="empty"\r\n\r\n--boundary--\r\n')
+        self.f.finalize()
+
+        self.assertEqual(0, len(self.files))
+        self.assert_field(b"empty", b"")
+
+    def test_zero_byte_field_does_not_swallow_next_part(self) -> None:
+        """
+        Same as above, but the empty field isn't the last part. Previously
+        the parser would miss the boundary right after the empty field and
+        instead match the *next* boundary it could find, folding the
+        following part's headers and body into the empty field's value.
+        """
+        self.make(boundary="boundary")
+        self.f.write(
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="empty"\r\n\r\n'
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="other"\r\n\r\n'
+            b"val\r\n"
+            b"--boundary--\r\n"
+        )
+        self.f.finalize()
+
+        self.assertEqual(0, len(self.files))
+        self.assertEqual(2, len(self.fields))
+        self.assert_field(b"empty", b"")
+        self.assert_field(b"other", b"val")
+
+    def test_zero_byte_file_is_not_dropped(self) -> None:
+        """
+        Same bug, but for a file part (one with a filename) instead of a
+        plain field.
+        """
+        self.make(boundary="boundary")
+        self.f.write(
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="f"; filename="empty.txt"\r\n'
+            b"Content-Type: text/plain\r\n\r\n"
+            b"--boundary--\r\n"
+        )
+        self.f.finalize()
+
+        self.assertEqual(0, len(self.fields))
+        self.assert_file(b"f", b"empty.txt", "text/plain", b"")
+
+    def test_multiple_consecutive_zero_byte_fields(self) -> None:
+        """
+        Several zero-byte parts in a row, to make sure the fix generalizes
+        beyond a single empty part.
+        """
+        self.make(boundary="boundary")
+        self.f.write(
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="a"\r\n\r\n'
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="b"\r\n\r\n'
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="c"\r\n\r\n'
+            b"val\r\n"
+            b"--boundary--\r\n"
+        )
+        self.f.finalize()
+
+        self.assertEqual(3, len(self.fields))
+        self.assert_field(b"a", b"")
+        self.assert_field(b"b", b"")
+        self.assert_field(b"c", b"val")
+
     def test_request_body_fuzz(self) -> None:
         """
         This test randomly fuzzes the request body to ensure that no strange
