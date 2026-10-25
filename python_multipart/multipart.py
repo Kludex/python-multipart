@@ -1411,8 +1411,25 @@ class MultipartParser(BaseParser):
                 # jump into the same matched state the fast-path `data.find`
                 # below would leave us in -- just offset by the 2 bytes
                 # it didn't need to (re-)match.
+                #
+                # Only take this path when the disambiguating bytes after
+                # the boundary (CRLF for a regular boundary, or a second
+                # hyphen for the last one) are already in this same buffer.
+                # Those two bytes before "--BOUNDARY" that we're skipping
+                # past are fictional, not real previously-scanned data, so
+                # if we committed to this match before its end is visible
+                # and it turned out to be a false positive (just real body
+                # content that happens to start with "--BOUNDARY", followed
+                # by neither CRLF nor "--"), the carry-over-to-next-chunk
+                # machinery below would replay those 2 fictional bytes as
+                # real data once the chunk boundary resolved it -- fabricating
+                # a "\r\n" that was never actually in the input. Requiring
+                # the full match here avoids ever leaving that ambiguous.
                 tail = boundary[2:]
-                if data[i : i + len(tail)] == tail:
+                tail_end = i + len(tail)
+                if data[i:tail_end] == tail and (
+                    data[tail_end : tail_end + 2] == b"\r\n" or data[tail_end : tail_end + 2] == b"--"
+                ):
                     index = boundary_length - 1
                     i += len(tail) - 1
                     c = data[i]
