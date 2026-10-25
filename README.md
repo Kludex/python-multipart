@@ -29,9 +29,9 @@ be handled without buffering the whole body in memory.
   case of reading a form submission into callbacks.
 - **Header utilities**: `parse_options_header` for extracting multipart
   boundaries and other parameters from `Content-Type`.
-- **Decoders**: included decoders for transfer encodings.
-- **Callback-driven API**: `on_part_begin`, `on_part_data`, `on_part_end`,
-  `on_field`, `on_file`, etc., invoked as data arrives.
+- **Decoders**: `Base64Decoder` and `QuotedPrintableDecoder` for transfer encodings.
+- **Callback-driven API**: `on_part_begin`, `on_part_data`, and `on_part_end` run
+  incrementally; `on_field` and `on_file` fire after each complete field or file.
 - **Zero runtime dependencies**: pure Python, no third-party packages required.
 
 ## Installation
