@@ -1397,6 +1397,26 @@ class MultipartParser(BaseParser):
                 # Mark the start of our part data.
                 set_mark("part_data")
 
+                # Special case: a part with zero bytes of body, where the
+                # boundary begins at the very next byte. The boundary we
+                # search for below is "\r\n--BOUNDARY", but the \r\n it
+                # expects immediately before "--BOUNDARY" is the exact same
+                # \r\n that HEADERS_ALMOST_DONE, above, just consumed as the
+                # header-terminating blank line -- it's already behind us
+                # and can never be found by a forward search starting here,
+                # so the general-purpose matching below would either run
+                # past the real boundary (if more parts follow) or never
+                # find it at all (if this is the last part). Detect a
+                # literal "--BOUNDARY" starting right here directly, and
+                # jump into the same matched state the fast-path `data.find`
+                # below would leave us in -- just offset by the 2 bytes
+                # it didn't need to (re-)match.
+                tail = boundary[2:]
+                if data[i : i + len(tail)] == tail:
+                    index = boundary_length - 1
+                    i += len(tail) - 1
+                    c = data[i]
+
                 # Start processing part data, including this character.
                 state = PART_DATA
                 i -= 1
