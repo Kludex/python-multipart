@@ -13,3 +13,34 @@ Test coverage is currently 100%.
 ## Why?
 
 Because streaming uploads are awesome for large files.
+
+## Overview
+
+`python-multipart` parses `multipart/form-data`, `octet-stream`, and
+query-string request bodies in a streaming fashion: data is fed to the parser
+incrementally and callbacks fire as parts are discovered, so large uploads can
+be handled without buffering the whole body in memory.
+
+## Capabilities
+
+- **Streaming parsers**: `MultipartParser`, `FormParser`, `OctetStreamParser`,
+  `QuerystringParser`, and `BaseParser` for building custom parsers.
+- **Convenience helpers**: `parse_form` and `create_form_parser` for the common
+  case of reading a form submission into callbacks.
+- **Header utilities**: `parse_options_header` for extracting multipart
+  boundaries and other parameters from `Content-Type`.
+- **Decoders**: included decoders for transfer encodings.
+- **Callback-driven API**: `on_part_begin`, `on_part_data`, `on_part_end`,
+  `on_field`, `on_file`, etc., invoked as data arrives.
+- **Zero runtime dependencies**: pure Python, no third-party packages required.
+
+## Installation
+
+```console
+pip install python-multipart
+```
+
+## Requirements
+
+- Python 3.11+
+- No runtime dependencies.
