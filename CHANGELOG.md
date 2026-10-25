@@ -3,7 +3,7 @@
 ## Unreleased
 
 * Speed up querystring callback dispatch [#316](https://github.com/Kludex/python-multipart/pull/316).
-* Fix a part with zero bytes of body (an empty field, or a file with no content) being dropped entirely, or merged into the following part's headers and data, because the boundary search immediately after an empty part's headers missed the `\r\n` it needed, having already consumed it as the header-terminating blank line [#345](https://github.com/Kludex/python-multipart/pull/345).
+* Fix empty fields and files (zero-byte parts) being dropped or merged into the next part, when the boundary arrives in the same `write()` call as the part's headers. A boundary split across separate writes right at that point is a separate, pre-existing limitation this doesn't cover [#345](https://github.com/Kludex/python-multipart/pull/345).
 
 ## 0.0.32 (2026-06-04)
 
