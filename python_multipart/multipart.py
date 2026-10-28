@@ -542,7 +542,10 @@ class File:
             path = os.path.join(file_dir, fname)  # type: ignore[arg-type]
             try:
                 self.logger.info("Opening file: %r", path)
-                tmp_file = open(path, "w+b")
+                # The final path component comes from the client, so refuse to
+                # follow a symlink planted under that name in UPLOAD_DIR.
+                flags = os.O_RDWR | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+                tmp_file = os.fdopen(os.open(path, flags, 0o666), "w+b")
             except OSError:
                 tmp_file = None
 

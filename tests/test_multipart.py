@@ -214,6 +214,25 @@ class TestFile(unittest.TestCase):
         self.assertEqual(self.f.actual_file_name, b"foo.txt")
         self.assert_exists()
 
+    @pytest.mark.skipif(not hasattr(os, "O_NOFOLLOW"), reason="requires O_NOFOLLOW")
+    def test_file_full_name_does_not_follow_symlink(self) -> None:
+        target_dir = force_bytes(tempfile.mkdtemp())
+        target = os.path.join(target_dir, b"target.txt")
+        with open(target, "wb") as f:
+            f.write(b"original")
+        os.symlink(target, os.path.join(self.d, b"foo.txt"))
+
+        self.c["UPLOAD_DIR"] = self.d
+        self.c["UPLOAD_KEEP_FILENAME"] = True
+        self.c["UPLOAD_KEEP_EXTENSIONS"] = True
+        self.c["MAX_MEMORY_FILE_SIZE"] = 10
+
+        with self.assertRaises(FileError):
+            self.f.write(b"12345678901")
+
+        with open(target, "rb") as f:
+            self.assertEqual(f.read(), b"original")
+
     def test_no_dir_with_extension(self) -> None:
         self.c["UPLOAD_KEEP_EXTENSIONS"] = True
         self.c["MAX_MEMORY_FILE_SIZE"] = 10
