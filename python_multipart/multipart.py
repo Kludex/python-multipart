@@ -433,9 +433,7 @@ class File:
         # config, we may not actually use the provided name.
         self._actual_file_name: bytes | None = None
 
-        # Split the extension from the filename. Without a filename (for
-        # example an application/octet-stream upload) there is no base and no
-        # extension to keep.
+        # Nameless uploads (e.g. `application/octet-stream`) have no base or extension.
         self._file_base: bytes | None = None
         self._ext = b""
         if file_name is not None:
