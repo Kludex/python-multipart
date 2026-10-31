@@ -54,4 +54,5 @@ Report these as public issues if you think they are bugs.
 
 Report vulnerabilities privately through a
 [GitHub security advisory](https://github.com/Kludex/python-multipart/security/advisories/new). Include a proof of
-concept and the impact without relying on another parser's behaviour.
+concept and the impact. If the impact depends on another parser, also show how `python-multipart` departs from the
+specification.
