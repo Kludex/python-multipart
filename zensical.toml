@@ -21,6 +21,7 @@ icon = "fontawesome/brands/python"
 link = "https://pypi.org/project/python-multipart"
 
 [project.theme]
+variant = "classic"
 features = [
   "navigation.tracking",
   "content.code.copy",
