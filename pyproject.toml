@@ -122,4 +122,4 @@ exclude_also = [
 ]
 
 [tool.check-sdist]
-git-only = ["docs", "fuzz", "scripts", "zensical.toml", "uv.lock", "SECURITY.md"]
+git-only = ["docs", "fuzz", "scripts", "zensical.toml", "uv.lock"]
