@@ -43,6 +43,7 @@ meow
 ```
 
 Each part has some headers (the field name, the file name) and then the content.
+Every line ends with `\r\n` (a carriage return and a newline), which is why the examples below write `\r\n` explicitly.
 A **parser** is the code that turns this text back into fields and files. Python-Multipart is that parser.
 
 ### Big files do not fit in memory
