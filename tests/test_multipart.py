@@ -753,6 +753,15 @@ class TestQuotedPrintableDecoder(unittest.TestCase):
         self.d.write(b"\r\nbar")
         self.assert_data(b"foobar")
 
+    def test_with_escape_before_split_escape(self) -> None:
+        self.d.write(b"=41=")
+        self.d.write(b"42")
+        self.assert_data(b"AB")
+
+    def test_with_trailing_double_equals(self) -> None:
+        self.d.write(b"==")
+        self.assert_data(b"=")
+
     def test_close_and_finalize(self) -> None:
         parser = Mock()
         f = QuotedPrintableDecoder(parser)
