@@ -435,7 +435,9 @@ class File:
         # config, we may not actually use the provided name.
         self._actual_file_name: bytes | None = None
 
-        # Split the extension from the filename.
+        # Nameless uploads (e.g. `application/octet-stream`) have no base or extension.
+        self._file_base: bytes | None = None
+        self._ext = b""
         if file_name is not None:
             # Extract just the basename to avoid directory traversal
             basename = os.path.basename(file_name)
@@ -533,12 +535,11 @@ class File:
         delete_tmp = self._config.get("UPLOAD_DELETE_TMP", True)
         tmp_file: None | BufferedRandom = None
 
-        # If we have a directory and are to keep the filename...
-        if file_dir is not None and keep_filename:
+        # If we have a directory and a filename to keep...
+        if file_dir is not None and keep_filename and self._file_base is not None:
             self.logger.info("Saving with filename in: %r", file_dir)
 
             # Build our filename.
-            # TODO: what happens if we don't have a filename?
             fname = self._file_base + self._ext if keep_extensions else self._file_base
 
             path = os.path.join(os.fsencode(file_dir), fname)
