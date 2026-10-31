@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* Add opt-in field-count and field-size limits for URL-encoded forms in `FormParser` [#332](https://github.com/Kludex/python-multipart/issues/332).
 * Speed up querystring callback dispatch [#316](https://github.com/Kludex/python-multipart/pull/316).
 
 ## 0.0.32 (2026-06-04)

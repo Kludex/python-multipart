@@ -895,6 +895,37 @@ def test_multipart_opening_boundary_max_size() -> None:
     assert events == ["begin", "end"]
 
 
+@pytest.mark.parametrize(
+    "config,first,second,message",
+    [
+        ({"MAX_FIELDS": 1}, b"a=1&", b"b=2", "Too many fields"),
+        ({"MAX_FIELD_SIZE": 3}, b"lo", b"ng=1", "Field exceeded maximum size of 3 bytes"),
+        ({"MAX_FIELD_SIZE": 3}, b"a=l", b"ong", "Field exceeded maximum size of 3 bytes"),
+    ],
+)
+def test_urlencoded_field_limits(config: dict[str, int], first: bytes, second: bytes, message: str) -> None:
+    parser = FormParser("application/x-www-form-urlencoded", None, None, config=config)
+    parser.write(first)
+    with pytest.raises(FormParserError, match=message):
+        parser.write(second)
+
+
+def test_urlencoded_field_limits_accept_exact_boundaries() -> None:
+    fields: list[Field] = []
+    parser = FormParser(
+        "application/x-www-form-urlencoded", fields.append, None, config={"MAX_FIELDS": 2, "MAX_FIELD_SIZE": 3}
+    )
+    parser.write(b"a=12&b")
+    parser.write(b"c=4")
+    parser.finalize()
+    assert [(field.field_name, field.value) for field in fields] == [(b"a", b"12"), (b"bc", b"4")]
+
+
+def test_invalid_urlencoded_field_limit() -> None:
+    with pytest.raises(ValueError, match="MAX_FIELDS must be a non-negative number"):
+        FormParser("application/x-www-form-urlencoded", None, None, config={"MAX_FIELDS": -1})
+
+
 @parametrize_class
 class TestFormParser(unittest.TestCase):
     def make(self, boundary: str | bytes, config: dict[str, Any] = {}) -> None:
