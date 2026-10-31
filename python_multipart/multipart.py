@@ -1338,6 +1338,7 @@ class MultipartParser(BaseParser):
                         # False positive inside the preamble - just part of
                         # the preamble text.  Reset and keep scanning.
                         index = 0
+                        i -= 1
                 elif index == boundary_length + 1:
                     # Regular delimiter: expect LF after CR.
                     if c == LF:
@@ -1347,6 +1348,7 @@ class MultipartParser(BaseParser):
                     else:
                         # False positive: CR not followed by LF.  Reset.
                         index = 0
+                        i -= 1
                 else:
                     # Close delimiter: expect HYPHEN after HYPHEN.
                     if c == HYPHEN:
@@ -1355,6 +1357,7 @@ class MultipartParser(BaseParser):
                     else:
                         # False positive: HYPHEN not followed by HYPHEN.
                         index = 0
+                        i -= 1
 
             elif state == HEADER_FIELD_START:
                 # Mark the start of a header field here, reset the index, and

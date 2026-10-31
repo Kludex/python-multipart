@@ -1441,6 +1441,21 @@ class TestFormParser(unittest.TestCase):
         self.f.finalize()
         self.assert_field(b"field", b"value")
 
+    def test_preamble_false_positive_before_real_delimiter(self) -> None:
+        for trailer in (b"X", b"\r", b"-"):
+            with self.subTest(trailer=trailer):
+                self.make("boundary")
+                data = (
+                    b"preamble\r\n--boundary" + trailer + b"\r\n--boundary\r\n"
+                    b'Content-Disposition: form-data; name="field"\r\n'
+                    b"\r\n"
+                    b"value\r\n"
+                    b"--boundary--\r\n"
+                )
+                self.f.write(data)
+                self.f.finalize()
+                self.assert_field(b"field", b"value")
+
     def test_preamble_followed_by_close_boundary(self) -> None:
         # A preamble followed directly by the close boundary (empty body)
         # should parse without error and produce no fields.
