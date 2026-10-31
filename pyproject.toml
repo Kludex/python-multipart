@@ -52,10 +52,8 @@ dev = [
     "types-PyYAML",
     "atheris==2.3.0; python_version <= '3.11'",
     # Documentation
-    "mkdocs",
-    "mkdocs-material",
+    "zensical",
     "mkdocstrings-python",
-    "mkdocs-autorefs",
     "pymdown-extensions>=10.21.2",
 ]
 
@@ -124,4 +122,4 @@ exclude_also = [
 ]
 
 [tool.check-sdist]
-git-only = ["docs", "fuzz", "scripts", "mkdocs.yml", "uv.lock"]
+git-only = ["docs", "fuzz", "scripts", "zensical.toml", "uv.lock"]
