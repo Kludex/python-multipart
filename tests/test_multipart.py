@@ -277,6 +277,11 @@ class TestParseOptionsHeader(unittest.TestCase):
         self.assertEqual(t, b"application/json")
         self.assertEqual(p, {b"par": b"val", b"asdf": b"foo"})
 
+    def test_content_type_with_parameters_is_normalized(self) -> None:
+        t, p = parse_options_header(b"Multipart/Form-Data; boundary=abc")
+        self.assertEqual(t, b"multipart/form-data")
+        self.assertEqual(p, {b"boundary": b"abc"})
+
     def test_quoted_param(self) -> None:
         t, p = parse_options_header(b'application/json;param="quoted"')
         self.assertEqual(t, b"application/json")
