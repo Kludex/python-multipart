@@ -215,7 +215,10 @@ def _parseparam(s: str) -> list[str]:
 
 
 def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, bytes]]:
-    """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
+    """Parses a Content-Type header into a value in the following format: (content_type, {parameters}).
+
+    `str` values must be Latin-1 encodable, as in WSGI; pass the raw header `bytes` otherwise.
+    """
     if not value:
         return (b"", {})
 
