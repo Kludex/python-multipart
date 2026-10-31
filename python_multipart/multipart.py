@@ -1608,9 +1608,7 @@ class FormParser:
             manually.
         config: Configuration to use for this FormParser.  The default values are taken from the DEFAULT_CONFIG value,
             and then any keys present in this dictionary will overwrite the default values.
-            For URL-encoded forms, `MAX_FIELDS` limits the number of fields and `MAX_FIELD_SIZE` limits the combined
-            raw name/value bytes per field. Both default to infinity and accept non-negative numbers.
-            Exceeding either limit raises `FormParserError` before buffering the offending field or bytes.
+            For URL-encoded forms, `MAX_FIELDS` and `MAX_FIELD_SIZE` (raw name and value bytes) raise `FormParserError`.
     """
 
     #: This is the default configuration for our form parser.
