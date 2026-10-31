@@ -277,6 +277,11 @@ class TestParseOptionsHeader(unittest.TestCase):
         self.assertEqual(t, b"application/json")
         self.assertEqual(p, {b"par": b"val", b"asdf": b"foo"})
 
+    def test_content_type_with_parameters_is_normalized(self) -> None:
+        t, p = parse_options_header(b"Multipart/Form-Data; boundary=abc")
+        self.assertEqual(t, b"multipart/form-data")
+        self.assertEqual(p, {b"boundary": b"abc"})
+
     def test_quoted_param(self) -> None:
         t, p = parse_options_header(b'application/json;param="quoted"')
         self.assertEqual(t, b"application/json")
@@ -344,12 +349,6 @@ class TestParseOptionsHeader(unittest.TestCase):
         _, p = parse_options_header(b'text/plain; a="x;y"; b="esc \\" quote"')
 
         self.assertEqual(p, {b"a": b"x;y", b"b": b'esc " quote'})
-
-    def test_preserves_content_type_case(self) -> None:
-        t, p = parse_options_header(b"Text/Plain; a=b")
-
-        self.assertEqual(t, b"Text/Plain")
-        self.assertEqual(p, {b"a": b"b"})
 
     def test_preserves_backslash_unquoting_order(self) -> None:
         _, p = parse_options_header(b'text/plain; q="a\\\\b"')
@@ -852,6 +851,20 @@ def test_content_transfer_encoding_is_case_insensitive(content_transfer_encoding
     file = files[0]
     file.file_object.seek(0)
     assert file.file_object.read() == b"Test"
+
+
+def test_finalizes_transfer_encoding_before_callback() -> None:
+    data = (
+        b'--b\r\nContent-Disposition: form-data; name="f"\r\n'
+        b"Content-Transfer-Encoding: quoted-printable\r\n\r\n=4\r\n--b--\r\n"
+    )
+    values: list[bytes | None] = []
+    parser = FormParser("multipart/form-data", lambda field: values.append(field.value), None, boundary=b"b")
+
+    parser.write(data)
+    parser.finalize()
+
+    assert values == [b"=4"]
 
 
 def test_parser_states_remain_enum_members() -> None:
@@ -1695,6 +1708,10 @@ class TestFormParser(unittest.TestCase):
 class TestHelperFunctions(unittest.TestCase):
     def test_create_form_parser(self) -> None:
         r = create_form_parser({"Content-Type": b"application/octet-stream"}, None, None)
+        self.assertTrue(isinstance(r, FormParser))
+
+    def test_create_form_parser_accepts_mixed_case_content_type(self) -> None:
+        r = create_form_parser({"Content-Type": b"Multipart/Form-Data; boundary=abc"}, None, None)
         self.assertTrue(isinstance(r, FormParser))
 
     def test_create_form_parser_error(self) -> None:

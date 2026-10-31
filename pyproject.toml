@@ -27,6 +27,7 @@ classifiers = [
     'Programming Language :: Python :: 3.12',
     'Programming Language :: Python :: 3.13',
     'Programming Language :: Python :: 3.14',
+    'Programming Language :: Python :: 3.15',
     'Topic :: Software Development :: Libraries :: Python Modules',
 ]
 dependencies = []
@@ -51,15 +52,16 @@ dev = [
     "types-PyYAML",
     "atheris==2.3.0; python_version <= '3.11'",
     # Documentation
-    "mkdocs",
-    "mkdocs-material",
+    "zensical",
     "mkdocstrings-python",
-    "mkdocs-autorefs",
     "pymdown-extensions>=10.21.2",
 ]
 
 [tool.uv]
 exclude-newer = "7 days"
+
+[tool.uv.exclude-newer-package]
+certifi = "2026-10-20T23:59:59Z"
 
 [tool.uv.pip]
 reinstall-package = ["python-multipart"]
@@ -120,4 +122,4 @@ exclude_also = [
 ]
 
 [tool.check-sdist]
-git-only = ["docs", "fuzz", "scripts", "mkdocs.yml", "uv.lock", "SECURITY.md"]
+git-only = ["docs", "fuzz", "scripts", "zensical.toml", "uv.lock"]

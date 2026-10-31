@@ -249,7 +249,7 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
         if key == "filename" and (val[1:3] == ":\\" or val[:2] == "\\\\"):
             val = val.split("\\")[-1]
         options[key.encode("latin-1")] = val.encode("latin-1")
-    return ctype.encode("latin-1"), options
+    return ctype.lower().encode("latin-1"), options
 
 
 class Field:
@@ -541,7 +541,7 @@ class File:
             # TODO: what happens if we don't have a filename?
             fname = self._file_base + self._ext if keep_extensions else self._file_base
 
-            path = os.path.join(file_dir, fname)  # type: ignore[arg-type]
+            path = os.path.join(os.fsencode(file_dir), fname)
             try:
                 self.logger.info("Opening file: %r", path)
                 tmp_file = open(path, "w+b")
@@ -1781,9 +1781,9 @@ class FormParser:
                 # TODO: check for error here.
 
             def on_part_end() -> None:
-                nonlocal f_multi, is_file
                 assert f_multi is not None
-                f_multi.finalize()
+                assert writer is not None
+                writer.finalize()
                 if is_file:
                     if on_file:
                         assert isinstance(f_multi, File)
@@ -1855,9 +1855,6 @@ class FormParser:
                         writer = f_multi
 
             def _on_end() -> None:
-                nonlocal writer
-                if writer is not None:
-                    writer.finalize()
                 if self.on_end is not None:
                     self.on_end()
 
