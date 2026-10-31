@@ -1,8 +1,17 @@
 # Changelog
 
-## Unreleased
+## 0.0.33 (2026-10-31)
 
-* Add opt-in field-count and field-size limits for URL-encoded forms in `FormParser` [#332](https://github.com/Kludex/python-multipart/issues/332).
+* Drop Python 3.10 support [#329](https://github.com/Kludex/python-multipart/pull/329).
+* Add Python 3.15 support [#350](https://github.com/Kludex/python-multipart/pull/350).
+* Add opt-in field-count and field-size limits for URL-encoded forms in `FormParser` [#333](https://github.com/Kludex/python-multipart/pull/333).
+* Normalize the content type returned by `parse_options_header` when the header has parameters [#287](https://github.com/Kludex/python-multipart/pull/287).
+* Finalize `Content-Transfer-Encoding` decoding before invoking field and file callbacks [#336](https://github.com/Kludex/python-multipart/pull/336).
+* Keep only the incomplete escape when quoted-printable data is split across writes [#355](https://github.com/Kludex/python-multipart/pull/355).
+* Handle nameless uploads when `UPLOAD_KEEP_FILENAME` or `UPLOAD_KEEP_EXTENSIONS` is set [#343](https://github.com/Kludex/python-multipart/pull/343).
+* Accept a `str` `UPLOAD_DIR` when `UPLOAD_KEEP_FILENAME` is set [#335](https://github.com/Kludex/python-multipart/pull/335).
+* Speed up parser state lookups [#330](https://github.com/Kludex/python-multipart/pull/330).
+* Speed up opening boundary matching [#328](https://github.com/Kludex/python-multipart/pull/328).
 * Speed up querystring callback dispatch [#316](https://github.com/Kludex/python-multipart/pull/316).
 
 ## 0.0.32 (2026-06-04)
