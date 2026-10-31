@@ -1094,12 +1094,28 @@ class TestFormParser(unittest.TestCase):
             uploaded_file = self.files[0]
             assert uploaded_file.actual_file_name is not None
             actual_file_name = uploaded_file.actual_file_name.decode(sys.getfilesystemencoding())
+            self.f.close()
+            self.assertFalse(uploaded_file.file_object.closed)
             uploaded_file.close()
 
             try:
                 self.assertTrue(os.path.exists(actual_file_name))
             finally:
                 os.unlink(actual_file_name)
+
+    def test_close_deletes_incomplete_upload(self) -> None:
+        with tempfile.TemporaryDirectory() as upload_dir:
+            self.make("boundary", config={"UPLOAD_DIR": upload_dir, "MAX_MEMORY_FILE_SIZE": 1})
+            self.f.write(
+                b'--boundary\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\n\r\nincomplete'
+            )
+            self.assertEqual(len(os.listdir(upload_dir)), 1)
+
+            self.f.close()
+            self.f.close()
+
+            self.assertEqual(os.listdir(upload_dir), [])
+            self.assertEqual(self.files, [])
 
     @parametrize("param", [t for t in http_tests if t["name"] in single_byte_tests])
     def test_feed_single_bytes(self, param: TestParams) -> None:
@@ -1378,6 +1394,26 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(len(files), 1)
         self.assert_file_data(files[0], b"test1234")
         self.assertTrue(on_end.called)
+
+        f.close()
+        self.assertFalse(files[0].file_object.closed)
+        files[0].close()
+
+    def test_octet_stream_close_deletes_incomplete_upload(self) -> None:
+        with tempfile.TemporaryDirectory() as upload_dir:
+            f = FormParser(
+                "application/octet-stream",
+                None,
+                None,
+                file_name=b"foo.txt",
+                config={"UPLOAD_DIR": upload_dir, "MAX_MEMORY_FILE_SIZE": 1},
+            )
+            f.write(b"incomplete")
+            self.assertEqual(len(os.listdir(upload_dir)), 1)
+
+            f.close()
+
+            self.assertEqual(os.listdir(upload_dir), [])
 
     def test_querystring(self) -> None:
         fields: list[Field] = []

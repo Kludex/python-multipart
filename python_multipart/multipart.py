@@ -1645,6 +1645,7 @@ class FormParser:
         self.boundary = boundary
         self.bytes_received = 0
         self.parser = None
+        self._pending_files: list[File] = []
 
         # Save callbacks.
         self.on_field = on_field
@@ -1664,6 +1665,7 @@ class FormParser:
             def on_start() -> None:
                 nonlocal file
                 file = File(file_name, None, config=self.config)
+                self._pending_files.append(file)
 
             def on_data(data: bytes, start: int, end: int) -> None:
                 nonlocal file
@@ -1678,6 +1680,7 @@ class FormParser:
 
                 # Call our callback.
                 if on_file:
+                    self._pending_files.remove(file)
                     on_file(file)
 
                 # Call the on-end callback.
@@ -1788,6 +1791,7 @@ class FormParser:
                 if is_file:
                     if on_file:
                         assert isinstance(f_multi, File)
+                        self._pending_files.remove(f_multi)
                         on_file(f_multi)
                 else:
                     if on_field:
@@ -1828,6 +1832,7 @@ class FormParser:
                     f_multi = Field(field_name, content_type=content_type)
                 else:
                     f_multi = File(file_name, field_name, config=self.config, content_type=content_type)
+                    self._pending_files.append(f_multi)
                     is_file = True
 
                 # Parse the given Content-Transfer-Encoding to determine what
@@ -1907,6 +1912,8 @@ class FormParser:
         """Close the parser."""
         if self.parser is not None and hasattr(self.parser, "close"):
             self.parser.close()
+        while self._pending_files:
+            self._pending_files.pop().close()
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(content_type={self.content_type!r}, parser={self.parser!r})"
