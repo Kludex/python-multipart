@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import os
 import random
 import sys
@@ -22,13 +21,17 @@ from python_multipart.exceptions import (
     QuerystringParseError,
 )
 from python_multipart.multipart import (
+    END,
+    FIELD_DATA,
     BaseParser,
     Field,
     File,
     FormParser,
     MultipartParser,
+    MultipartState,
     OctetStreamParser,
     QuerystringParser,
+    QuerystringState,
     create_form_parser,
     parse_form,
     parse_options_header,
@@ -274,6 +277,11 @@ class TestParseOptionsHeader(unittest.TestCase):
         self.assertEqual(t, b"application/json")
         self.assertEqual(p, {b"par": b"val", b"asdf": b"foo"})
 
+    def test_content_type_with_parameters_is_normalized(self) -> None:
+        t, p = parse_options_header(b"Multipart/Form-Data; boundary=abc")
+        self.assertEqual(t, b"multipart/form-data")
+        self.assertEqual(p, {b"boundary": b"abc"})
+
     def test_quoted_param(self) -> None:
         t, p = parse_options_header(b'application/json;param="quoted"')
         self.assertEqual(t, b"application/json")
@@ -300,10 +308,52 @@ class TestParseOptionsHeader(unittest.TestCase):
         # If vulnerable, this test wouldn't finish, the line above would hang
         self.assertIn(b'"\\', p[b"!"])
 
-    def test_handles_rfc_2231(self) -> None:
+    def test_ignores_rfc_2231_extended_param(self) -> None:
+        # RFC 7578 §4.2 forbids the RFC 5987/2231 extended syntax, so the
+        # decoded `param*` value is not exposed under `param`.
         t, p = parse_options_header(b"text/plain; param*=us-ascii'en-us'encoded%20message")
 
-        self.assertEqual(p[b"param"], b"encoded message")
+        self.assertEqual(t, b"text/plain")
+        self.assertEqual(p, {})
+
+    def test_plain_param_authoritative_over_extended(self) -> None:
+        # When both plain and extended forms are present, the plain one wins
+        # and the extended one is ignored.
+        _, p = parse_options_header(b"form-data; name=\"comment\"; name*=utf-8''other")
+
+        self.assertEqual(p, {b"name": b"comment"})
+
+    def test_ignores_rfc_2231_continuation_filename(self) -> None:
+        _, p = parse_options_header(b'form-data; name="f"; filename*0="a"; filename*1="b.txt"')
+
+        self.assertEqual(p, {b"name": b"f"})
+
+    def test_ignores_oversized_rfc_2231_index(self) -> None:
+        t, p = parse_options_header("text/plain; filename*" + ("1" * 4301) + "*=utf-8''x")
+
+        self.assertEqual(t, b"text/plain")
+        self.assertEqual(p, {})
+
+    def test_ignores_mixed_rfc_2231_continuations(self) -> None:
+        t, p = parse_options_header("text/plain; filename*=utf-8''a; filename*0*=utf-8''b")
+
+        self.assertEqual(t, b"text/plain")
+        self.assertEqual(p, {})
+
+    def test_ignores_extended_param_case_insensitively(self) -> None:
+        _, p = parse_options_header(b"text/plain; UPPER*=utf-8''X")
+
+        self.assertEqual(p, {})
+
+    def test_preserves_quoted_semicolons_and_escapes(self) -> None:
+        _, p = parse_options_header(b'text/plain; a="x;y"; b="esc \\" quote"')
+
+        self.assertEqual(p, {b"a": b"x;y", b"b": b'esc " quote'})
+
+    def test_preserves_backslash_unquoting_order(self) -> None:
+        _, p = parse_options_header(b'text/plain; q="a\\\\b"')
+
+        self.assertEqual(p, {b"q": b"a\\b"})
 
 
 class TestBaseParser(unittest.TestCase):
@@ -318,6 +368,10 @@ class TestBaseParser(unittest.TestCase):
             nonlocal called
             called += 1
 
+        def on_data(data: bytes, start: int, end: int) -> None:
+            nonlocal called
+            called += 1
+
         self.b.set_callback("foo", on_foo)  # type: ignore[arg-type]
         self.b.callback("foo")  # type: ignore[arg-type]
         self.assertEqual(called, 1)
@@ -325,6 +379,12 @@ class TestBaseParser(unittest.TestCase):
         self.b.set_callback("foo", None)  # type: ignore[arg-type]
         self.b.callback("foo")  # type: ignore[arg-type]
         self.assertEqual(called, 1)
+
+        self.b.set_callback("data", on_data)
+        self.b.callback("data", b"", 0, 0)
+        self.assertEqual(called, 1)
+        self.b.callback("data", b"x", 0, 1)
+        self.assertEqual(called, 2)
 
 
 class TestQuerystringParser(unittest.TestCase):
@@ -365,6 +425,25 @@ class TestQuerystringParser(unittest.TestCase):
         self.p.write(b"foo=bar")
 
         self.assert_fields((b"foo", b"bar"))
+
+    def test_no_callbacks(self) -> None:
+        parser = QuerystringParser()
+
+        self.assertEqual(parser.write(b"foo=bar"), 7)
+        parser.finalize()
+
+    def test_none_callbacks(self) -> None:
+        callbacks: Any = {
+            "on_field_start": None,
+            "on_field_name": None,
+            "on_field_data": None,
+            "on_field_end": None,
+            "on_end": None,
+        }
+        parser = QuerystringParser(callbacks)
+
+        self.assertEqual(parser.write(b"foo=bar"), 7)
+        parser.finalize()
 
     def test_querystring_blank_beginning(self) -> None:
         self.p.write(b"&foo=bar")
@@ -416,10 +495,10 @@ class TestQuerystringParser(unittest.TestCase):
         self.p.write(b"f=baz")
         self.assert_fields((b"asdf", b"baz"))
 
-    def test_semicolon_separator(self) -> None:
-        self.p.write(b"foo=bar;asdf=baz")
+    def test_semicolon_is_data_not_a_field_separator(self) -> None:
+        self.p.write(b"role=user&x=;role=admin")
 
-        self.assert_fields((b"foo", b"bar"), (b"asdf", b"baz"))
+        self.assert_fields((b"role", b"user"), (b"x", b";role=admin"))
 
     def test_too_large_field(self) -> None:
         self.p.max_size = 15
@@ -674,6 +753,15 @@ class TestQuotedPrintableDecoder(unittest.TestCase):
         self.d.write(b"\r\nbar")
         self.assert_data(b"foobar")
 
+    def test_with_escape_before_split_escape(self) -> None:
+        self.d.write(b"=41=")
+        self.d.write(b"42")
+        self.assert_data(b"AB")
+
+    def test_with_trailing_double_equals(self) -> None:
+        self.d.write(b"==")
+        self.assert_data(b"=")
+
     def test_close_and_finalize(self) -> None:
         parser = Mock()
         f = QuotedPrintableDecoder(parser)
@@ -734,7 +822,16 @@ single_byte_tests = [
     "single_field_single_file",
     "preamble",
     "preamble_mime_headers",
+    "crlf_dense_part_data",
 ]
+
+EPILOGUE_TEST_HEAD = (
+    "--boundary\r\n"
+    'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+    "Content-Type: text/plain\r\n\r\n"
+    "hello\r\n"
+    "--boundary--"
+).encode("latin-1")
 
 
 def split_all(val: bytes) -> Iterator[tuple[bytes, bytes]]:
@@ -765,6 +862,79 @@ def test_content_transfer_encoding_is_case_insensitive(content_transfer_encoding
     file = files[0]
     file.file_object.seek(0)
     assert file.file_object.read() == b"Test"
+
+
+def test_finalizes_transfer_encoding_before_callback() -> None:
+    data = (
+        b'--b\r\nContent-Disposition: form-data; name="f"\r\n'
+        b"Content-Transfer-Encoding: quoted-printable\r\n\r\n=4\r\n--b--\r\n"
+    )
+    values: list[bytes | None] = []
+    parser = FormParser("multipart/form-data", lambda field: values.append(field.value), None, boundary=b"b")
+
+    parser.write(data)
+    parser.finalize()
+
+    assert values == [b"=4"]
+
+
+def test_parser_states_remain_enum_members() -> None:
+    multipart_parser = MultipartParser(b"boundary")
+    multipart_parser.write(b"--boundary--\r\n")
+    multipart_parser.finalize()
+    assert multipart_parser.state is MultipartState.END is END
+
+    querystring_parser = QuerystringParser()
+    querystring_parser.write(b"field=value")
+    querystring_parser.finalize()
+    assert querystring_parser.state is QuerystringState.FIELD_DATA is FIELD_DATA
+
+
+def test_multipart_opening_boundary_max_size() -> None:
+    data = b"--boundary\r\n\r\nvalue\r\n--boundary--"
+    max_size = 9
+    events: list[str] = []
+    parser = MultipartParser(
+        b"boundary",
+        {"on_part_begin": lambda: events.append("begin"), "on_end": lambda: events.append("end")},
+        max_size=max_size,
+    )
+    assert parser.write(data) == max_size
+    parser.max_size = len(data)  # type: ignore[assignment]  # mypy narrows max_size to float & Number.
+    assert parser.write(data[max_size:]) == len(data) - max_size
+    parser.finalize()
+    assert events == ["begin", "end"]
+
+
+@pytest.mark.parametrize(
+    "config,first,second,message",
+    [
+        ({"MAX_FIELDS": 1}, b"a=1&", b"b=2", "Too many fields"),
+        ({"MAX_FIELD_SIZE": 3}, b"lo", b"ng=1", "Field exceeded maximum size of 3 bytes"),
+        ({"MAX_FIELD_SIZE": 3}, b"a=l", b"ong", "Field exceeded maximum size of 3 bytes"),
+    ],
+)
+def test_urlencoded_field_limits(config: dict[str, int], first: bytes, second: bytes, message: str) -> None:
+    parser = FormParser("application/x-www-form-urlencoded", None, None, config=config)
+    parser.write(first)
+    with pytest.raises(FormParserError, match=message):
+        parser.write(second)
+
+
+def test_urlencoded_field_limits_accept_exact_boundaries() -> None:
+    fields: list[Field] = []
+    parser = FormParser(
+        "application/x-www-form-urlencoded", fields.append, None, config={"MAX_FIELDS": 2, "MAX_FIELD_SIZE": 3}
+    )
+    parser.write(b"a=12&b")
+    parser.write(b"c=4")
+    parser.finalize()
+    assert [(field.field_name, field.value) for field in fields] == [(b"a", b"12"), (b"bc", b"4")]
+
+
+def test_invalid_urlencoded_field_limit() -> None:
+    with pytest.raises(ValueError, match="MAX_FIELDS must be a non-negative number"):
+        FormParser("application/x-www-form-urlencoded", None, None, config={"MAX_FIELDS": -1})
 
 
 @parametrize_class
@@ -1281,6 +1451,18 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(self.fields, [])
         self.assertEqual(self.files, [])
 
+    def test_multipart_header_count_limit(self) -> None:
+        self.make("poc")
+        payload = b'--poc\r\nContent-Disposition: form-data; name="x"\r\n' + (b"X-A: 1\r\n" * 8)
+        with self.assertRaisesRegex(MultipartParseError, "Maximum header count exceeded"):
+            self.f.write(payload)
+
+    def test_multipart_header_size_limit(self) -> None:
+        self.make("poc")
+        payload = b'--poc\r\nContent-Disposition: form-data; name="x"\r\n' + b"X-A: " + (b"a" * (4096 + 124))
+        with self.assertRaisesRegex(MultipartParseError, "Maximum header size exceeded"):
+            self.f.write(payload)
+
     def test_octet_stream(self) -> None:
         files: list[File] = []
 
@@ -1441,16 +1623,43 @@ class TestFormParser(unittest.TestCase):
         self.assertEqual(fields[2].field_name, b"baz")
         self.assertEqual(fields[2].value, b"asdf")
 
-    def test_multipart_parser_newlines_before_first_boundary(self) -> None:
-        """This test makes sure that the parser does not handle when there is junk data after the last boundary."""
-        num = 5_000_000
-        data = (
-            "\r\n" * num + "--boundary\r\n"
-            'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
-            "Content-Type: text/plain\r\n\r\n"
-            "hello\r\n"
-            "--boundary--"
-        )
+    @parametrize(
+        "chunks",
+        [
+            [
+                b"\r\nignored preamble\r\n"
+                + (
+                    b"--boundary\r\n"
+                    b'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+                    b"Content-Type: text/plain\r\n\r\n"
+                    b"hello\r\n"
+                    b"--boundary--"
+                )
+            ],
+            [
+                b"\r\n" * 5_000_000
+                + (
+                    b"--boundary\r\n"
+                    b'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+                    b"Content-Type: text/plain\r\n\r\n"
+                    b"hello\r\n"
+                    b"--boundary--"
+                )
+            ],
+            [
+                b"\r\n" * 5_000_000,
+                (
+                    b"--boundary\r\n"
+                    b'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
+                    b"Content-Type: text/plain\r\n\r\n"
+                    b"hello\r\n"
+                    b"--boundary--"
+                ),
+            ],
+        ],
+    )
+    def test_multipart_parser_preamble_before_first_boundary(self, chunks: list[bytes]) -> None:
+        """Parser must not hang or blow up on a preamble before the first boundary."""
 
         files: list[File] = []
 
@@ -1458,10 +1667,14 @@ class TestFormParser(unittest.TestCase):
             files.append(f)
 
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
-        f.write(data.encode("latin-1"))
+        for chunk in chunks:
+            f.write(chunk)
+
+        assert len(files) == 1
+        self.assert_file_data(files[0], b"hello")
 
     def test_multipart_parser_data_after_last_boundary(self) -> None:
-        """This test makes sure that the parser does not handle when there is junk data after the last boundary."""
+        """Parser must short-circuit on arbitrary epilogue data after the closing boundary (no O(N) scan)."""
         num = 50_000_000
         data = (
             "--boundary\r\n"
@@ -1479,29 +1692,32 @@ class TestFormParser(unittest.TestCase):
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
         f.write(data.encode("latin-1"))
 
-    @pytest.fixture(autouse=True)
-    def inject_fixtures(self, caplog: pytest.LogCaptureFixture) -> None:
-        self._caplog = caplog
+    @parametrize(
+        "chunks",
+        [
+            [EPILOGUE_TEST_HEAD + b"\r\n"],
+            [EPILOGUE_TEST_HEAD + b"\r", b"\n"],
+            [EPILOGUE_TEST_HEAD, b"\r\n"],
+            [EPILOGUE_TEST_HEAD + b"\r\n--boundary\r\nthis is not a valid header\r\n\r\nnot a real part"],
+        ],
+    )
+    def test_multipart_parser_ignores_epilogue(self, chunks: list[bytes]) -> None:
+        """Epilogue data after the closing boundary must be ignored.
 
-    def test_multipart_parser_data_end_with_crlf_without_warnings(self) -> None:
-        """This test makes sure that the parser does not handle when the data ends with a CRLF."""
-        data = (
-            "--boundary\r\n"
-            'Content-Disposition: form-data; name="file"; filename="filename.txt"\r\n'
-            "Content-Type: text/plain\r\n\r\n"
-            "hello\r\n"
-            "--boundary--\r\n"
-        )
-
+        Covers both the single-chunk case and the case where trailing CRLF is split across `write()` calls.
+        The final case asserts that epilogue bytes are not parsed or validated.
+        """
         files: list[File] = []
 
         def on_file(f: File) -> None:
             files.append(f)
 
         f = FormParser("multipart/form-data", on_field=Mock(), on_file=on_file, boundary="boundary")
-        with self._caplog.at_level(logging.WARNING):
-            f.write(data.encode("latin-1"))
-            assert len(self._caplog.records) == 0
+        for chunk in chunks:
+            f.write(chunk)
+
+        assert len(files) == 1
+        self.assert_file_data(files[0], b"hello")
 
     def test_max_size_multipart(self) -> None:
         # Load test data.
@@ -1567,6 +1783,12 @@ class TestFormParser(unittest.TestCase):
         with self.assertRaises(ValueError):
             MultipartParser(b"bound", max_size="foo")  # type: ignore[arg-type]
 
+    def test_boundary_too_long(self) -> None:
+        with self.assertRaisesRegex(FormParserError, "Boundary length 257 exceeds maximum of 256"):
+            MultipartParser(b"x" * 257)
+        # 256 should be accepted.
+        MultipartParser(b"x" * 256)
+
     def test_header_begin_callback(self) -> None:
         """
         This test verifies we call the `on_header_begin` callback.
@@ -1601,6 +1823,10 @@ class TestFormParser(unittest.TestCase):
 class TestHelperFunctions(unittest.TestCase):
     def test_create_form_parser(self) -> None:
         r = create_form_parser({"Content-Type": b"application/octet-stream"}, None, None)
+        self.assertTrue(isinstance(r, FormParser))
+
+    def test_create_form_parser_accepts_mixed_case_content_type(self) -> None:
+        r = create_form_parser({"Content-Type": b"Multipart/Form-Data; boundary=abc"}, None, None)
         self.assertTrue(isinstance(r, FormParser))
 
     def test_create_form_parser_error(self) -> None:
@@ -1647,6 +1873,15 @@ class TestHelperFunctions(unittest.TestCase):
                 lambda _: None,
                 lambda _: None,
                 chunk_size=0,
+            )
+
+    def test_parse_form_negative_content_length(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Content-Length must be non-negative"):
+            parse_form(
+                {"Content-Type": b"application/octet-stream", "Content-Length": b"-1"},
+                BytesIO(b"123456789012345"),
+                lambda _: None,
+                lambda _: None,
             )
 
 

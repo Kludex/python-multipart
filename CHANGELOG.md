@@ -1,5 +1,54 @@
 # Changelog
 
+## Unreleased
+
+* Add opt-in field-count and field-size limits for URL-encoded forms in `FormParser` [#332](https://github.com/Kludex/python-multipart/issues/332).
+* Speed up querystring callback dispatch [#316](https://github.com/Kludex/python-multipart/pull/316).
+
+## 0.0.32 (2026-06-04)
+
+* Speed up partial-boundary scanning for CR/LF-dense part data [#300](https://github.com/Kludex/python-multipart/pull/300).
+
+## 0.0.31 (2026-06-04)
+
+* Speed up multipart header parsing and callback dispatch [#295](https://github.com/Kludex/python-multipart/pull/295).
+* Bound header field name size before validating [#296](https://github.com/Kludex/python-multipart/pull/296).
+* Validate `Content-Length` is non-negative in `parse_form` [#297](https://github.com/Kludex/python-multipart/pull/297).
+
+## 0.0.30 (2026-05-31)
+
+* Parse `application/x-www-form-urlencoded` bodies per the WHATWG URL standard, treating only `&` as a field separator [#290](https://github.com/Kludex/python-multipart/pull/290).
+* Ignore RFC 2231/5987 extended parameters (`name*`, `filename*`) in `parse_options_header`, keeping the plain parameter authoritative per [RFC 7578 §4.2](https://datatracker.ietf.org/doc/html/rfc7578#section-4.2) [#291](https://github.com/Kludex/python-multipart/pull/291).
+
+## 0.0.29 (2026-05-17)
+
+* Handle malformed RFC 2231 continuations in `parse_options_header` [#270](https://github.com/Kludex/python-multipart/pull/270).
+
+## 0.0.28 (2026-05-10)
+
+* Speed up partial-boundary tail scan via `bytes.find` [#281](https://github.com/Kludex/python-multipart/pull/281).
+* Cap multipart boundary length at 256 bytes [#282](https://github.com/Kludex/python-multipart/pull/282).
+
+## 0.0.27 (2026-04-27)
+
+* Add multipart header limits [#267](https://github.com/Kludex/python-multipart/pull/267).
+* Pass parse offsets via constructors [#268](https://github.com/Kludex/python-multipart/pull/268).
+
+## 0.0.26 (2026-04-10)
+
+* Skip preamble before the first multipart boundary more efficiently [#262](https://github.com/Kludex/python-multipart/pull/262).
+* Silently discard epilogue data after the closing multipart boundary [#259](https://github.com/Kludex/python-multipart/pull/259).
+
+## 0.0.25 (2026-04-10)
+
+* Add MIME content type info to `File` [#143](https://github.com/Kludex/python-multipart/pull/143).
+* Handle CTE values case-insensitively [#258](https://github.com/Kludex/python-multipart/pull/258).
+* Remove custom `FormParser` classes [#257](https://github.com/Kludex/python-multipart/pull/257).
+* Add `UPLOAD_DELETE_TMP` to `FormParser` config [#254](https://github.com/Kludex/python-multipart/pull/254).
+* Emit `field_end` for trailing bare field names on finalize [#230](https://github.com/Kludex/python-multipart/pull/230).
+* Handle multipart headers case-insensitively [#252](https://github.com/Kludex/python-multipart/pull/252).
+* Apply Apache-2.0 properly [#247](https://github.com/Kludex/python-multipart/pull/247).
+
 ## 0.0.24 (2026-04-05)
 
 * Validate `chunk_size` in `parse_form()` [#244](https://github.com/Kludex/python-multipart/pull/244).

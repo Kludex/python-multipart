@@ -1,0 +1,8 @@
+boundary: boundary
+expected:
+  - name: file
+    type: file
+    file_name: crlf.bin
+    content_type: 'application/octet-stream'
+    data: !!binary |
+      DQoNCg0KDQoNCg0KDQoNCg0KDQoNCg0KDQoNCg0KDQoNCg0KDQoNCg0KLS1ib3VuZGFyDQoNCg0KDQoNCg0KLS1ib3VuZA0K

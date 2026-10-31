@@ -7,9 +7,9 @@ class ParseError(FormParserError):
     parsing something.
     """
 
-    #: This is the offset in the input data chunk (*NOT* the overall stream) in
-    #: which the parse error occurred.  It will be -1 if not specified.
-    offset = -1
+    def __init__(self, message: str, *, offset: int = -1) -> None:
+        super().__init__(message)
+        self.offset = offset
 
 
 class MultipartParseError(ParseError):

@@ -1,0 +1,73 @@
+[project]
+site_name = "Python Multipart"
+site_url = "https://kludex.github.io/python-multipart/"
+site_author = "Marcelo Trylesinski,Andrew Dunham"
+site_description = "A streaming multipart parser for Python."
+repo_name = "kludex/python-multipart"
+repo_url = "https://github.com/kludex/python-multipart"
+edit_uri = "https://github.com/kludex/python-multipart/tree/master/docs"
+nav = [
+  { "Introduction" = "index.md" },
+  { "API Reference" = "api.md" },
+  { "Changelog" = "changelog.md" },
+]
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/kludex/python-multipart"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/python"
+link = "https://pypi.org/project/python-multipart"
+
+[project.theme]
+variant = "classic"
+features = [
+  "navigation.tracking",
+  "content.code.copy",
+  "content.tooltips",
+  "content.code.annotate",
+  "navigation.sections",
+]
+font.text = "Roboto"
+font.code = "Roboto Mono"
+
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to light mode"
+
+[project.plugins.mkdocstrings]
+default_handler = "python"
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["."]
+load_external_modules = true
+
+[project.plugins.mkdocstrings.handlers.python.options]
+parameter_headings = true
+allow_inspection = true
+show_bases = true
+group_by_category = true
+docstring_style = "sphinx"
+show_symbol_type_heading = true
+show_symbol_type_toc = true
+show_category_heading = true
+
+[project.markdown_extensions]
+admonition = {}
+pymdownx.details = {}
+pymdownx.superfences = {}
+attr_list = {}
+md_in_html = {}
+pymdownx.tabbed.alternate_style = true
+toc.permalink = true
+pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
+pymdownx.emoji.emoji_generator = "zensical.extensions.emoji.to_svg"
+pymdownx.snippets.check_paths = true
+pymdownx.highlight.anchor_linenums = true

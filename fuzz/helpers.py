@@ -7,3 +7,6 @@ class EnhancedDataProvider(atheris.FuzzedDataProvider):
 
     def ConsumeRandomString(self) -> str:
         return self.ConsumeUnicodeNoSurrogates(self.ConsumeIntInRange(0, self.remaining_bytes()))
+
+    def ConsumeBool(self) -> bool:
+        return bool(self.ConsumeInt(1))

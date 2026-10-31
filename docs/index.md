@@ -84,7 +84,7 @@ import python_multipart
 
 def simple_app(environ, start_response):
     start_response('200 OK', [('Content-type', 'text/plain')])
-    return ['Hashes:\n']
+    return [b'Hashes:\n']
 
 from wsgiref.simple_server import make_server
 httpd = make_server('', 8123, simple_app)
@@ -117,7 +117,7 @@ import python_multipart
 from python_multipart.multipart import parse_options_header
 
 def simple_app(environ, start_response):
-    ret = []
+    ret = [b'Hashes:\n']
 
     # Python 2 doesn't have the "nonlocal" keyword from Python 3, so we get
     # around it by setting attributes on a dummy object.
@@ -135,7 +135,7 @@ def simple_app(environ, start_response):
 
     # Our current part is done, so we can finish the hash.
     def on_part_end():
-        ret.append("Part hash: %s" % (g.hash.hexdigest(),))
+        ret.append(b"Part hash: %s\n" % (g.hash.hexdigest().encode(),))
 
     # Parse the Content-Type header to get the multipart boundary.
     content_type, params = parse_options_header(environ['CONTENT_TYPE'])
