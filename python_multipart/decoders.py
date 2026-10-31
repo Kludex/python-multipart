@@ -139,11 +139,11 @@ class QuotedPrintableDecoder:
         if len(self.cache) > 0:
             data = self.cache + data
 
-        # If the last 2 characters have an '=' sign in it, then we won't be
-        # able to decode the encoded value and we'll need to save it for the
-        # next decoding step.
-        if data[-2:].find(b"=") != -1:
-            enc, rest = data[:-2], data[-2:]
+        # An '=' in the last 2 characters may start an incomplete escape, so we
+        # keep everything from it onwards for the next decoding step.
+        idx = data.find(b"=", max(0, len(data) - 2))
+        if idx != -1:
+            enc, rest = data[:idx], data[idx:]
         else:
             enc = data
             rest = b""
