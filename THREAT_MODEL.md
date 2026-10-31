@@ -27,6 +27,8 @@
 - Memory or CPU use out of proportion to the input, or a bypass of a configured limit.
 - A file written outside `UPLOAD_DIR`.
 - A file or field value exposed to a different request.
+- A departure from the specification that changes field names, filenames, or values. These are usually low severity,
+  because the impact depends on another parser in front of your application.
 
 ## What does not count
 
@@ -34,12 +36,10 @@ Report these as public issues if you think they are bugs.
 
 | Report | Why it is not a vulnerability |
 |---|---|
-| Another parser reads ambiguous or malformed input differently | Such input has no single correct reading, and the attacker can already send your application the same field or filename directly |
+| Another parser reads ambiguous input differently | The specification gives no single correct reading, so neither parser is wrong |
 | An exception other than `FormParserError` on malformed input | It fails that one request, and it is fixed as a normal bug |
 | Memory use from a large body when `MAX_BODY_SIZE` is not set | The default is unlimited, so you set the limit here or in your server |
 | Malicious content in fields, filenames, or file bodies | The library returns what the client sent, and validating it is your job |
-
-Valid input that the parser reads incorrectly is a bug and gets fixed, even when it only matters behind a WAF.
 
 ## Your responsibilities
 
@@ -54,4 +54,5 @@ Valid input that the parser reads incorrectly is a bug and gets fixed, even when
 
 Report vulnerabilities privately through a
 [GitHub security advisory](https://github.com/Kludex/python-multipart/security/advisories/new). Include a proof of
-concept and the impact without relying on another parser's behaviour.
+concept and the impact. If the impact depends on another parser, also show how `python-multipart` departs from the
+specification.
