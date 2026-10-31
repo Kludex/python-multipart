@@ -21,13 +21,17 @@ from python_multipart.exceptions import (
     QuerystringParseError,
 )
 from python_multipart.multipart import (
+    END,
+    FIELD_DATA,
     BaseParser,
     Field,
     File,
     FormParser,
     MultipartParser,
+    MultipartState,
     OctetStreamParser,
     QuerystringParser,
+    QuerystringState,
     create_form_parser,
     parse_form,
     parse_options_header,
@@ -304,10 +308,52 @@ class TestParseOptionsHeader(unittest.TestCase):
         # If vulnerable, this test wouldn't finish, the line above would hang
         self.assertIn(b'"\\', p[b"!"])
 
-    def test_handles_rfc_2231(self) -> None:
+    def test_ignores_rfc_2231_extended_param(self) -> None:
+        # RFC 7578 §4.2 forbids the RFC 5987/2231 extended syntax, so the
+        # decoded `param*` value is not exposed under `param`.
         t, p = parse_options_header(b"text/plain; param*=us-ascii'en-us'encoded%20message")
 
-        self.assertEqual(p[b"param"], b"encoded message")
+        self.assertEqual(t, b"text/plain")
+        self.assertEqual(p, {})
+
+    def test_plain_param_authoritative_over_extended(self) -> None:
+        # When both plain and extended forms are present, the plain one wins
+        # and the extended one is ignored.
+        _, p = parse_options_header(b"form-data; name=\"comment\"; name*=utf-8''other")
+
+        self.assertEqual(p, {b"name": b"comment"})
+
+    def test_ignores_rfc_2231_continuation_filename(self) -> None:
+        _, p = parse_options_header(b'form-data; name="f"; filename*0="a"; filename*1="b.txt"')
+
+        self.assertEqual(p, {b"name": b"f"})
+
+    def test_ignores_oversized_rfc_2231_index(self) -> None:
+        t, p = parse_options_header("text/plain; filename*" + ("1" * 4301) + "*=utf-8''x")
+
+        self.assertEqual(t, b"text/plain")
+        self.assertEqual(p, {})
+
+    def test_ignores_mixed_rfc_2231_continuations(self) -> None:
+        t, p = parse_options_header("text/plain; filename*=utf-8''a; filename*0*=utf-8''b")
+
+        self.assertEqual(t, b"text/plain")
+        self.assertEqual(p, {})
+
+    def test_ignores_extended_param_case_insensitively(self) -> None:
+        _, p = parse_options_header(b"text/plain; UPPER*=utf-8''X")
+
+        self.assertEqual(p, {})
+
+    def test_preserves_quoted_semicolons_and_escapes(self) -> None:
+        _, p = parse_options_header(b'text/plain; a="x;y"; b="esc \\" quote"')
+
+        self.assertEqual(p, {b"a": b"x;y", b"b": b'esc " quote'})
+
+    def test_preserves_backslash_unquoting_order(self) -> None:
+        _, p = parse_options_header(b'text/plain; q="a\\\\b"')
+
+        self.assertEqual(p, {b"q": b"a\\b"})
 
 
 class TestBaseParser(unittest.TestCase):
@@ -322,6 +368,10 @@ class TestBaseParser(unittest.TestCase):
             nonlocal called
             called += 1
 
+        def on_data(data: bytes, start: int, end: int) -> None:
+            nonlocal called
+            called += 1
+
         self.b.set_callback("foo", on_foo)  # type: ignore[arg-type]
         self.b.callback("foo")  # type: ignore[arg-type]
         self.assertEqual(called, 1)
@@ -329,6 +379,12 @@ class TestBaseParser(unittest.TestCase):
         self.b.set_callback("foo", None)  # type: ignore[arg-type]
         self.b.callback("foo")  # type: ignore[arg-type]
         self.assertEqual(called, 1)
+
+        self.b.set_callback("data", on_data)
+        self.b.callback("data", b"", 0, 0)
+        self.assertEqual(called, 1)
+        self.b.callback("data", b"x", 0, 1)
+        self.assertEqual(called, 2)
 
 
 class TestQuerystringParser(unittest.TestCase):
@@ -369,6 +425,25 @@ class TestQuerystringParser(unittest.TestCase):
         self.p.write(b"foo=bar")
 
         self.assert_fields((b"foo", b"bar"))
+
+    def test_no_callbacks(self) -> None:
+        parser = QuerystringParser()
+
+        self.assertEqual(parser.write(b"foo=bar"), 7)
+        parser.finalize()
+
+    def test_none_callbacks(self) -> None:
+        callbacks: Any = {
+            "on_field_start": None,
+            "on_field_name": None,
+            "on_field_data": None,
+            "on_field_end": None,
+            "on_end": None,
+        }
+        parser = QuerystringParser(callbacks)
+
+        self.assertEqual(parser.write(b"foo=bar"), 7)
+        parser.finalize()
 
     def test_querystring_blank_beginning(self) -> None:
         self.p.write(b"&foo=bar")
@@ -420,10 +495,10 @@ class TestQuerystringParser(unittest.TestCase):
         self.p.write(b"f=baz")
         self.assert_fields((b"asdf", b"baz"))
 
-    def test_semicolon_separator(self) -> None:
-        self.p.write(b"foo=bar;asdf=baz")
+    def test_semicolon_is_data_not_a_field_separator(self) -> None:
+        self.p.write(b"role=user&x=;role=admin")
 
-        self.assert_fields((b"foo", b"bar"), (b"asdf", b"baz"))
+        self.assert_fields((b"role", b"user"), (b"x", b";role=admin"))
 
     def test_too_large_field(self) -> None:
         self.p.max_size = 15
@@ -736,6 +811,7 @@ single_byte_tests = [
     "almost_match_boundary_without_LF",
     "almost_match_boundary_without_final_hyphen",
     "single_field_single_file",
+    "crlf_dense_part_data",
 ]
 
 EPILOGUE_TEST_HEAD = (
@@ -775,6 +851,48 @@ def test_content_transfer_encoding_is_case_insensitive(content_transfer_encoding
     file = files[0]
     file.file_object.seek(0)
     assert file.file_object.read() == b"Test"
+
+
+def test_finalizes_transfer_encoding_before_callback() -> None:
+    data = (
+        b'--b\r\nContent-Disposition: form-data; name="f"\r\n'
+        b"Content-Transfer-Encoding: quoted-printable\r\n\r\n=4\r\n--b--\r\n"
+    )
+    values: list[bytes | None] = []
+    parser = FormParser("multipart/form-data", lambda field: values.append(field.value), None, boundary=b"b")
+
+    parser.write(data)
+    parser.finalize()
+
+    assert values == [b"=4"]
+
+
+def test_parser_states_remain_enum_members() -> None:
+    multipart_parser = MultipartParser(b"boundary")
+    multipart_parser.write(b"--boundary--\r\n")
+    multipart_parser.finalize()
+    assert multipart_parser.state is MultipartState.END is END
+
+    querystring_parser = QuerystringParser()
+    querystring_parser.write(b"field=value")
+    querystring_parser.finalize()
+    assert querystring_parser.state is QuerystringState.FIELD_DATA is FIELD_DATA
+
+
+def test_multipart_opening_boundary_max_size() -> None:
+    data = b"--boundary\r\n\r\nvalue\r\n--boundary--"
+    max_size = 9
+    events: list[str] = []
+    parser = MultipartParser(
+        b"boundary",
+        {"on_part_begin": lambda: events.append("begin"), "on_end": lambda: events.append("end")},
+        max_size=max_size,
+    )
+    assert parser.write(data) == max_size
+    parser.max_size = len(data)  # type: ignore[assignment]  # mypy narrows max_size to float & Number.
+    assert parser.write(data[max_size:]) == len(data) - max_size
+    parser.finalize()
+    assert events == ["begin", "end"]
 
 
 @parametrize_class
@@ -1609,6 +1727,15 @@ class TestHelperFunctions(unittest.TestCase):
                 lambda _: None,
                 lambda _: None,
                 chunk_size=0,
+            )
+
+    def test_parse_form_negative_content_length(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Content-Length must be non-negative"):
+            parse_form(
+                {"Content-Type": b"application/octet-stream", "Content-Length": b"-1"},
+                BytesIO(b"123456789012345"),
+                lambda _: None,
+                lambda _: None,
             )
 
 

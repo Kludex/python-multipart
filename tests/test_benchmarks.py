@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import string
-from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 import pytest
@@ -81,37 +80,41 @@ WORSTCASE_BCHAR_CHUNKS = split(WORSTCASE_BCHAR)
 URLENCODED_LARGE = b"&".join(f"field{i}={'v' * 64}".encode() for i in range(100))
 
 
-@pytest.fixture
-def multipart_parser() -> Iterator[MultipartParser]:
-    parser = MultipartParser(BOUNDARY, MULTIPART_CALLBACKS)
-    yield parser
+def make_multipart_parser() -> MultipartParser:
+    return MultipartParser(BOUNDARY, MULTIPART_CALLBACKS)
+
+
+def make_querystring_parser() -> QuerystringParser:
+    return QuerystringParser(QUERYSTRING_CALLBACKS)
+
+
+def test_parse_multipart_simple_form() -> None:
+    parser = make_multipart_parser()
+    parser.write(SIMPLE_FORM)
     parser.finalize()
 
 
-@pytest.fixture
-def querystring_parser() -> Iterator[QuerystringParser]:
-    parser = QuerystringParser(QUERYSTRING_CALLBACKS)
-    yield parser
+def test_parse_multipart_large_form() -> None:
+    parser = make_multipart_parser()
+    parser.write(LARGE_FORM)
     parser.finalize()
 
 
-def test_multipart_simple_form(multipart_parser: MultipartParser) -> None:
-    multipart_parser.write(SIMPLE_FORM)
-
-
-def test_multipart_large_form(multipart_parser: MultipartParser) -> None:
-    multipart_parser.write(LARGE_FORM)
-
-
-def test_multipart_file_upload(multipart_parser: MultipartParser) -> None:
+def test_parse_multipart_file_upload() -> None:
+    parser = make_multipart_parser()
     for chunk in FILE_UPLOAD_CHUNKS:
-        multipart_parser.write(chunk)
+        parser.write(chunk)
+    parser.finalize()
 
 
-def test_multipart_worstcase_boundary_chars(multipart_parser: MultipartParser) -> None:
+def test_parse_multipart_worstcase_boundary_chars() -> None:
+    parser = make_multipart_parser()
     for chunk in WORSTCASE_BCHAR_CHUNKS:
-        multipart_parser.write(chunk)
+        parser.write(chunk)
+    parser.finalize()
 
 
-def test_querystring_large_form(querystring_parser: QuerystringParser) -> None:
-    querystring_parser.write(URLENCODED_LARGE)
+def test_parse_querystring_large_form() -> None:
+    parser = make_querystring_parser()
+    parser.write(URLENCODED_LARGE)
+    parser.finalize()

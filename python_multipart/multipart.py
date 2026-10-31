@@ -5,8 +5,7 @@ import os
 import shutil
 import sys
 import tempfile
-from email.message import Message
-from enum import IntEnum
+from enum import IntEnum, global_enum
 from io import BufferedRandom, BytesIO
 from numbers import Number
 from typing import TYPE_CHECKING, cast
@@ -79,6 +78,15 @@ if TYPE_CHECKING:
 _missing = object()
 
 
+def _noop_event() -> None:
+    pass
+
+
+def _noop_data(_data: bytes, _start: int, _end: int) -> None:
+    pass
+
+
+@global_enum
 class QuerystringState(IntEnum):
     """Querystring parser states.
 
@@ -91,6 +99,7 @@ class QuerystringState(IntEnum):
     FIELD_DATA = 2
 
 
+@global_enum
 class MultipartState(IntEnum):
     """Multipart parser states.
 
@@ -113,6 +122,25 @@ class MultipartState(IntEnum):
     END = 12
 
 
+if TYPE_CHECKING:
+    BEFORE_FIELD = QuerystringState.BEFORE_FIELD
+    FIELD_NAME = QuerystringState.FIELD_NAME
+    FIELD_DATA = QuerystringState.FIELD_DATA
+
+    START = MultipartState.START
+    START_BOUNDARY = MultipartState.START_BOUNDARY
+    HEADER_FIELD_START = MultipartState.HEADER_FIELD_START
+    HEADER_FIELD = MultipartState.HEADER_FIELD
+    HEADER_VALUE_START = MultipartState.HEADER_VALUE_START
+    HEADER_VALUE = MultipartState.HEADER_VALUE
+    HEADER_VALUE_ALMOST_DONE = MultipartState.HEADER_VALUE_ALMOST_DONE
+    HEADERS_ALMOST_DONE = MultipartState.HEADERS_ALMOST_DONE
+    PART_DATA_START = MultipartState.PART_DATA_START
+    PART_DATA = MultipartState.PART_DATA
+    PART_DATA_END = MultipartState.PART_DATA_END
+    END_BOUNDARY = MultipartState.END_BOUNDARY
+    END = MultipartState.END
+
 # Flags for the multipart parser.
 FLAG_PART_BOUNDARY = 1
 FLAG_LAST_BOUNDARY = 2
@@ -126,7 +154,6 @@ COLON = b":"[0]
 SPACE = b" "[0]
 HYPHEN = b"-"[0]
 AMPERSAND = b"&"[0]
-SEMICOLON = b";"[0]
 LOWER_A = b"a"[0]
 LOWER_Z = b"z"[0]
 NULL = b"\x00"[0]
@@ -135,11 +162,12 @@ NULL = b"\x00"[0]
 # Mask for ASCII characters that can be http tokens.
 # Per RFC7230 - 3.2.6, this is all alpha-numeric characters
 # and these: !#$%&'*+-.^_`|~
-TOKEN_CHARS_SET = frozenset(
+TOKEN_CHARS = (
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     b"abcdefghijklmnopqrstuvwxyz"
     b"0123456789"
     b"!#$%&'*+-.^_`|~")
+TOKEN_CHARS_SET = frozenset(TOKEN_CHARS)
 # fmt: on
 
 DEFAULT_MAX_HEADER_COUNT = 8
@@ -157,10 +185,37 @@ every HTTP client.
 """
 
 
+def _parseparam(s: str) -> list[str]:
+    # Vendored from the standard library's
+    # [`email.message._parseparam`](https://github.com/python/cpython/blob/v3.14.2/Lib/email/message.py#L73-L96)
+    # to split a header into its `;`-separated parts without treating a `;` inside a double-quoted string as a
+    # separator - and without the RFC 2231 decoding that `email.message.Message.get_params` would apply on top.
+    s = ";" + s
+    plist: list[str] = []
+    start = 0
+    while s.find(";", start) == start:
+        start += 1
+        end = s.find(";", start)
+        ind, diff = start, 0
+        while end > 0:
+            diff += s.count('"', ind, end) - s.count('\\"', ind, end)
+            if diff % 2 == 0:
+                break
+            end, ind = ind, s.find(";", end + 1)
+        if end < 0:
+            end = len(s)
+        i = s.find("=", start, end)
+        if i == -1:
+            f = s[start:end]
+        else:
+            f = s[start:i].rstrip().lower() + "=" + s[i + 1 : end].lstrip()
+        plist.append(f.strip())
+        start = end
+    return plist
+
+
 def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, bytes]]:
     """Parses a Content-Type header into a value in the following format: (content_type, {parameters})."""
-    # Uses email.message.Message to parse the header as described in PEP 594.
-    # Ref: https://peps.python.org/pep-0594/#cgi
     if not value:
         return (b"", {})
 
@@ -175,29 +230,24 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
     if ";" not in value:
         return (value.lower().strip().encode("latin-1"), {})
 
-    # Split at the first semicolon, to get our value and then options.
-    # ctype, rest = value.split(b';', 1)
-    message = Message()
-    message["content-type"] = value
-    params = message.get_params()
-    # If there were no parameters, this would have already returned above
-    assert params, "At least the content type value should be present"
-    ctype = params.pop(0)[0].lower().strip().encode("latin-1")
+    ctype, *segments = _parseparam(value)
     options: dict[bytes, bytes] = {}
-    for param in params:
-        key, value = param
-        # If the value returned from get_params() is a 3-tuple, the last
-        # element corresponds to the value.
-        # See: https://docs.python.org/3/library/email.compat32-message.html
-        if isinstance(value, tuple):
-            value = value[-1]
-        # If the value is a filename, we need to fix a bug on IE6 that sends
-        # the full file path instead of the filename.
-        if key == "filename":
-            if value[1:3] == ":\\" or value[:2] == "\\\\":
-                value = value.split("\\")[-1]
-        options[key.encode("latin-1")] = value.encode("latin-1")
-    return ctype, options
+    for segment in segments:
+        key, _, val = segment.partition("=")
+        # [RFC 7578 §4.2](https://datatracker.ietf.org/doc/html/rfc7578#section-4.2)
+        # forbids the RFC 5987/2231 extended syntax (`key*=`, `key*0`, ...) in
+        # multipart/form-data, so we ignore those parameters and keep the plain
+        # `key` authoritative.
+        if "*" in key:
+            continue
+        if len(val) >= 2 and val[0] == '"' and val[-1] == '"':
+            val = val[1:-1].replace("\\\\", "\\").replace('\\"', '"')
+        # Work around an IE6 bug where the full file path is sent instead of
+        # just the filename.
+        if key == "filename" and (val[1:3] == ":\\" or val[:2] == "\\\\"):
+            val = val.split("\\")[-1]
+        options[key.encode("latin-1")] = val.encode("latin-1")
+    return ctype.lower().encode("latin-1"), options
 
 
 class Field:
@@ -347,7 +397,7 @@ class File:
     |-----------------------|-------|---------|-------------|
     | UPLOAD_DIR            | `str` | None    | The directory to store uploaded files in. If this is None, a temporary file will be created in the system's standard location. |
     | UPLOAD_DELETE_TMP     | `bool`| True    | Delete automatically created TMP file |
-    | UPLOAD_KEEP_FILENAME  | `bool`| False   | Whether or not to keep the filename of the uploaded file. If True, then the filename will be converted to a safe representation (e.g. by removing any invalid path segments), and then saved with the same name). Otherwise, a temporary name will be used. |
+    | UPLOAD_KEEP_FILENAME  | `bool`| False   | Whether or not to keep the filename of the uploaded file. If True, then the filename is reduced to its basename (directory components are stripped) and the file is saved with that name. Otherwise, a temporary name will be used. |
     | UPLOAD_KEEP_EXTENSIONS| `bool`| False   | Whether or not to keep the uploaded file's extension. If False, the file will be saved with the default temporary extension (usually ".tmp"). Otherwise, the file's extension will be maintained. Note that this will properly combine with the UPLOAD_KEEP_FILENAME setting. |
     | MAX_MEMORY_FILE_SIZE  | `int` | 1 MiB   | The maximum number of bytes of a File to keep in memory. By default, the contents of a File are kept into memory until a certain limit is reached, after which the contents of the File are written to a temporary file. This behavior can be disabled by setting this value to an appropriately large value (or, for example, infinity, such as `float('inf')`. |
 
@@ -627,8 +677,7 @@ class BaseParser:
             end: An integer that is passed to the data callback.
             start: An integer that is passed to the data callback.
         """
-        on_name = "on_" + name
-        func = self.callbacks.get(on_name)
+        func = self.callbacks.get("on_" + name)
         if func is None:
             return
         func = cast("Callable[..., Any]", func)
@@ -637,11 +686,8 @@ class BaseParser:
             # Don't do anything if we have start == end.
             if start is not None and start == end:
                 return
-
-            self.logger.debug("Calling %s with data[%d:%d]", on_name, start, end)
             func(data, start, end)
         else:
-            self.logger.debug("Calling %s with no data", on_name)
             func()
 
     def set_callback(self, name: CallbackName, new_func: Callable[..., Any] | None) -> None:
@@ -765,7 +811,7 @@ class QuerystringParser(BaseParser):
         self, callbacks: QuerystringCallbacks = {}, strict_parsing: bool = False, max_size: float = float("inf")
     ) -> None:
         super().__init__()
-        self.state = QuerystringState.BEFORE_FIELD
+        self.state = BEFORE_FIELD
         self._found_sep = False
 
         self.callbacks = callbacks
@@ -819,26 +865,39 @@ class QuerystringParser(BaseParser):
         state = self.state
         strict_parsing = self.strict_parsing
         found_sep = self._found_sep
+        callbacks = cast("QuerystringCallbacks", self.callbacks)
+        on_field_start = callbacks.get("on_field_start")
+        on_field_name = callbacks.get("on_field_name")
+        on_field_data = callbacks.get("on_field_data")
+        on_field_end = callbacks.get("on_field_end")
+        if on_field_start is None:
+            on_field_start = _noop_event
+        if on_field_name is None:
+            on_field_name = _noop_data
+        if on_field_data is None:
+            on_field_data = _noop_data
+        if on_field_end is None:
+            on_field_end = _noop_event
 
         i = 0
         while i < length:
             ch = data[i]
 
             # Depending on our state...
-            if state == QuerystringState.BEFORE_FIELD:
+            if state == BEFORE_FIELD:
                 # If the 'found_sep' flag is set, we've already encountered
                 # and skipped a single separator.  If so, we check our strict
                 # parsing flag and decide what to do.  Otherwise, we haven't
                 # yet reached a separator, and thus, if we do, we need to skip
                 # it as it will be the boundary between fields that's supposed
                 # to be there.
-                if ch == AMPERSAND or ch == SEMICOLON:
+                if ch == AMPERSAND:
                     if found_sep:
                         # If we're parsing strictly, we disallow blank chunks.
                         if strict_parsing:
-                            raise QuerystringParseError("Skipping duplicate ampersand/semicolon at %d" % i, offset=i)
+                            raise QuerystringParseError("Skipping duplicate ampersand at %d" % i, offset=i)
                         else:
-                            self.logger.debug("Skipping duplicate ampersand/semicolon at %d", i)
+                            self.logger.debug("Skipping duplicate ampersand at %d", i)
                     else:
                         # This case is when we're skipping the (first)
                         # separator between fields, so we just set our flag
@@ -848,17 +907,15 @@ class QuerystringParser(BaseParser):
                     # Emit a field-start event, and go to that state.  Also,
                     # reset the "found_sep" flag, for the next time we get to
                     # this state.
-                    self.callback("field_start")
+                    on_field_start()
                     i -= 1
-                    state = QuerystringState.FIELD_NAME
+                    state = FIELD_NAME
                     found_sep = False
 
-            elif state == QuerystringState.FIELD_NAME:
+            elif state == FIELD_NAME:
                 # Try and find a separator - we ensure that, if we do, we only
                 # look for the equal sign before it.
-                sep_pos = data.find(b"&", i)
-                if sep_pos == -1:
-                    sep_pos = data.find(b";", i)
+                sep_pos = data.find(b"&", i, length)
 
                 # See if we can find an equals sign in the remaining data.  If
                 # so, we can immediately emit the field name and jump to the
@@ -866,17 +923,18 @@ class QuerystringParser(BaseParser):
                 if sep_pos != -1:
                     equals_pos = data.find(b"=", i, sep_pos)
                 else:
-                    equals_pos = data.find(b"=", i)
+                    equals_pos = data.find(b"=", i, length)
 
                 if equals_pos != -1:
                     # Emit this name.
-                    self.callback("field_name", data, i, equals_pos)
+                    if i != equals_pos:
+                        on_field_name(data, i, equals_pos)
 
                     # Jump i to this position.  Note that it will then have 1
                     # added to it below, which means the next iteration of this
                     # loop will inspect the character after the equals sign.
                     i = equals_pos
-                    state = QuerystringState.FIELD_DATA
+                    state = FIELD_DATA
                 else:
                     # No equals sign found.
                     if not strict_parsing:
@@ -885,15 +943,17 @@ class QuerystringParser(BaseParser):
                         # end - there's no data callback at all (not even with
                         # a blank value).
                         if sep_pos != -1:
-                            self.callback("field_name", data, i, sep_pos)
-                            self.callback("field_end")
+                            if i != sep_pos:
+                                on_field_name(data, i, sep_pos)
+                            on_field_end()
 
                             i = sep_pos - 1
-                            state = QuerystringState.BEFORE_FIELD
+                            state = BEFORE_FIELD
                         else:
                             # Otherwise, no separator in this block, so the
                             # rest of this chunk must be a name.
-                            self.callback("field_name", data, i, length)
+                            if i != length:
+                                on_field_name(data, i, length)
                             i = length
 
                     else:
@@ -909,32 +969,32 @@ class QuerystringParser(BaseParser):
 
                         # No separator in the rest of this chunk, so it's just
                         # a field name.
-                        self.callback("field_name", data, i, length)
+                        if i != length:
+                            on_field_name(data, i, length)
                         i = length
 
-            elif state == QuerystringState.FIELD_DATA:
-                # Try finding either an ampersand or a semicolon after this
-                # position.
-                sep_pos = data.find(b"&", i)
-                if sep_pos == -1:
-                    sep_pos = data.find(b";", i)
+            elif state == FIELD_DATA:
+                # Try finding an ampersand after this position.
+                sep_pos = data.find(b"&", i, length)
 
                 # If we found it, callback this bit as data and then go back
                 # to expecting to find a field.
                 if sep_pos != -1:
-                    self.callback("field_data", data, i, sep_pos)
-                    self.callback("field_end")
+                    if i != sep_pos:
+                        on_field_data(data, i, sep_pos)
+                    on_field_end()
 
                     # Note that we go to the separator, which brings us to the
                     # "before field" state.  This allows us to properly emit
                     # "field_start" events only when we actually have data for
                     # a field of some sort.
                     i = sep_pos - 1
-                    state = QuerystringState.BEFORE_FIELD
+                    state = BEFORE_FIELD
 
                 # Otherwise, emit the rest as data and finish.
                 else:
-                    self.callback("field_data", data, i, length)
+                    if i != length:
+                        on_field_data(data, i, length)
                     i = length
 
             else:  # pragma: no cover (error case)
@@ -953,10 +1013,17 @@ class QuerystringParser(BaseParser):
         if we're still in the middle of a field, an on_field_end callback, and
         then the on_end callback.
         """
+        callbacks = cast("QuerystringCallbacks", self.callbacks)
         # If we're currently in the middle of a field, we finish it.
-        if self.state in (QuerystringState.FIELD_DATA, QuerystringState.FIELD_NAME):
-            self.callback("field_end")
-        self.callback("end")
+        if self.state in (FIELD_DATA, FIELD_NAME):
+            on_field_end = callbacks.get("on_field_end")
+            if on_field_end is None:
+                on_field_end = _noop_event
+            on_field_end()
+        on_end = callbacks.get("on_end")
+        if on_end is None:
+            on_end = _noop_event
+        on_end()
 
     def __repr__(self) -> str:
         return "{}(strict_parsing={!r}, max_size={!r})".format(
@@ -998,7 +1065,7 @@ class MultipartParser(BaseParser):
     ) -> None:
         # Initialize parser state.
         super().__init__()
-        self.state = MultipartState.START
+        self.state = START
         self.index = self.flags = 0
 
         self.callbacks = callbacks
@@ -1063,6 +1130,7 @@ class MultipartParser(BaseParser):
     def _internal_write(self, data: bytes, length: int) -> int:
         # Get values from locals.
         boundary = self.boundary
+        boundary_length = len(boundary)
 
         # Get our state, flags and index.  These are persisted between calls to
         # this function.
@@ -1113,7 +1181,7 @@ class MultipartParser(BaseParser):
                 # We need to use self.flags (and not flags) because we care about
                 # the state when we entered the loop.
                 lookbehind_len = -marked_index
-                if lookbehind_len <= len(boundary):
+                if lookbehind_len <= boundary_length:
                     self.callback(name, boundary, 0, lookbehind_len)
                 elif self.flags & FLAG_PART_BOUNDARY:
                     lookback = boundary + b"\r\n"
@@ -1137,7 +1205,7 @@ class MultipartParser(BaseParser):
         while i < length:
             c = data[i]
 
-            if state == MultipartState.START:
+            if state == START:
                 # Skip leading newlines
                 if c == CR or c == LF:
                     i = data.find(b"-", i)
@@ -1152,16 +1220,21 @@ class MultipartParser(BaseParser):
 
                 # Move to the next state, but decrement i so that we re-process
                 # this character.
-                state = MultipartState.START_BOUNDARY
+                state = START_BOUNDARY
                 i -= 1
 
-            elif state == MultipartState.START_BOUNDARY:
+            elif state == START_BOUNDARY:
+                if index == 0 and data.startswith(boundary[2:], i, length):
+                    index = boundary_length - 2
+                    i += index
+                    continue
+
                 # Check to ensure that the last 2 characters in our boundary
                 # are CRLF.
-                if index == len(boundary) - 2:
+                if index == boundary_length - 2:
                     if c == HYPHEN:
                         # Potential empty message.
-                        state = MultipartState.END_BOUNDARY
+                        state = END_BOUNDARY
                     elif c != CR:
                         # Error!
                         msg = "Did not find CR at end of boundary (%d)" % (i,)
@@ -1170,7 +1243,7 @@ class MultipartParser(BaseParser):
 
                     index += 1
 
-                elif index == len(boundary) - 2 + 1:
+                elif index == boundary_length - 1:
                     if c != LF:
                         msg = "Did not find LF at end of boundary (%d)" % (i,)
                         self.logger.warning(msg)
@@ -1185,7 +1258,7 @@ class MultipartParser(BaseParser):
                     current_header_size = 0
 
                     # Move to the next character and state.
-                    state = MultipartState.HEADER_FIELD_START
+                    state = HEADER_FIELD_START
 
                 else:
                     # Check to ensure our boundary matches
@@ -1197,7 +1270,7 @@ class MultipartParser(BaseParser):
                     # Increment index into boundary and continue.
                     index += 1
 
-            elif state == MultipartState.HEADER_FIELD_START:
+            elif state == HEADER_FIELD_START:
                 # Mark the start of a header field here, reset the index, and
                 # continue parsing our header field.
                 index = 0
@@ -1219,45 +1292,55 @@ class MultipartParser(BaseParser):
                     self.callback("header_begin")
 
                 # Move to parsing header fields.
-                state = MultipartState.HEADER_FIELD
+                state = HEADER_FIELD
                 i -= 1
 
-            elif state == MultipartState.HEADER_FIELD:
+            elif state == HEADER_FIELD:
                 # If we've reached a CR at the beginning of a header, it means
                 # that we've reached the second of 2 newlines, and so there are
                 # no more headers to parse.
                 if c == CR and index == 0:
                     delete_mark("header_field")
-                    state = MultipartState.HEADERS_ALMOST_DONE
+                    state = HEADERS_ALMOST_DONE
                     i += 1
                     continue
 
-                # Increment our index in the header.
-                index += 1
+                # The field name runs until the colon; jump straight to it and
+                # validate the whole span at once instead of byte by byte.
+                colon = data.find(b":", i, length)
+                end = colon if colon != -1 else length
 
-                # If we've reached a colon, we're done with this header.
-                if c == COLON:
-                    advance_header_size()
+                # Enforce the size limit before slicing and validating, so an oversized header
+                # name fails fast instead of copying and scanning a potentially huge span.
+                advance_header_size(end - i if colon == -1 else end - i + 1)
+
+                field = data[i:end]
+                if field.translate(None, TOKEN_CHARS):
+                    bad = next(b for b in field if b not in TOKEN_CHARS_SET)
+                    bad_i = i + field.index(bad)
+                    msg = "Found invalid character %r in header at %d" % (bad, bad_i)
+                    self.logger.warning(msg)
+                    raise MultipartParseError(msg, offset=bad_i)
+
+                index += end - i
+                if colon == -1:
+                    # Field name continues into the next chunk.
+                    i = length
+                else:
                     # A 0-length header is an error.
-                    if index == 1:
+                    if index == 0:
                         msg = "Found 0-length header at %d" % (i,)
                         self.logger.warning(msg)
                         raise MultipartParseError(msg, offset=i)
 
                     # Call our callback with the header field.
+                    i = colon
                     data_callback("header_field", i)
 
                     # Move to parsing the header value.
-                    state = MultipartState.HEADER_VALUE_START
+                    state = HEADER_VALUE_START
 
-                elif c not in TOKEN_CHARS_SET:
-                    msg = "Found invalid character %r in header at %d" % (c, i)
-                    self.logger.warning(msg)
-                    raise MultipartParseError(msg, offset=i)
-                else:
-                    advance_header_size()
-
-            elif state == MultipartState.HEADER_VALUE_START:
+            elif state == HEADER_VALUE_START:
                 # Skip leading spaces.
                 if c == SPACE:
                     advance_header_size()
@@ -1268,21 +1351,25 @@ class MultipartParser(BaseParser):
                 set_mark("header_value")
 
                 # Move to the header-value state, reprocessing this character.
-                state = MultipartState.HEADER_VALUE
+                state = HEADER_VALUE
                 i -= 1
 
-            elif state == MultipartState.HEADER_VALUE:
-                # If we've got a CR, we're nearly done our headers.  Otherwise,
-                # we do nothing and just move past this character.
-                if c == CR:
+            elif state == HEADER_VALUE:
+                # The value runs until the terminating CR; jump straight to it
+                # instead of inspecting every byte.
+                cr = data.find(b"\r", i, length)
+                end = cr if cr != -1 else length
+                advance_header_size(end - i)
+                if cr != -1:
+                    i = cr
                     data_callback("header_value", i)
                     self.callback("header_end")
                     current_header_size = 0
-                    state = MultipartState.HEADER_VALUE_ALMOST_DONE
+                    state = HEADER_VALUE_ALMOST_DONE
                 else:
-                    advance_header_size()
+                    i = length
 
-            elif state == MultipartState.HEADER_VALUE_ALMOST_DONE:
+            elif state == HEADER_VALUE_ALMOST_DONE:
                 # The last character should be a LF.  If not, it's an error.
                 if c != LF:
                     msg = f"Did not find LF character at end of header (found {c!r})"
@@ -1292,9 +1379,9 @@ class MultipartParser(BaseParser):
                 # Move back to the start of another header.  Note that if that
                 # state detects ANOTHER newline, it'll trigger the end of our
                 # headers.
-                state = MultipartState.HEADER_FIELD_START
+                state = HEADER_FIELD_START
 
-            elif state == MultipartState.HEADERS_ALMOST_DONE:
+            elif state == HEADERS_ALMOST_DONE:
                 # We're almost done our headers.  This is reached when we parse
                 # a CR at the beginning of a header, so our next character
                 # should be a LF, or it's an error.
@@ -1304,17 +1391,17 @@ class MultipartParser(BaseParser):
                     raise MultipartParseError(msg, offset=i)
 
                 self.callback("headers_finished")
-                state = MultipartState.PART_DATA_START
+                state = PART_DATA_START
 
-            elif state == MultipartState.PART_DATA_START:
+            elif state == PART_DATA_START:
                 # Mark the start of our part data.
                 set_mark("part_data")
 
                 # Start processing part data, including this character.
-                state = MultipartState.PART_DATA
+                state = PART_DATA
                 i -= 1
 
-            elif state == MultipartState.PART_DATA:
+            elif state == PART_DATA:
                 # We're processing our part data right now.  During this, we
                 # need to efficiently search for our boundary, since any data
                 # on any number of lines can be a part of the current data.
@@ -1323,33 +1410,30 @@ class MultipartParser(BaseParser):
                 # find part of a boundary, but it doesn't match fully.
                 prev_index = index
 
-                # Set up variables.
-                boundary_length = len(boundary)
-                data_length = length
-
                 # If our index is 0, we're starting a new part, so start our
                 # search.
                 if index == 0:
                     # The most common case is likely to be that the whole
                     # boundary is present in the buffer.
                     # Calling `find` is much faster than iterating here.
-                    i0 = data.find(boundary, i, data_length)
+                    i0 = data.find(boundary, i, length)
                     if i0 >= 0:
                         # We matched the whole boundary string.
                         index = boundary_length - 1
                         i = i0 + boundary_length - 1
+                        c = data[i]
                     else:
-                        # No match found for whole string.
-                        # There may be a partial boundary at the end of the
-                        # data, which the find will not match.
-                        # Since the length to be searched is limited to the
-                        # boundary length, scan the tail for boundary[0] via
-                        # bytes.find (C-level) to keep cost off the Python loop.
-                        i = max(i, data_length - boundary_length)
-                        j = data.find(boundary[:1], i, data_length - 1)
-                        i = j if j >= 0 else data_length - 1
-
-                    c = data[i]
+                        # No whole boundary, but the tail may hold a partial one
+                        # that completes in the next chunk. Boundary starts with
+                        # CR, which an RFC boundary contains nowhere else, so the
+                        # last CR in the tail is the only candidate prefix start.
+                        k = data.rfind(boundary[:1], max(i, length - boundary_length + 1), length)
+                        if k != -1 and boundary.startswith(data[k:length]):
+                            index = length - k
+                        # Carry the partial via index; the end-of-chunk flush
+                        # emits the data before it and re-marks the lookbehind.
+                        i = length
+                        continue
 
                 # Now, we have a couple of cases here.  If our index is before
                 # the end of the boundary...
@@ -1403,7 +1487,7 @@ class MultipartParser(BaseParser):
 
                             # Move to parsing new headers.
                             index = 0
-                            state = MultipartState.HEADER_FIELD_START
+                            state = HEADER_FIELD_START
                             i += 1
                             continue
 
@@ -1423,7 +1507,7 @@ class MultipartParser(BaseParser):
                             # message.
                             self.callback("part_end")
                             self.callback("end")
-                            state = MultipartState.END
+                            state = END
                         else:
                             # No match, so reset index.
                             index = 0
@@ -1440,17 +1524,17 @@ class MultipartParser(BaseParser):
                     # the start of the boundary itself.
                     i -= 1
 
-            elif state == MultipartState.END_BOUNDARY:
-                if index == len(boundary) - 2 + 1:
+            elif state == END_BOUNDARY:
+                if index == boundary_length - 1:
                     if c != HYPHEN:
                         msg = "Did not find - at end of boundary (%d)" % (i,)
                         self.logger.warning(msg)
                         raise MultipartParseError(msg, offset=i)
                     index += 1
                     self.callback("end")
-                    state = MultipartState.END
+                    state = END
 
-            elif state == MultipartState.END:
+            elif state == END:
                 # Silently discard any epilogue data (RFC 2046 section 5.1.1 allows a CRLF and optional
                 # epilogue after the closing boundary). Django and Werkzeug do the same.
                 i = length
@@ -1675,9 +1759,9 @@ class FormParser:
                 # TODO: check for error here.
 
             def on_part_end() -> None:
-                nonlocal f_multi, is_file
                 assert f_multi is not None
-                f_multi.finalize()
+                assert writer is not None
+                writer.finalize()
                 if is_file:
                     if on_file:
                         assert isinstance(f_multi, File)
@@ -1749,9 +1833,6 @@ class FormParser:
                         writer = f_multi
 
             def _on_end() -> None:
-                nonlocal writer
-                if writer is not None:
-                    writer.finalize()
                 if self.on_end is not None:
                     self.on_end()
 
@@ -1877,6 +1958,8 @@ def parse_form(
     content_length: int | float | bytes | None = headers.get("Content-Length")
     if content_length is not None:
         content_length = int(content_length)
+        if content_length < 0:
+            raise ValueError("Content-Length must be non-negative")
     else:
         content_length = float("inf")
     bytes_read = 0

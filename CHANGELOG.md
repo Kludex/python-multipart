@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+* Speed up querystring callback dispatch [#316](https://github.com/Kludex/python-multipart/pull/316).
+
+## 0.0.32 (2026-06-04)
+
+* Speed up partial-boundary scanning for CR/LF-dense part data [#300](https://github.com/Kludex/python-multipart/pull/300).
+
+## 0.0.31 (2026-06-04)
+
+* Speed up multipart header parsing and callback dispatch [#295](https://github.com/Kludex/python-multipart/pull/295).
+* Bound header field name size before validating [#296](https://github.com/Kludex/python-multipart/pull/296).
+* Validate `Content-Length` is non-negative in `parse_form` [#297](https://github.com/Kludex/python-multipart/pull/297).
+
+## 0.0.30 (2026-05-31)
+
+* Parse `application/x-www-form-urlencoded` bodies per the WHATWG URL standard, treating only `&` as a field separator [#290](https://github.com/Kludex/python-multipart/pull/290).
+* Ignore RFC 2231/5987 extended parameters (`name*`, `filename*`) in `parse_options_header`, keeping the plain parameter authoritative per [RFC 7578 §4.2](https://datatracker.ietf.org/doc/html/rfc7578#section-4.2) [#291](https://github.com/Kludex/python-multipart/pull/291).
+
+## 0.0.29 (2026-05-17)
+
+* Handle malformed RFC 2231 continuations in `parse_options_header` [#270](https://github.com/Kludex/python-multipart/pull/270).
+
 ## 0.0.28 (2026-05-10)
 
 * Speed up partial-boundary tail scan via `bytes.find` [#281](https://github.com/Kludex/python-multipart/pull/281).
