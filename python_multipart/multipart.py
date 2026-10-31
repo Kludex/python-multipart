@@ -247,7 +247,7 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
         if key == "filename" and (val[1:3] == ":\\" or val[:2] == "\\\\"):
             val = val.split("\\")[-1]
         options[key.encode("latin-1")] = val.encode("latin-1")
-    return ctype.encode("latin-1"), options
+    return ctype.lower().encode("latin-1"), options
 
 
 class Field:
