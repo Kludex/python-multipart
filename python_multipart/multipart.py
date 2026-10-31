@@ -53,6 +53,8 @@ if TYPE_CHECKING:
     class FormParserConfig(FileConfig):
         UPLOAD_ERROR_ON_BAD_CTE: bool
         MAX_BODY_SIZE: float
+        MAX_FIELDS: int | float
+        MAX_FIELD_SIZE: int | float
         MAX_HEADER_COUNT: int
         MAX_HEADER_SIZE: int
 
@@ -247,7 +249,7 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
         if key == "filename" and (val[1:3] == ":\\" or val[:2] == "\\\\"):
             val = val.split("\\")[-1]
         options[key.encode("latin-1")] = val.encode("latin-1")
-    return ctype.encode("latin-1"), options
+    return ctype.lower().encode("latin-1"), options
 
 
 class Field:
@@ -540,7 +542,7 @@ class File:
             # Build our filename.
             fname = self._file_base + self._ext if keep_extensions else self._file_base
 
-            path = os.path.join(file_dir, fname)  # type: ignore[arg-type]
+            path = os.path.join(os.fsencode(file_dir), fname)
             try:
                 self.logger.info("Opening file: %r", path)
                 tmp_file = open(path, "w+b")
@@ -1613,6 +1615,8 @@ class FormParser:
     #: Note: all file sizes should be in bytes.
     DEFAULT_CONFIG: FormParserConfig = {
         "MAX_BODY_SIZE": float("inf"),
+        "MAX_FIELDS": float("inf"),
+        "MAX_FIELD_SIZE": float("inf"),
         "MAX_HEADER_COUNT": DEFAULT_MAX_HEADER_COUNT,
         "MAX_HEADER_SIZE": DEFAULT_MAX_HEADER_SIZE,
         "MAX_MEMORY_FILE_SIZE": 1 * 1024 * 1024,
@@ -1687,18 +1691,36 @@ class FormParser:
             )
 
         elif content_type == "application/x-www-form-urlencoded" or content_type == "application/x-url-encoded":
-            name_buffer: list[bytes] = []
+            max_fields = self.config["MAX_FIELDS"]
+            max_field_size = self.config["MAX_FIELD_SIZE"]
+            for key, limit in (("MAX_FIELDS", max_fields), ("MAX_FIELD_SIZE", max_field_size)):
+                if not isinstance(limit, (int, float)) or not limit >= 0:
+                    raise ValueError(f"{key} must be a non-negative number, not {limit!r}")
 
+            name_buffer: list[bytes] = []
+            field_count = 0
+            field_size = 0
             f: Field | None = None
 
             def on_field_start() -> None:
-                pass
+                nonlocal field_count, field_size
+                field_count += 1
+                if field_count > max_fields:
+                    raise FormParserError(f"Too many fields. Maximum number of fields is {max_fields}.")
+                field_size = 0
 
             def on_field_name(data: bytes, start: int, end: int) -> None:
+                nonlocal field_size
+                field_size += end - start
+                if field_size > max_field_size:
+                    raise FormParserError(f"Field exceeded maximum size of {max_field_size} bytes.")
                 name_buffer.append(data[start:end])
 
             def on_field_data(data: bytes, start: int, end: int) -> None:
-                nonlocal f
+                nonlocal f, field_size
+                field_size += end - start
+                if field_size > max_field_size:
+                    raise FormParserError(f"Field exceeded maximum size of {max_field_size} bytes.")
                 if f is None:
                     f = Field(b"".join(name_buffer))
                     del name_buffer[:]

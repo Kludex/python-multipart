@@ -277,6 +277,11 @@ class TestParseOptionsHeader(unittest.TestCase):
         self.assertEqual(t, b"application/json")
         self.assertEqual(p, {b"par": b"val", b"asdf": b"foo"})
 
+    def test_content_type_with_parameters_is_normalized(self) -> None:
+        t, p = parse_options_header(b"Multipart/Form-Data; boundary=abc")
+        self.assertEqual(t, b"multipart/form-data")
+        self.assertEqual(p, {b"boundary": b"abc"})
+
     def test_quoted_param(self) -> None:
         t, p = parse_options_header(b'application/json;param="quoted"')
         self.assertEqual(t, b"application/json")
@@ -344,12 +349,6 @@ class TestParseOptionsHeader(unittest.TestCase):
         _, p = parse_options_header(b'text/plain; a="x;y"; b="esc \\" quote"')
 
         self.assertEqual(p, {b"a": b"x;y", b"b": b'esc " quote'})
-
-    def test_preserves_content_type_case(self) -> None:
-        t, p = parse_options_header(b"Text/Plain; a=b")
-
-        self.assertEqual(t, b"Text/Plain")
-        self.assertEqual(p, {b"a": b"b"})
 
     def test_preserves_backslash_unquoting_order(self) -> None:
         _, p = parse_options_header(b'text/plain; q="a\\\\b"')
@@ -894,6 +893,37 @@ def test_multipart_opening_boundary_max_size() -> None:
     assert parser.write(data[max_size:]) == len(data) - max_size
     parser.finalize()
     assert events == ["begin", "end"]
+
+
+@pytest.mark.parametrize(
+    "config,first,second,message",
+    [
+        ({"MAX_FIELDS": 1}, b"a=1&", b"b=2", "Too many fields"),
+        ({"MAX_FIELD_SIZE": 3}, b"lo", b"ng=1", "Field exceeded maximum size of 3 bytes"),
+        ({"MAX_FIELD_SIZE": 3}, b"a=l", b"ong", "Field exceeded maximum size of 3 bytes"),
+    ],
+)
+def test_urlencoded_field_limits(config: dict[str, int], first: bytes, second: bytes, message: str) -> None:
+    parser = FormParser("application/x-www-form-urlencoded", None, None, config=config)
+    parser.write(first)
+    with pytest.raises(FormParserError, match=message):
+        parser.write(second)
+
+
+def test_urlencoded_field_limits_accept_exact_boundaries() -> None:
+    fields: list[Field] = []
+    parser = FormParser(
+        "application/x-www-form-urlencoded", fields.append, None, config={"MAX_FIELDS": 2, "MAX_FIELD_SIZE": 3}
+    )
+    parser.write(b"a=12&b")
+    parser.write(b"c=4")
+    parser.finalize()
+    assert [(field.field_name, field.value) for field in fields] == [(b"a", b"12"), (b"bc", b"4")]
+
+
+def test_invalid_urlencoded_field_limit() -> None:
+    with pytest.raises(ValueError, match="MAX_FIELDS must be a non-negative number"):
+        FormParser("application/x-www-form-urlencoded", None, None, config={"MAX_FIELDS": -1})
 
 
 @parametrize_class
@@ -1678,6 +1708,10 @@ class TestFormParser(unittest.TestCase):
 class TestHelperFunctions(unittest.TestCase):
     def test_create_form_parser(self) -> None:
         r = create_form_parser({"Content-Type": b"application/octet-stream"}, None, None)
+        self.assertTrue(isinstance(r, FormParser))
+
+    def test_create_form_parser_accepts_mixed_case_content_type(self) -> None:
+        r = create_form_parser({"Content-Type": b"Multipart/Form-Data; boundary=abc"}, None, None)
         self.assertTrue(isinstance(r, FormParser))
 
     def test_create_form_parser_error(self) -> None:
