@@ -1117,6 +1117,29 @@ class TestFormParser(unittest.TestCase):
             self.assertEqual(os.listdir(upload_dir), [])
             self.assertEqual(self.files, [])
 
+    def test_closes_completed_files_without_on_file(self) -> None:
+        with tempfile.TemporaryDirectory() as upload_dir:
+            f = FormParser(
+                "multipart/form-data",
+                None,
+                None,
+                boundary="boundary",
+                config={"UPLOAD_DIR": upload_dir, "MAX_MEMORY_FILE_SIZE": 1},
+            )
+            f.write(
+                b"--boundary\r\n"
+                b'Content-Disposition: form-data; name="first"; filename="first.txt"\r\n\r\n'
+                b"complete\r\n"
+                b"--boundary\r\n"
+                b'Content-Disposition: form-data; name="second"; filename="second.txt"\r\n\r\n'
+                b"incomplete"
+            )
+            self.assertEqual(len(os.listdir(upload_dir)), 1)
+
+            f.close()
+
+            self.assertEqual(os.listdir(upload_dir), [])
+
     @parametrize("param", [t for t in http_tests if t["name"] in single_byte_tests])
     def test_feed_single_bytes(self, param: TestParams) -> None:
         """
@@ -1412,6 +1435,20 @@ class TestFormParser(unittest.TestCase):
             self.assertEqual(len(os.listdir(upload_dir)), 1)
 
             f.close()
+
+            self.assertEqual(os.listdir(upload_dir), [])
+
+    def test_octet_stream_closes_completed_file_without_on_file(self) -> None:
+        with tempfile.TemporaryDirectory() as upload_dir:
+            f = FormParser(
+                "application/octet-stream",
+                None,
+                None,
+                file_name=b"foo.txt",
+                config={"UPLOAD_DIR": upload_dir, "MAX_MEMORY_FILE_SIZE": 1},
+            )
+            f.write(b"complete")
+            f.finalize()
 
             self.assertEqual(os.listdir(upload_dir), [])
 

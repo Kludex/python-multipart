@@ -1679,9 +1679,11 @@ class FormParser:
                 file.finalize()
 
                 # Call our callback.
+                self._pending_files.remove(file)
                 if on_file:
-                    self._pending_files.remove(file)
                     on_file(file)
+                else:
+                    file.close()
 
                 # Call the on-end callback.
                 if self.on_end is not None:
@@ -1789,10 +1791,12 @@ class FormParser:
                 assert writer is not None
                 writer.finalize()
                 if is_file:
+                    assert isinstance(f_multi, File)
+                    self._pending_files.remove(f_multi)
                     if on_file:
-                        assert isinstance(f_multi, File)
-                        self._pending_files.remove(f_multi)
                         on_file(f_multi)
+                    else:
+                        f_multi.close()
                 else:
                     if on_field:
                         assert isinstance(f_multi, Field)
