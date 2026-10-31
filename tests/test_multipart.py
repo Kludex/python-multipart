@@ -1348,9 +1348,6 @@ class TestFormParser(unittest.TestCase):
             self.f.write(data)
 
     def test_preamble_is_ignored(self) -> None:
-        # RFC 2046 section 5.1.1: bytes before the first boundary delimiter
-        # must be ignored.  This covers machine-generated payloads that
-        # include MIME-style headers before the first boundary.
         self.make("boundary")
         data = (
             b"MIME-Version: 1.0\r\n"
@@ -1367,8 +1364,6 @@ class TestFormParser(unittest.TestCase):
         self.assert_field(b"field", b"value")
 
     def test_preamble_split_across_writes(self) -> None:
-        # The boundary can straddle chunk boundaries - exercise the
-        # byte-by-byte partial-match path in the PREAMBLE state.
         self.make("boundary")
         data = (
             b"preamble text\r\n"
@@ -1384,17 +1379,12 @@ class TestFormParser(unittest.TestCase):
         self.assert_field(b"field", b"value")
 
     def test_finalize_raises_when_no_boundary_found(self) -> None:
-        # Input that never contains a boundary must still raise, otherwise
-        # malformed bodies would be silently accepted as empty.
         self.make("boundary")
         self.f.write(b"this is not a multipart body at all")
         with self.assertRaises(MultipartParseError):
             self.f.finalize()
 
     def test_preamble_skips_boundary_false_positive(self) -> None:
-        # A preamble line that starts with `--boundary` but is not followed
-        # by a valid delimiter trailer must be treated as preamble text,
-        # not as a delimiter that causes the parser to raise.
         self.make("boundary")
         data = (
             b"preamble line one\r\n"
@@ -1410,7 +1400,6 @@ class TestFormParser(unittest.TestCase):
         self.assert_field(b"field", b"value")
 
     def test_preamble_skips_cr_without_lf_false_positive(self) -> None:
-        # `\r\n--boundary\r` followed by a non-LF byte is not a delimiter.
         self.make("boundary")
         data = (
             b"preamble\r\n"
@@ -1426,7 +1415,6 @@ class TestFormParser(unittest.TestCase):
         self.assert_field(b"field", b"value")
 
     def test_preamble_skips_hyphen_without_hyphen_false_positive(self) -> None:
-        # `\r\n--boundary-` followed by a non-HYPHEN byte is not a delimiter.
         self.make("boundary")
         data = (
             b"preamble\r\n"
@@ -1457,8 +1445,6 @@ class TestFormParser(unittest.TestCase):
                 self.assert_field(b"field", b"value")
 
     def test_preamble_followed_by_close_boundary(self) -> None:
-        # A preamble followed directly by the close boundary (empty body)
-        # should parse without error and produce no fields.
         self.make("boundary")
         data = b"preamble text\r\n--boundary--\r\n"
         self.f.write(data)
