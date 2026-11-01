@@ -122,6 +122,7 @@ class MultipartState(IntEnum):
     PART_DATA_END = 10
     END_BOUNDARY = 11
     END = 12
+    PREAMBLE = 13
 
 
 if TYPE_CHECKING:
@@ -142,6 +143,7 @@ if TYPE_CHECKING:
     PART_DATA_END = MultipartState.PART_DATA_END
     END_BOUNDARY = MultipartState.END_BOUNDARY
     END = MultipartState.END
+    PREAMBLE = MultipartState.PREAMBLE
 
 # Flags for the multipart parser.
 FLAG_PART_BOUNDARY = 1
@@ -1221,9 +1223,11 @@ class MultipartParser(BaseParser):
                 # index is used as in index into our boundary.  Set to 0.
                 index = 0
 
-                # Move to the next state, but decrement i so that we re-process
-                # this character.
-                state = START_BOUNDARY
+                if c == HYPHEN:
+                    state = START_BOUNDARY
+                else:
+                    state = PREAMBLE
+
                 i -= 1
 
             elif state == START_BOUNDARY:
@@ -1272,6 +1276,52 @@ class MultipartParser(BaseParser):
 
                     # Increment index into boundary and continue.
                     index += 1
+
+            elif state == PREAMBLE:
+                # RFC 2046 5.1.1. `index` past `boundary_length`: +0 trailer byte, +1 after CR, +2 after HYPHEN.
+                if index == 0:
+                    i0 = data.find(boundary, i, length)
+                    if i0 >= 0:
+                        i = i0 + boundary_length
+                        index = boundary_length
+                        continue
+
+                    i = max(i, length - boundary_length)
+                    while i < length and data[i] != boundary[0]:
+                        i += 1
+                    if i >= length:
+                        break
+                    c = data[i]
+
+                if index < boundary_length:
+                    if boundary[index] == c:
+                        index += 1
+                    else:
+                        index = 0
+                        i -= 1
+                elif index == boundary_length:
+                    if c == CR:
+                        index = boundary_length + 1
+                    elif c == HYPHEN:
+                        index = boundary_length + 2
+                    else:
+                        index = 0
+                        i -= 1
+                elif index == boundary_length + 1:
+                    if c == LF:
+                        self.callback("part_begin")
+                        index = 0
+                        state = HEADER_FIELD_START
+                    else:
+                        index = 0
+                        i -= 1
+                else:
+                    if c == HYPHEN:
+                        self.callback("end")
+                        state = END
+                    else:
+                        index = 0
+                        i -= 1
 
             elif state == HEADER_FIELD_START:
                 # Mark the start of a header field here, reset the index, and
@@ -1582,9 +1632,14 @@ class MultipartParser(BaseParser):
         are in the final state of the parser (i.e. the end of the multipart
         message is well-formed), and, if not, throw an error.
         """
+        if self.state == PREAMBLE:
+            msg = "No boundary found in multipart body"
+            self.logger.warning(msg)
+            e = MultipartParseError(msg)
+            e.offset = 0
+            raise e
         # TODO: verify that we're in the state MultipartState.END, otherwise throw an
         # error or otherwise state that we're not finished parsing.
-        pass
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(boundary={self.boundary!r})"

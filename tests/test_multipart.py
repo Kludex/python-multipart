@@ -820,6 +820,8 @@ single_byte_tests = [
     "almost_match_boundary_without_LF",
     "almost_match_boundary_without_final_hyphen",
     "single_field_single_file",
+    "preamble",
+    "preamble_mime_headers",
     "crlf_dense_part_data",
 ]
 
@@ -1344,6 +1346,111 @@ class TestFormParser(unittest.TestCase):
             MultipartParseError, "Expected boundary character {!r}, got {!r}".format(b"b"[0], b"B"[0])
         ):
             self.f.write(data)
+
+    def test_preamble_is_ignored(self) -> None:
+        self.make("boundary")
+        data = (
+            b"MIME-Version: 1.0\r\n"
+            b'Content-Type: multipart/form-data; boundary="boundary"\r\n'
+            b"\r\n"
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="field"\r\n'
+            b"\r\n"
+            b"value\r\n"
+            b"--boundary--\r\n"
+        )
+        self.f.write(data)
+        self.f.finalize()
+        self.assert_field(b"field", b"value")
+
+    def test_preamble_split_across_writes(self) -> None:
+        self.make("boundary")
+        data = (
+            b"preamble text\r\n"
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="field"\r\n'
+            b"\r\n"
+            b"value\r\n"
+            b"--boundary--\r\n"
+        )
+        for b in data:
+            self.f.write(bytes([b]))
+        self.f.finalize()
+        self.assert_field(b"field", b"value")
+
+    def test_finalize_raises_when_no_boundary_found(self) -> None:
+        self.make("boundary")
+        self.f.write(b"this is not a multipart body at all")
+        with self.assertRaises(MultipartParseError):
+            self.f.finalize()
+
+    def test_preamble_skips_boundary_false_positive(self) -> None:
+        self.make("boundary")
+        data = (
+            b"preamble line one\r\n"
+            b"--boundaryX is not a real delimiter\r\n"
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="field"\r\n'
+            b"\r\n"
+            b"value\r\n"
+            b"--boundary--\r\n"
+        )
+        self.f.write(data)
+        self.f.finalize()
+        self.assert_field(b"field", b"value")
+
+    def test_preamble_skips_cr_without_lf_false_positive(self) -> None:
+        self.make("boundary")
+        data = (
+            b"preamble\r\n"
+            b"--boundary\rfoo\r\n"
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="field"\r\n'
+            b"\r\n"
+            b"value\r\n"
+            b"--boundary--\r\n"
+        )
+        self.f.write(data)
+        self.f.finalize()
+        self.assert_field(b"field", b"value")
+
+    def test_preamble_skips_hyphen_without_hyphen_false_positive(self) -> None:
+        self.make("boundary")
+        data = (
+            b"preamble\r\n"
+            b"--boundary-X\r\n"
+            b"--boundary\r\n"
+            b'Content-Disposition: form-data; name="field"\r\n'
+            b"\r\n"
+            b"value\r\n"
+            b"--boundary--\r\n"
+        )
+        self.f.write(data)
+        self.f.finalize()
+        self.assert_field(b"field", b"value")
+
+    def test_preamble_false_positive_before_real_delimiter(self) -> None:
+        for trailer in (b"X", b"\r", b"-"):
+            with self.subTest(trailer=trailer):
+                self.make("boundary")
+                data = (
+                    b"preamble\r\n--boundary" + trailer + b"\r\n--boundary\r\n"
+                    b'Content-Disposition: form-data; name="field"\r\n'
+                    b"\r\n"
+                    b"value\r\n"
+                    b"--boundary--\r\n"
+                )
+                self.f.write(data)
+                self.f.finalize()
+                self.assert_field(b"field", b"value")
+
+    def test_preamble_followed_by_close_boundary(self) -> None:
+        self.make("boundary")
+        data = b"preamble text\r\n--boundary--\r\n"
+        self.f.write(data)
+        self.f.finalize()
+        self.assertEqual(self.fields, [])
+        self.assertEqual(self.files, [])
 
     def test_multipart_header_count_limit(self) -> None:
         self.make("poc")
