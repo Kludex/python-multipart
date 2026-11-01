@@ -821,6 +821,7 @@ single_byte_tests = [
     "almost_match_boundary_without_final_hyphen",
     "single_field_single_file",
     "crlf_dense_part_data",
+    "boundary_padding",
 ]
 
 EPILOGUE_TEST_HEAD = (
@@ -1356,6 +1357,12 @@ class TestFormParser(unittest.TestCase):
         payload = b'--poc\r\nContent-Disposition: form-data; name="x"\r\n' + b"X-A: " + (b"a" * (4096 + 124))
         with self.assertRaisesRegex(MultipartParseError, "Maximum header size exceeded"):
             self.f.write(payload)
+
+    @parametrize("rest", [b"x", b"\rx"])
+    def test_multipart_boundary_padding_without_crlf(self, rest: bytes) -> None:
+        self.make("poc")
+        with self.assertRaisesRegex(MultipartParseError, "after boundary padding"):
+            self.f.write(b'--poc\r\nContent-Disposition: form-data; name="a"\r\n\r\nfirst\r\n--poc ' + rest)
 
     def test_octet_stream(self) -> None:
         files: list[File] = []

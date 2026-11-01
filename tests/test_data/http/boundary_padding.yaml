@@ -1,0 +1,10 @@
+boundary: ----boundary
+expected:
+  - name: a
+    type: field
+    data: !!binary |
+      Zmlyc3Q=
+  - name: b
+    type: field
+    data: !!binary |
+      c2Vjb25k

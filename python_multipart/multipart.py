@@ -122,6 +122,7 @@ class MultipartState(IntEnum):
     PART_DATA_END = 10
     END_BOUNDARY = 11
     END = 12
+    BOUNDARY_PADDING = 13
 
 
 if TYPE_CHECKING:
@@ -142,6 +143,7 @@ if TYPE_CHECKING:
     PART_DATA_END = MultipartState.PART_DATA_END
     END_BOUNDARY = MultipartState.END_BOUNDARY
     END = MultipartState.END
+    BOUNDARY_PADDING = MultipartState.BOUNDARY_PADDING
 
 # Flags for the multipart parser.
 FLAG_PART_BOUNDARY = 1
@@ -1466,6 +1468,13 @@ class MultipartParser(BaseParser):
                     elif c == HYPHEN:
                         flags |= FLAG_LAST_BOUNDARY
 
+                    # RFC 2046 forbids lines starting with the boundary in a part, so this can't be data.
+                    elif c in b" \t":
+                        data_callback("part_data", i - boundary_length)
+                        delete_mark("part_data")
+                        index = 0
+                        state = BOUNDARY_PADDING
+
                     # Otherwise, we reset our index, since this isn't either a
                     # newline or a hyphen.
                     else:
@@ -1529,6 +1538,21 @@ class MultipartParser(BaseParser):
                     # Re-consider the current character, since this could be
                     # the start of the boundary itself.
                     i -= 1
+
+            elif state == BOUNDARY_PADDING:
+                if index == 0 and c == CR:
+                    index = 1
+                elif index == 1 and c == LF:
+                    self.callback("part_end")
+                    self.callback("part_begin")
+                    current_header_count = 0
+                    current_header_size = 0
+                    index = 0
+                    state = HEADER_FIELD_START
+                elif index == 1 or c not in b" \t":
+                    msg = "Did not find CRLF after boundary padding at %d" % (i,)
+                    self.logger.warning(msg)
+                    raise MultipartParseError(msg, offset=i)
 
             elif state == END_BOUNDARY:
                 if index == boundary_length - 1:
