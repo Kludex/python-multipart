@@ -1,0 +1,9 @@
+------boundary
+Content-Disposition: form-data; name="a"; filename="a.txt"
+
+first
+------boundary
+Content-Disposition: form-data; name="b";…filename="b.txt"
+
+second
+------boundary--

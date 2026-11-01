@@ -212,8 +212,8 @@ def _parseparam(s: str) -> list[str]:
         if i == -1:
             f = s[start:end]
         else:
-            f = s[start:i].rstrip().lower() + "=" + s[i + 1 : end].lstrip()
-        plist.append(f.strip())
+            f = s[start:i].rstrip(" \t").lower() + "=" + s[i + 1 : end].lstrip(" \t")
+        plist.append(f.strip(" \t"))
         start = end
     return plist
 
@@ -232,7 +232,7 @@ def parse_options_header(value: str | bytes | None) -> tuple[bytes, dict[bytes, 
 
     # If we have no options, return the string as-is.
     if ";" not in value:
-        return (value.lower().strip().encode("latin-1"), {})
+        return (value.lower().strip(" \t").encode("latin-1"), {})
 
     ctype, *segments = _parseparam(value)
     options: dict[bytes, bytes] = {}
