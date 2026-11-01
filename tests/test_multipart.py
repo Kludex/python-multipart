@@ -272,6 +272,14 @@ class TestParseOptionsHeader(unittest.TestCase):
         self.assertEqual(t, b"application/json")
         self.assertEqual(p, {b"par": b"val"})
 
+    def test_tabs_around_param_are_trimmed(self) -> None:
+        _, p = parse_options_header(b"application/json;\t par \t=\t val\t")
+        self.assertEqual(p, {b"par": b"val"})
+
+    def test_non_breaking_space_is_not_trimmed(self) -> None:
+        _, p = parse_options_header(b"form-data; name=voil\xc3\xa0")
+        self.assertEqual(p, {b"name": b"voil\xc3\xa0"})
+
     def test_multiple_params(self) -> None:
         t, p = parse_options_header(b"application/json;par=val;asdf=foo")
         self.assertEqual(t, b"application/json")
