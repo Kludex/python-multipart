@@ -113,5 +113,5 @@ class ParametrizingMetaclass(type):
 
 
 # This is a class decorator that actually applies the above metaclass.
-def parametrize_class(klass: type) -> ParametrizingMetaclass:
+def parametrize_class(klass: type) -> type:
     return ParametrizingMetaclass(klass.__name__, klass.__bases__, klass.__dict__)
