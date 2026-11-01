@@ -1792,3 +1792,14 @@ def suite() -> unittest.TestSuite:
     suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(TestHelperFunctions))
 
     return suite
+
+
+@pytest.mark.parametrize("make_parser", [lambda: MultipartParser(b"boundary"), QuerystringParser, OctetStreamParser])
+def test_default_callbacks_are_not_shared_between_parsers(make_parser: Any) -> None:
+    first, second = make_parser(), make_parser()
+    on_end = Mock()
+    first.set_callback("end", on_end)
+
+    second.callback("end")
+
+    on_end.assert_not_called()
