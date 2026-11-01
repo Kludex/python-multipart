@@ -733,9 +733,9 @@ class OctetStreamParser(BaseParser):
         max_size: The maximum size of body to parse.  Defaults to infinity - i.e. unbounded.
     """
 
-    def __init__(self, callbacks: OctetStreamCallbacks = {}, max_size: float = float("inf")):
+    def __init__(self, callbacks: OctetStreamCallbacks | None = None, max_size: float = float("inf")):
         super().__init__()
-        self.callbacks = callbacks
+        self.callbacks = {} if callbacks is None else callbacks
         self._started = False
 
         if not isinstance(max_size, Number) or max_size < 1:
@@ -811,13 +811,16 @@ class QuerystringParser(BaseParser):
     state: QuerystringState
 
     def __init__(
-        self, callbacks: QuerystringCallbacks = {}, strict_parsing: bool = False, max_size: float = float("inf")
+        self,
+        callbacks: QuerystringCallbacks | None = None,
+        strict_parsing: bool = False,
+        max_size: float = float("inf"),
     ) -> None:
         super().__init__()
         self.state = BEFORE_FIELD
         self._found_sep = False
 
-        self.callbacks = callbacks
+        self.callbacks = {} if callbacks is None else callbacks
 
         # Max-size stuff
         if not isinstance(max_size, Number) or max_size < 1:
@@ -1060,7 +1063,7 @@ class MultipartParser(BaseParser):
     def __init__(
         self,
         boundary: bytes | str,
-        callbacks: MultipartCallbacks = {},
+        callbacks: MultipartCallbacks | None = None,
         max_size: float = float("inf"),
         *,
         max_header_count: int = DEFAULT_MAX_HEADER_COUNT,
@@ -1071,7 +1074,7 @@ class MultipartParser(BaseParser):
         self.state = START
         self.index = self.flags = 0
 
-        self.callbacks = callbacks
+        self.callbacks = {} if callbacks is None else callbacks
 
         if not isinstance(max_size, Number) or max_size < 1:
             raise ValueError("max_size must be a positive number, not %r" % max_size)
