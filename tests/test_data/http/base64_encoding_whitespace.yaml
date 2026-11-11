@@ -1,0 +1,8 @@
+boundary: --boundary
+expected:
+  - name: a
+    type: field
+    data: !!binary "aGVsbG8="
+  - name: b
+    type: field
+    data: !!binary "aGVsbG8="

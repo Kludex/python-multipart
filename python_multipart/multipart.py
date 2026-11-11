@@ -1828,7 +1828,7 @@ class FormParser:
                 header_value.append(data[start:end])
 
             def on_header_end() -> None:
-                headers[b"".join(header_name).lower()] = b"".join(header_value)
+                headers[b"".join(header_name).lower()] = b"".join(header_value).strip(b" \t")
                 del header_name[:]
                 del header_value[:]
 
