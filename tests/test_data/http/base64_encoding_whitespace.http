@@ -1,0 +1,11 @@
+----boundary
+Content-Disposition: form-data; name="a"
+Content-Transfer-Encoding: base64 
+
+aGVsbG8=
+----boundary
+Content-Disposition: form-data; name="b"
+Content-Transfer-Encoding:	base64	
+
+aGVsbG8=
+----boundary--
