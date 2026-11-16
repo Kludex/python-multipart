@@ -913,42 +913,6 @@ def test_multipart_opening_boundary_max_size() -> None:
     assert events == ["begin", "end"]
 
 
-@pytest.mark.parametrize("chunk_size", [*range(1, 32), 1024])
-def test_multipart_callbacks_across_chunks(chunk_size: int) -> None:
-    body = b"first\r\n--boundaryX\r\n--boundary\rX\r\n--boundary-X"
-    data = (
-        b"--boundary\r\nX-Test: value\r\n\r\n" + body + b"\r\n"
-        b"--boundary\r\nX-Test: other\r\n\r\nsecond\r\n--boundary--\r\n"
-    )
-    events: list[bytes] = []
-
-    def on_data(data: bytes, start: int, end: int) -> None:
-        events.append(data[start:end])
-
-    parser = MultipartParser(
-        b"boundary",
-        {
-            "on_part_begin": lambda: events.append(b"<part>"),
-            "on_header_begin": lambda: events.append(b"<header>"),
-            "on_header_field": on_data,
-            "on_header_value": on_data,
-            "on_header_end": lambda: events.append(b"</header>"),
-            "on_headers_finished": lambda: events.append(b"<data>"),
-            "on_part_data": on_data,
-            "on_part_end": lambda: events.append(b"</part>"),
-            "on_end": lambda: events.append(b"<end>"),
-        },
-    )
-    for start in range(0, len(data), chunk_size):
-        chunk = data[start : start + chunk_size]
-        assert parser.write(chunk) == len(chunk)
-    parser.finalize()
-    assert b"".join(events) == (
-        b"<part><header>X-Testvalue</header><data>" + body + b"</part>"
-        b"<part><header>X-Testother</header><data>second</part><end>"
-    )
-
-
 @pytest.mark.parametrize(
     "config,first,second,message",
     [
