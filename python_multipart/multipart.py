@@ -1135,6 +1135,51 @@ class MultipartParser(BaseParser):
 
         return l
 
+    def _data_callback(self, name: CallbackName, data: bytes, end_i: int, length: int, remaining: bool = False) -> None:
+        """Emit the data between the mark for `name` and `end_i` to the `name` callback.
+
+        With `remaining`, the mark is kept and rebased onto the next chunk instead of being deleted.
+        `_internal_write` uses this at its end to flush what is left of the current chunk.
+        """
+        boundary = self.boundary
+        marked_index = self.marks.get(name)
+        if marked_index is None:
+            return
+
+        # Otherwise, we call it from the mark to the current byte we're
+        # processing.
+        if end_i <= marked_index:
+            # There is no additional data to send.
+            pass
+        elif marked_index >= 0:
+            # We are emitting data from the local buffer.
+            self.callback(name, data, marked_index, end_i)
+        else:
+            # Some of the data comes from a partial boundary match.
+            # and requires look-behind.
+            # We need to use self.flags (and not flags) because we care about
+            # the state when we entered the loop.
+            lookbehind_len = -marked_index
+            if lookbehind_len <= len(boundary):
+                self.callback(name, boundary, 0, lookbehind_len)
+            elif self.flags & FLAG_PART_BOUNDARY:
+                lookback = boundary + b"\r\n"
+                self.callback(name, lookback, 0, lookbehind_len)
+            elif self.flags & FLAG_LAST_BOUNDARY:
+                lookback = boundary + b"--\r\n"
+                self.callback(name, lookback, 0, lookbehind_len)
+            else:  # pragma: no cover (error case)
+                self.logger.warning("Look-back buffer error")
+
+            if end_i > 0:
+                self.callback(name, data, 0, end_i)
+        # If we're getting remaining data, we have got all the data we
+        # can be certain is not a boundary, leaving only a partial boundary match.
+        if remaining:
+            self.marks[name] = end_i - length
+        else:
+            self.marks.pop(name, None)
+
     def _internal_write(self, data: bytes, length: int) -> int:
         # Get values from locals.
         boundary = self.boundary
@@ -1164,50 +1209,6 @@ class MultipartParser(BaseParser):
         # Remove a mark.
         def delete_mark(name: str, reset: bool = False) -> None:
             self.marks.pop(name, None)
-
-        # Helper function that makes calling a callback with data easier. The
-        # 'remaining' parameter will callback from the marked value until the
-        # end of the buffer, and reset the mark, instead of deleting it.  This
-        # is used at the end of the function to call our callbacks with any
-        # remaining data in this chunk.
-        def data_callback(name: CallbackName, end_i: int, remaining: bool = False) -> None:
-            marked_index = self.marks.get(name)
-            if marked_index is None:
-                return
-
-            # Otherwise, we call it from the mark to the current byte we're
-            # processing.
-            if end_i <= marked_index:
-                # There is no additional data to send.
-                pass
-            elif marked_index >= 0:
-                # We are emitting data from the local buffer.
-                self.callback(name, data, marked_index, end_i)
-            else:
-                # Some of the data comes from a partial boundary match.
-                # and requires look-behind.
-                # We need to use self.flags (and not flags) because we care about
-                # the state when we entered the loop.
-                lookbehind_len = -marked_index
-                if lookbehind_len <= boundary_length:
-                    self.callback(name, boundary, 0, lookbehind_len)
-                elif self.flags & FLAG_PART_BOUNDARY:
-                    lookback = boundary + b"\r\n"
-                    self.callback(name, lookback, 0, lookbehind_len)
-                elif self.flags & FLAG_LAST_BOUNDARY:
-                    lookback = boundary + b"--\r\n"
-                    self.callback(name, lookback, 0, lookbehind_len)
-                else:  # pragma: no cover (error case)
-                    self.logger.warning("Look-back buffer error")
-
-                if end_i > 0:
-                    self.callback(name, data, 0, end_i)
-            # If we're getting remaining data, we have got all the data we
-            # can be certain is not a boundary, leaving only a partial boundary match.
-            if remaining:
-                self.marks[name] = end_i - length
-            else:
-                self.marks.pop(name, None)
 
         # For each byte...
         while i < length:
@@ -1343,7 +1344,7 @@ class MultipartParser(BaseParser):
 
                     # Call our callback with the header field.
                     i = colon
-                    data_callback("header_field", i)
+                    self._data_callback("header_field", data, i, length)
 
                     # Move to parsing the header value.
                     state = HEADER_VALUE_START
@@ -1370,7 +1371,7 @@ class MultipartParser(BaseParser):
                 advance_header_size(end - i)
                 if cr != -1:
                     i = cr
-                    data_callback("header_value", i)
+                    self._data_callback("header_value", data, i, length)
                     self.callback("header_end")
                     current_header_size = 0
                     state = HEADER_VALUE_ALMOST_DONE
@@ -1470,7 +1471,7 @@ class MultipartParser(BaseParser):
 
                     # RFC 2046 forbids lines starting with the boundary in a part, so this can't be data.
                     elif c in b" \t":
-                        data_callback("part_data", i - boundary_length)
+                        self._data_callback("part_data", data, i - boundary_length, length)
                         delete_mark("part_data")
                         index = 0
                         state = BOUNDARY_PADDING
@@ -1492,7 +1493,7 @@ class MultipartParser(BaseParser):
                             flags &= ~FLAG_PART_BOUNDARY
 
                             # We have identified a boundary, callback for any data before it.
-                            data_callback("part_data", i - index)
+                            self._data_callback("part_data", data, i - index, length)
                             # Callback indicating that we've reached the end of
                             # a part, and are starting a new one.
                             self.callback("part_end")
@@ -1517,7 +1518,7 @@ class MultipartParser(BaseParser):
                         # We need a second hyphen here.
                         if c == HYPHEN:
                             # We have identified a boundary, callback for any data before it.
-                            data_callback("part_data", i - index)
+                            self._data_callback("part_data", data, i - index, length)
                             # Callback to end the current part, and then the
                             # message.
                             self.callback("part_end")
@@ -1587,9 +1588,9 @@ class MultipartParser(BaseParser):
         # that we haven't yet reached the end of this 'thing'.  So, by setting
         # the mark to 0, we cause any data callbacks that take place in future
         # calls to this function to start from the beginning of that buffer.
-        data_callback("header_field", length, True)
-        data_callback("header_value", length, True)
-        data_callback("part_data", length - index, True)
+        self._data_callback("header_field", data, length, length, True)
+        self._data_callback("header_value", data, length, length, True)
+        self._data_callback("part_data", data, length - index, length, True)
 
         # Save values to locals.
         self.state = state
