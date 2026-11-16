@@ -1157,14 +1157,6 @@ class MultipartParser(BaseParser):
             if current_header_size > self.max_header_size:
                 raise MultipartParseError("Maximum header size exceeded", offset=i)
 
-        # Set a mark.
-        def set_mark(name: str) -> None:
-            self.marks[name] = i
-
-        # Remove a mark.
-        def delete_mark(name: str, reset: bool = False) -> None:
-            self.marks.pop(name, None)
-
         # Helper function that makes calling a callback with data easier. The
         # 'remaining' parameter will callback from the marked value until the
         # end of the buffer, and reset the mark, instead of deleting it.  This
@@ -1290,7 +1282,7 @@ class MultipartParser(BaseParser):
                     current_header_size = 0
 
                 # Set a mark of our header field.
-                set_mark("header_field")
+                self.marks["header_field"] = i
 
                 # Notify that we're starting a header if the next character is
                 # not a CR; a CR at the beginning of the header will cause us
@@ -1308,7 +1300,7 @@ class MultipartParser(BaseParser):
                 # that we've reached the second of 2 newlines, and so there are
                 # no more headers to parse.
                 if c == CR and index == 0:
-                    delete_mark("header_field")
+                    self.marks.pop("header_field", None)
                     state = HEADERS_ALMOST_DONE
                     i += 1
                     continue
@@ -1356,7 +1348,7 @@ class MultipartParser(BaseParser):
                     continue
 
                 # Mark the start of the header value.
-                set_mark("header_value")
+                self.marks["header_value"] = i
 
                 # Move to the header-value state, reprocessing this character.
                 state = HEADER_VALUE
@@ -1403,7 +1395,7 @@ class MultipartParser(BaseParser):
 
             elif state == PART_DATA_START:
                 # Mark the start of our part data.
-                set_mark("part_data")
+                self.marks["part_data"] = i
 
                 # Start processing part data, including this character.
                 state = PART_DATA
@@ -1471,7 +1463,7 @@ class MultipartParser(BaseParser):
                     # RFC 2046 forbids lines starting with the boundary in a part, so this can't be data.
                     elif c in b" \t":
                         data_callback("part_data", i - boundary_length)
-                        delete_mark("part_data")
+                        self.marks.pop("part_data", None)
                         index = 0
                         state = BOUNDARY_PADDING
 
