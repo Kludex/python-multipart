@@ -480,6 +480,19 @@ class TestQuerystringParser(unittest.TestCase):
 
         self.assert_fields((b"foo", b"bar"), (b"asdf", b"baz"))
 
+    def test_field_start_events_across_chunks(self) -> None:
+        data = b"a=1&b=&&c&=2&d=x=y&"
+        chunkings = [[data[:split], data[split:]] for split in range(len(data) + 1)]
+        chunkings.append([data[i : i + 1] for i in range(len(data))])
+        for chunks in chunkings:
+            self.reset()
+            starts: list[int] = []
+            self.p.set_callback("field_start", lambda: starts.append(len(self.f)))
+            for chunk in chunks:
+                self.assertEqual(self.p.write(chunk), len(chunk))
+            self.assert_fields((b"a", b"1"), (b"b", b""), (b"c", b""), (b"", b"2"), (b"d", b"x=y"))
+            self.assertEqual(starts, [0, 1, 2, 3, 4])
+
     def test_streaming_simple(self) -> None:
         self.p.write(b"foo=bar&")
         self.assert_fields((b"foo", b"bar"), finalize=False)
@@ -518,6 +531,11 @@ class TestQuerystringParser(unittest.TestCase):
         # Note: len = 8, only 7 bytes processed
         self.p.write(b"a=123456")
         self.assert_fields((b"a", b"12345"))
+
+    def test_max_size_truncates_after_separator(self) -> None:
+        self.p.max_size = 4
+        self.assertEqual(self.p.write(b"a=1&b=2"), 4)
+        self.assert_fields((b"a", b"1"))
 
     def test_invalid_max_size(self) -> None:
         with self.assertRaises(ValueError):
