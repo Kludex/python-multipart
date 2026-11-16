@@ -40,6 +40,7 @@ Report these as public issues if you think they are bugs.
 | An exception other than `FormParserError` on malformed input | It fails that one request, and it is fixed as a normal bug |
 | Memory use from a large body when `MAX_BODY_SIZE` is not set | The default is unlimited, so you set the limit here or in your server |
 | Malicious content in fields, filenames, or file bodies | The library returns what the client sent, and validating it is your job |
+| A part's `Content-Transfer-Encoding` decoded wrongly or not at all | [RFC 7578 §4.7](https://www.rfc-editor.org/rfc/rfc7578#section-4.7) deprecates it for `multipart/form-data`, and browsers do not send it. A value that is not decoded holds the bytes the client sent |
 
 ## Your responsibilities
 
