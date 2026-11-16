@@ -40,10 +40,10 @@ from python_multipart.multipart import (
 from .compat import parametrize, parametrize_class
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from typing import Any, TypedDict
 
-    from python_multipart.multipart import FileConfig
+    from python_multipart.multipart import FileConfig, MultipartCallbacks
 
     class TestParams(TypedDict):
         name: str
@@ -929,6 +929,77 @@ def test_multipart_opening_boundary_max_size() -> None:
     assert parser.write(data[max_size:]) == len(data) - max_size
     parser.finalize()
     assert events == ["begin", "end"]
+
+
+def test_multipart_events_do_not_depend_on_chunk_boundaries() -> None:
+    data = (
+        b"--boundary\r\n"
+        b'Content-Disposition: form-data; name="a"\r\n'
+        b"X-Empty:\r\n"
+        b"\r\n"
+        b"first\r\n"
+        b"--boundary\r\n"
+        b"\r\n"
+        b"second\r\n"
+        b"--boundary--\r\n"
+    )
+
+    def parse(chunks: list[bytes]) -> list[tuple[str, bytes]]:
+        events: list[tuple[str, bytes]] = []
+
+        def on_data(name: str) -> Callable[[bytes, int, int], None]:
+            return lambda data, start, end: events.append((name, data[start:end]))
+
+        def on_event(name: str) -> Callable[[], None]:
+            return lambda: events.append((name, b""))
+
+        callbacks: MultipartCallbacks = {
+            "on_part_begin": on_event("part_begin"),
+            "on_part_data": on_data("part_data"),
+            "on_part_end": on_event("part_end"),
+            "on_header_begin": on_event("header_begin"),
+            "on_header_field": on_data("header_field"),
+            "on_header_value": on_data("header_value"),
+            "on_header_end": on_event("header_end"),
+            "on_headers_finished": on_event("headers_finished"),
+            "on_end": on_event("end"),
+        }
+        parser = MultipartParser(b"boundary", callbacks)
+        for chunk in chunks:
+            parser.write(chunk)
+        parser.finalize()
+
+        # Merge adjacent data events, since a split can break one value into several callbacks.
+        merged: list[tuple[str, bytes]] = []
+        for name, value in events:
+            if merged and value and merged[-1][0] == name:
+                merged[-1] = (name, merged[-1][1] + value)
+            else:
+                merged.append((name, value))
+        return merged
+
+    expected = parse([data])
+    assert expected == [
+        ("part_begin", b""),
+        ("header_begin", b""),
+        ("header_field", b"Content-Disposition"),
+        ("header_value", b'form-data; name="a"'),
+        ("header_end", b""),
+        ("header_begin", b""),
+        ("header_field", b"X-Empty"),
+        ("header_end", b""),
+        ("headers_finished", b""),
+        ("part_data", b"first"),
+        ("part_end", b""),
+        ("part_begin", b""),
+        ("headers_finished", b""),
+        ("part_data", b"second"),
+        ("part_end", b""),
+        ("end", b""),
+    ]
+    for i in range(1, len(data)):
+        assert parse([data[:i], data[i:]]) == expected
+    assert parse([data[i : i + 1] for i in range(len(data))]) == expected
 
 
 @pytest.mark.parametrize(
