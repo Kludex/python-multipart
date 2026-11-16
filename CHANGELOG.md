@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.34 (2026-11-16)
+
+* Reduce multipart parser overhead by removing mark-helper closures and consuming buffered line endings [#370](https://github.com/Kludex/python-multipart/pull/370), [#373](https://github.com/Kludex/python-multipart/pull/373).
+* Speed up query-string parsing by reusing separators and starting fields directly [#372](https://github.com/Kludex/python-multipart/pull/372).
+* Keep default callback dictionaries separate between parser instances [#362](https://github.com/Kludex/python-multipart/pull/362).
+* Recognize transport padding after between-part boundaries and reject malformed padding [#363](https://github.com/Kludex/python-multipart/pull/363).
+* Only trim spaces and tabs in `parse_options_header`, preserving other whitespace in media types and parameters [#364](https://github.com/Kludex/python-multipart/pull/364).
+* Strip spaces and tabs around part header values in `FormParser` [#366](https://github.com/Kludex/python-multipart/pull/366).
+* Add a threat model and clarify vulnerability scope [#358](https://github.com/Kludex/python-multipart/pull/358), [#359](https://github.com/Kludex/python-multipart/pull/359).
+
 ## 0.0.33 (2026-10-31)
 
 * Drop Python 3.10 support [#329](https://github.com/Kludex/python-multipart/pull/329).
