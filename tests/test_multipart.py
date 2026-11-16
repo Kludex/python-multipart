@@ -914,6 +914,39 @@ def test_multipart_opening_boundary_max_size() -> None:
 
 
 @pytest.mark.parametrize(
+    "header,limit,offset",
+    [
+        (b"Long: value", 4, 0),
+        (b"Long@: value", 4, 0),
+        (b"X:     value", 4, 4),
+        (b"X: value", 7, 3),
+        (b"Long: value", 11, None),
+        (b"X:     value", 12, None),
+        (b"X: value", 8, None),
+    ],
+)
+@pytest.mark.parametrize("split", [0, 4])
+def test_multipart_header_size_limit_offsets(header: bytes, limit: int, offset: int | None, split: int) -> None:
+    events: list[str] = []
+    parser = MultipartParser(
+        b"b",
+        {"on_header_end": lambda: events.append("header_end"), "on_end": lambda: events.append("end")},
+        max_header_size=limit,
+    )
+    parser.write(b"--b\r\n" + header[:split])
+    remaining = header[split:] + b"\r\n\r\nbody\r\n--b--\r\n"
+    if offset is not None:
+        with pytest.raises(MultipartParseError, match="Maximum header size exceeded") as exc:
+            parser.write(remaining)
+        assert exc.value.offset == (0 if split else offset)
+        assert events == []
+    else:
+        assert parser.write(remaining) == len(remaining)
+        parser.finalize()
+        assert events == ["header_end", "end"]
+
+
+@pytest.mark.parametrize(
     "config,first,second,message",
     [
         ({"MAX_FIELDS": 1}, b"a=1&", b"b=2", "Too many fields"),
@@ -1360,9 +1393,10 @@ class TestFormParser(unittest.TestCase):
         with self.assertRaisesRegex(MultipartParseError, "Maximum header count exceeded"):
             self.f.write(payload)
 
-    def test_multipart_header_size_limit(self) -> None:
+    @parametrize("header", [b"X-A: " + b"a" * 4220, b"X-" + b"a" * 4224, b"X-A:" + b" " * 4224])
+    def test_multipart_header_size_limit(self, header: bytes) -> None:
         self.make("poc")
-        payload = b'--poc\r\nContent-Disposition: form-data; name="x"\r\n' + b"X-A: " + (b"a" * (4096 + 124))
+        payload = b'--poc\r\nContent-Disposition: form-data; name="x"\r\n' + header
         with self.assertRaisesRegex(MultipartParseError, "Maximum header size exceeded"):
             self.f.write(payload)
 

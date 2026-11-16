@@ -1135,6 +1135,10 @@ class MultipartParser(BaseParser):
 
         return l
 
+    def _check_header_size(self, size: int, offset: int) -> None:
+        if size > self.max_header_size:
+            raise MultipartParseError("Maximum header size exceeded", offset=offset)
+
     def _internal_write(self, data: bytes, length: int) -> int:
         # Get values from locals.
         boundary = self.boundary
@@ -1150,12 +1154,6 @@ class MultipartParser(BaseParser):
 
         # Our index defaults to 0.
         i = 0
-
-        def advance_header_size(amount: int = 1) -> None:
-            nonlocal current_header_size
-            current_header_size += amount
-            if current_header_size > self.max_header_size:
-                raise MultipartParseError("Maximum header size exceeded", offset=i)
 
         # Helper function that makes calling a callback with data easier. The
         # 'remaining' parameter will callback from the marked value until the
@@ -1312,7 +1310,8 @@ class MultipartParser(BaseParser):
 
                 # Enforce the size limit before slicing and validating, so an oversized header
                 # name fails fast instead of copying and scanning a potentially huge span.
-                advance_header_size(end - i if colon == -1 else end - i + 1)
+                current_header_size += end - i if colon == -1 else end - i + 1
+                self._check_header_size(current_header_size, i)
 
                 field = data[i:end]
                 if field.translate(None, TOKEN_CHARS):
@@ -1343,7 +1342,8 @@ class MultipartParser(BaseParser):
             elif state == HEADER_VALUE_START:
                 # Skip leading spaces.
                 if c == SPACE:
-                    advance_header_size()
+                    current_header_size += 1
+                    self._check_header_size(current_header_size, i)
                     i += 1
                     continue
 
@@ -1359,7 +1359,8 @@ class MultipartParser(BaseParser):
                 # instead of inspecting every byte.
                 cr = data.find(b"\r", i, length)
                 end = cr if cr != -1 else length
-                advance_header_size(end - i)
+                current_header_size += end - i
+                self._check_header_size(current_header_size, i)
                 if cr != -1:
                     i = cr
                     data_callback("header_value", i)
