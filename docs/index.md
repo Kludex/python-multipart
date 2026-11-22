@@ -197,3 +197,9 @@ This package used to be accessed via `import multipart`. This still works for
 now (with a warning) as long as the Python package `multipart` is not also
 installed. If both are installed, you need to use the full PyPI name
 `python_multipart` for this package.
+
+## Sponsors
+
+Help us keep python-multipart maintained and sustainable by [becoming a sponsor](https://marcelotryle.com/sponsors/).
+
+[![Sponsors](https://marcelotryle.com/sponsors/logos.svg)](https://marcelotryle.com/sponsors/)

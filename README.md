@@ -146,6 +146,12 @@ Instead of copying data, the parser passes you a buffer plus `start` and `end` p
 - [API reference](https://kludex.github.io/python-multipart/api/)
 - [Changelog](https://github.com/Kludex/python-multipart/blob/main/CHANGELOG.md)
 
+## Sponsors
+
+Help us keep python-multipart maintained and sustainable by [becoming a sponsor](https://marcelotryle.com/sponsors/).
+
+[![Sponsors](https://marcelotryle.com/sponsors/logos.svg)](https://marcelotryle.com/sponsors/)
+
 ## License
 
 Apache 2.0. See [LICENSE.txt](LICENSE.txt).
