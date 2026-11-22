@@ -22,6 +22,7 @@ link = "https://pypi.org/project/python-multipart"
 
 [project.theme]
 variant = "classic"
+custom_dir = "overrides"
 features = [
   "navigation.tracking",
   "content.code.copy",
