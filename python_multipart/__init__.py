@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = "0.0.34"
-
+from ._version import __version__ as __version__
 from .multipart import (
     BaseParser,
     FormParser,
