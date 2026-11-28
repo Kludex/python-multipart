@@ -1,5 +1,6 @@
 # Project-specific ignores.
 tmp/
+python_multipart/_version.py
 
 # Installer logs
 pip-log.txt

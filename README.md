@@ -144,7 +144,7 @@ Instead of copying data, the parser passes you a buffer plus `start` and `end` p
 
 - [Documentation](https://kludex.github.io/python-multipart/)
 - [API reference](https://kludex.github.io/python-multipart/api/)
-- [Changelog](https://github.com/Kludex/python-multipart/blob/main/CHANGELOG.md)
+- [Changelog](https://github.com/Kludex/python-multipart/releases)
 
 ## Sponsors
 

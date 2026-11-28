@@ -9,7 +9,7 @@ edit_uri = "https://github.com/kludex/python-multipart/tree/master/docs"
 nav = [
   { "Introduction" = "index.md" },
   { "API Reference" = "api.md" },
-  { "Changelog" = "changelog.md" },
+  { "Changelog" = "https://github.com/Kludex/python-multipart/releases" },
 ]
 
 [[project.extra.social]]

@@ -1,5 +1,7 @@
 # Changelog
 
+Release notes after 0.0.34 are on [GitHub Releases](https://github.com/Kludex/python-multipart/releases).
+
 ## 0.0.34 (2026-11-16)
 
 * Reduce multipart parser overhead by removing mark-helper closures and consuming buffered line endings [#370](https://github.com/Kludex/python-multipart/pull/370), [#373](https://github.com/Kludex/python-multipart/pull/373).
